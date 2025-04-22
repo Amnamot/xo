@@ -24,4 +24,4 @@ jobs:
             git pull
             npm install
             npm run build
-            pm2 restart all || pm2 start dist/server.js --name xo
+            pm2 restart xo || pm2 start npx --name xo -- serve -s build

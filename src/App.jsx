@@ -91,28 +91,48 @@ const App = () => {
   }, [position, scale]);
 
   // 🔐 Telegram WebApp авторизация: отправка initData на сервер
+  // useEffect(() => {
+  //   const telegram = window.Telegram?.WebApp;
+    
+  //   if (telegram?.initDataUnsafe?.user) {
+  //     const { id, first_name } = telegram.initDataUnsafe.user;
+  //     console.log("🔥 useEffect сработал")
+  //     fetch("https://xo.xuton.uno/api/auth", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({
+  //         telegramId: String(id),
+  //         name: first_name,
+  //       }),
+  //     })
+  //       .then((res) => res.json())
+  //       .then((data) => console.log("✅ User saved:", data))
+  //       .catch((err) => console.error("❌ Auth error:", err));
+  //   }
+  // }, []);
+
+  // Отладка
   useEffect(() => {
-    const telegram = window.Telegram?.WebApp;
-
-    if (telegram?.initDataUnsafe?.user) {
-      const { id, first_name } = telegram.initDataUnsafe.user;
-
-      fetch("https://xo.xuton.uno/api/auth", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          telegramId: String(id),
-          name: first_name,
-        }),
-      })
-        .then((res) => res.json())
-        .then((data) => console.log("✅ User saved:", data))
-        .catch((err) => console.error("❌ Auth error:", err));
-    }
+    console.log("🔥 useEffect сработал");
+  
+    fetch("https://xo.xuton.uno/api/auth", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        telegramId: "debug-test",
+        name: "TestUser",
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => console.log("✅ Debug user saved:", data))
+      .catch((err) => console.error("❌ Debug auth error:", err));
   }, []);
-
+  // Конец отладки
+  
   const handleTouchStart = (e) => {
     if (e.touches.length === 1) {
       setTouchStart({ x: e.touches[0].clientX - position.x, y: e.touches[0].clientY - position.y });

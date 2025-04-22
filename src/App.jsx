@@ -110,14 +110,14 @@ const App = () => {
     }
   };
 
-  const handleTouchEnd = (e) => {
+  const handleTouchEnd = () => {
     setTouchStart(null);
     setInitialDistance(null);
   };
 
   const visibleCells = getVisibleCells(board);
 
-  const handleCellTouchEnd = (row, col) => {
+  const handleCellClick = (row, col) => {
     if (!visibleCells.has(`${row}-${col}`) || winner) return;
     const newBoard = board.map((r) => [...r]);
     newBoard[row][col] = currentPlayer;
@@ -152,7 +152,7 @@ const App = () => {
               className={`w-[${CELL_SIZE}px] h-[${CELL_SIZE}px] border border-gray-500 flex items-center justify-center ${
                 visibleCells.has(`${i}-${j}`) ? "bg-gray-200" : "bg-gray-500"
               }`}
-              onTouchEnd={() => handleCellTouchEnd(i, j)}
+              onClick={() => handleCellClick(i, j)}
             >
               {cell && <Shape type={cell} />}
             </div>

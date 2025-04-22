@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import Shape from "./Shape";
+import Shape, { WinLine } from "./Shape";
 
 const BOARD_SIZE = 100;
 const WIN_CONDITION = 5;
@@ -169,26 +169,7 @@ const App = () => {
           ))
         )}
         {winLine && (
-          <div
-            className="absolute bg-green-500 origin-top-left"
-            style={{
-              top: `${winLine.start[0] * CELL_SIZE}px`,
-              left: `${winLine.start[1] * CELL_SIZE}px`,
-              width: `${
-                Math.sqrt(
-                  (winLine.end[1] - winLine.start[1]) ** 2 +
-                  (winLine.end[0] - winLine.start[0]) ** 2
-                ) * CELL_SIZE + CELL_SIZE
-              }px`,
-              height: '5px',
-              transform: `rotate(${Math.atan2(
-                winLine.end[0] - winLine.start[0],
-                winLine.end[1] - winLine.start[1]
-              )}rad)`,
-              transformOrigin: 'top left',
-              transition: 'width 0.5s ease',
-            }}
-          />
+          <WinLine start={winLine.start} end={winLine.end} cellSize={CELL_SIZE} />
         )}
       </div>
     </div>

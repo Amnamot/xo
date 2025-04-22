@@ -16,7 +16,13 @@ app.use(express.json());
 app.post("/api/auth", async (req, res) => {
   const { telegramId, name } = req.body;
 
+  // 🔍 Логирование тела запроса
+  console.log("📩 Пришёл запрос на /api/auth:");
+  console.log("→ telegramId:", telegramId);
+  console.log("→ name:", name);
+
   if (!telegramId || !name) {
+    console.warn("⚠️ Недостаточно данных: telegramId или name отсутствует");
     return res.status(400).json({ error: "Missing telegramId or name" });
   }
 
@@ -26,6 +32,7 @@ app.post("/api/auth", async (req, res) => {
       update: { name },
       create: { telegramId, name },
     });
+    console.log("✅ Пользователь успешно сохранён:", user);
     res.json({ success: true, user });
   } catch (error) {
     console.error("❌ Ошибка при сохранении пользователя:", error);

@@ -54,7 +54,7 @@ export default function Shape({ type }) {
           cx="50"
           cy="50"
           r="35"
-          stroke="red"
+          stroke="rgb(220, 10, 223)"
           strokeWidth="10"
           fill="none"
           strokeLinecap="round"

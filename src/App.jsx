@@ -87,17 +87,16 @@ const App = () => {
 
   // 🔐 Telegram WebApp авторизация: отправка initData на сервер
   useEffect(() => {
+    const telegram = window.Telegram?.WebApp;
     console.log("🔥 useEffect сработал");
     console.log("📦 Telegram.WebApp:", telegram);
     console.log("🧾 telegram.initData:", telegram?.initData);
     console.log("🧾 telegram.initDataUnsafe:", telegram?.initDataUnsafe);
-
-    const telegram = window.Telegram?.WebApp;
-
+  
     if (telegram?.initDataUnsafe?.user) {
       const { id, first_name } = telegram.initDataUnsafe.user;
       console.log("📲 Telegram user detected:", { id, first_name });
-
+  
       fetch("https://xo.xuton.uno/api/auth", {
         method: "POST",
         headers: {

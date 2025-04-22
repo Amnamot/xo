@@ -5,7 +5,7 @@ const BOARD_SIZE = 100;
 const WIN_CONDITION = 5;
 const CELL_SIZE_DESKTOP = 60;
 const CELL_SIZE_MOBILE = 40;
-const APP_VERSION = "1.0.3";
+const APP_VERSION = "1.0.4";
 
 const INITIAL_POSITION = Math.floor(BOARD_SIZE / 2);
 
@@ -88,6 +88,10 @@ const App = () => {
   // 🔐 Telegram WebApp авторизация: отправка initData на сервер
   useEffect(() => {
     console.log("🔥 useEffect сработал");
+    console.log("📦 Telegram.WebApp:", telegram);
+    console.log("🧾 telegram.initData:", telegram?.initData);
+    console.log("🧾 telegram.initDataUnsafe:", telegram?.initDataUnsafe);
+
     const telegram = window.Telegram?.WebApp;
 
     if (telegram?.initDataUnsafe?.user) {

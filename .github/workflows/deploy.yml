@@ -7,13 +7,14 @@ on:
 
 jobs:
   deploy:
+    name: Deploy to Production
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📦 Checkout repo
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: 🚀 Deploy via SSH
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.HOST }}
@@ -24,4 +25,7 @@ jobs:
             git pull
             npm install
             npm run build
+            cp -r ./build/* /var/www/xo/
+            chown -R www-data:www-data /var/www/xo
+            systemctl reload nginx
             pm2 restart xo || pm2 start npx --name xo -- serve -s build

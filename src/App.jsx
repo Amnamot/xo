@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
-import Shape from "./Shape"; // Импорт компонента
+import Shape from "./Shape";
 
 const BOARD_SIZE = 100;
 const WIN_CONDITION = 5;
+const CELL_SIZE_DESKTOP = 60;
+const CELL_SIZE_MOBILE = 40;
+
 const INITIAL_POSITION = Math.floor(BOARD_SIZE / 2);
-const CELL_SIZE = 60;
 
 const createEmptyBoard = () =>
   Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
@@ -56,18 +58,22 @@ const getVisibleCells = (board) => {
   return visibleCells;
 };
 
-export default function App() {
+const App = () => {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const CELL_SIZE = isMobile ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP;
+
   const [board, setBoard] = useState(() => {
     const newBoard = createEmptyBoard();
     newBoard[INITIAL_POSITION][INITIAL_POSITION] = "X";
     return newBoard;
   });
+
   const [currentPlayer, setCurrentPlayer] = useState("O");
   const [winner, setWinner] = useState(null);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isPanning, setIsPanning] = useState(false);
-  const [startPan, setStartPan] = useState({ x: 0, y: 0 });
+  const [touchStart, setTouchStart] = useState(null);
+  const [initialDistance, setInitialDistance] = useState(null);
   const boardRef = useRef(null);
 
   useEffect(() => {
@@ -76,29 +82,42 @@ export default function App() {
     }
   }, [position, scale]);
 
-  const handleMouseDown = (e) => {
-    setIsPanning(true);
-    setStartPan({ x: e.clientX - position.x, y: e.clientY - position.y });
-  };
-
-  const handleMouseMove = (e) => {
-    if (isPanning) {
-      setPosition({ x: e.clientX - startPan.x, y: e.clientY - startPan.y });
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      setTouchStart({ x: e.touches[0].clientX - position.x, y: e.touches[0].clientY - position.y });
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      setInitialDistance(Math.sqrt(dx * dx + dy * dy));
     }
   };
 
-  const handleMouseUp = () => {
-    setIsPanning(false);
+  const handleTouchMove = (e) => {
+    if (e.touches.length === 1 && touchStart) {
+      setPosition({
+        x: e.touches[0].clientX - touchStart.x,
+        y: e.touches[0].clientY - touchStart.y,
+      });
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const newDistance = Math.sqrt(dx * dx + dy * dy);
+      if (initialDistance) {
+        const zoom = newDistance / initialDistance;
+        setScale((prev) => Math.min(Math.max(prev * zoom, 0.5), 2));
+        setInitialDistance(newDistance);
+      }
+    }
   };
 
-  const handleWheel = (e) => {
-    e.preventDefault();
-    setScale((prev) => Math.min(Math.max(prev - e.deltaY * 0.001, 0.5), 2));
+  const handleTouchEnd = (e) => {
+    setTouchStart(null);
+    setInitialDistance(null);
   };
 
   const visibleCells = getVisibleCells(board);
 
-  const handleClick = (row, col) => {
+  const handleCellTouchEnd = (row, col) => {
     if (!visibleCells.has(`${row}-${col}`) || winner) return;
     const newBoard = board.map((r) => [...r]);
     newBoard[row][col] = currentPlayer;
@@ -113,37 +132,35 @@ export default function App() {
 
   return (
     <div
-      className="flex flex-col items-center p-4 overflow-hidden h-screen w-screen relative"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onWheel={handleWheel}
+      className="flex flex-col items-center p-0 overflow-hidden h-screen w-screen relative touch-none"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
-      <h1 className="text-2xl font-bold mb-4">Infinite Tic-Tac-Toe</h1>
       <div
         ref={boardRef}
         className="grid absolute top-1/2 left-1/2"
         style={{
-          display: "grid",
           gridTemplateColumns: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)`,
-          gridTemplateRows: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)`,
+          gridTemplateRows: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)`
         }}
       >
         {board.map((row, i) =>
           row.map((cell, j) => (
-            <button
+            <div
               key={`${i}-${j}`}
               className={`w-[${CELL_SIZE}px] h-[${CELL_SIZE}px] border border-gray-500 flex items-center justify-center ${
                 visibleCells.has(`${i}-${j}`) ? "bg-gray-200" : "bg-gray-500"
               }`}
-              onClick={() => handleClick(i, j)}
-              disabled={!visibleCells.has(`${i}-${j}`)}
+              onTouchEnd={() => handleCellTouchEnd(i, j)}
             >
               {cell && <Shape type={cell} />}
-            </button>
+            </div>
           ))
         )}
       </div>
     </div>
   );
-}
+};
+
+export default App;

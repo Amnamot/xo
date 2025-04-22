@@ -5,6 +5,7 @@ const BOARD_SIZE = 100;
 const WIN_CONDITION = 5;
 const CELL_SIZE_DESKTOP = 60;
 const CELL_SIZE_MOBILE = 40;
+const APP_VERSION = "1.0.3";
 
 const INITIAL_POSITION = Math.floor(BOARD_SIZE / 2);
 
@@ -198,6 +199,9 @@ const App = () => {
         {winLine && (
           <WinLine start={winLine.start} end={winLine.end} cellSize={CELL_SIZE} />
         )}
+      </div>
+      <div className="absolute bottom-2 right-2 text-xs text-gray-400">
+        Версия: {APP_VERSION}
       </div>
     </div>
   );

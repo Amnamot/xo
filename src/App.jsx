@@ -21,19 +21,26 @@ const checkWinner = (board, row, col, player) => {
 
   for (const [dx, dy] of directions) {
     let count = 1;
+    let start = [row, col];
+    let end = [row, col];
+
     for (let step = 1; step < WIN_CONDITION; step++) {
       const x = row + dx * step;
       const y = col + dy * step;
-      if (board[x]?.[y] === player) count++;
-      else break;
+      if (board[x]?.[y] === player) {
+        count++;
+        end = [x, y];
+      } else break;
     }
     for (let step = 1; step < WIN_CONDITION; step++) {
       const x = row - dx * step;
       const y = col - dy * step;
-      if (board[x]?.[y] === player) count++;
-      else break;
+      if (board[x]?.[y] === player) {
+        count++;
+        start = [x, y];
+      } else break;
     }
-    if (count >= WIN_CONDITION) return player;
+    if (count >= WIN_CONDITION) return { player, start, end };
   }
   return null;
 };
@@ -70,6 +77,7 @@ const App = () => {
 
   const [currentPlayer, setCurrentPlayer] = useState("O");
   const [winner, setWinner] = useState(null);
+  const [winLine, setWinLine] = useState(null);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [touchStart, setTouchStart] = useState(null);
@@ -123,8 +131,10 @@ const App = () => {
     newBoard[row][col] = currentPlayer;
     setBoard(newBoard);
 
-    if (checkWinner(newBoard, row, col, currentPlayer)) {
-      setWinner(currentPlayer);
+    const result = checkWinner(newBoard, row, col, currentPlayer);
+    if (result) {
+      setWinner(result.player);
+      setWinLine(result);
     } else {
       setCurrentPlayer(currentPlayer === "X" ? "O" : "X");
     }
@@ -157,6 +167,28 @@ const App = () => {
               {cell && <Shape type={cell} />}
             </div>
           ))
+        )}
+        {winLine && (
+          <div
+            className="absolute bg-green-500 origin-top-left"
+            style={{
+              top: `${winLine.start[0] * CELL_SIZE}px`,
+              left: `${winLine.start[1] * CELL_SIZE}px`,
+              width: `${
+                Math.sqrt(
+                  (winLine.end[1] - winLine.start[1]) ** 2 +
+                  (winLine.end[0] - winLine.start[0]) ** 2
+                ) * CELL_SIZE + CELL_SIZE
+              }px`,
+              height: '5px',
+              transform: `rotate(${Math.atan2(
+                winLine.end[0] - winLine.start[0],
+                winLine.end[1] - winLine.start[1]
+              )}rad)`,
+              transformOrigin: 'top left',
+              transition: 'width 0.5s ease',
+            }}
+          />
         )}
       </div>
     </div>

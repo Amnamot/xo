@@ -20,7 +20,7 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USER }}
           key: ${{ secrets.DEPLOY_KEY }}
-          port: 22
+          port: 2222
           script: |
             cd /root/xo
             git pull

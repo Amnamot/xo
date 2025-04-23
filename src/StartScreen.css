@@ -1,0 +1,104 @@
+.start-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    height: 100vh;
+    width: 100vw;
+    padding: 0;
+    box-sizing: border-box;
+    background-color: #0a0a0a; /* тёмный фон */
+    font-family: 'Inter', sans-serif;
+  }
+  
+  .top-logo {
+    display: flex;
+    justify-content: center;
+    margin-top: 30px;
+  }
+  
+  .user-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 83.3333vw; /* 10/12 от ширины экрана */
+    max-width: 600px;
+  }
+  
+  .ava1 {
+    border-radius: 8px;
+    width: 40vw;
+    max-width: 200px;
+  }
+  
+  .title1 {
+    margin-top: 12px;
+    font-size: 16px;
+    font-weight: 400;
+    color: #CEDCFF;
+  }
+  
+  .name1 {
+    margin-top: 9px;
+    font-size: 16px;
+    font-weight: 400;
+    color: #CEDCFF;
+  }
+  
+  .stata1 {
+    margin-top: 24px;
+    font-size: 16px;
+    font-weight: 400;
+    color: #CEDCFF;
+    line-height: 1.4;
+  }
+  
+  .bottom-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 83.3333vw; /* 10/12 */
+    max-width: 600px;
+  }
+  
+  .call1 {
+    font-size: 16px;
+    font-weight: 300;
+    color: #CEDCFF;
+    margin-bottom: 12px;
+  }
+  
+  .button1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #CEDCFF;
+    border: 2px solid #CEDCFF;
+    background-color: rgba(206, 220, 255, 0.7);
+    border-radius: 8px;
+    width: 100%;
+    height: 46px;
+    cursor: pointer;
+    margin-bottom: 36px;
+  }
+  
+  /* 📱 Мобильные экраны */
+  @media (max-width: 480px) {
+    .ava1 {
+      width: 60vw;
+    }
+  
+    .button1 {
+      font-size: 20px;
+      height: 44px;
+    }
+  
+    .title1,
+    .name1,
+    .stata1,
+    .call1 {
+      font-size: 15px;
+    }
+  }
+  

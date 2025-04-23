@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import Shape, { WinLine } from "./Shape";
-import StartScreen from "./StartScreen";
 
 const BOARD_SIZE = 100;
 const WIN_CONDITION = 5;
 const CELL_SIZE_DESKTOP = 60;
 const CELL_SIZE_MOBILE = 40;
 const APP_VERSION = "1.0.4";
+
 const INITIAL_POSITION = Math.floor(BOARD_SIZE / 2);
 
 const createEmptyBoard = () =>
@@ -66,8 +66,8 @@ const getVisibleCells = (board) => {
   return visibleCells;
 };
 
-const GameScreen = () => {
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+const Game = () => {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const CELL_SIZE = isMobile ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP;
 
   const [board, setBoard] = useState(() => {
@@ -86,6 +86,21 @@ const GameScreen = () => {
   const boardRef = useRef(null);
 
   useEffect(() => {
+    const telegram = window.Telegram?.WebApp;
+    if (telegram?.initDataUnsafe?.user) {
+      const { id, first_name } = telegram.initDataUnsafe.user;
+      fetch("https://xo.xuton.uno/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telegramId: String(id), name: first_name }),
+      })
+        .then((res) => res.json())
+        .then((data) => console.log("✅ User saved:", data))
+        .catch((err) => console.error("❌ Auth error:", err));
+    }
+  }, []);
+
+  useEffect(() => {
     if (boardRef.current) {
       boardRef.current.style.transform = `translate(-50%, -50%) translate(${position.x}px, ${position.y}px) scale(${scale})`;
     }
@@ -93,10 +108,7 @@ const GameScreen = () => {
 
   const handleTouchStart = (e) => {
     if (e.touches.length === 1) {
-      setTouchStart({
-        x: e.touches[0].clientX - position.x,
-        y: e.touches[0].clientY - position.y,
-      });
+      setTouchStart({ x: e.touches[0].clientX - position.x, y: e.touches[0].clientY - position.y });
     } else if (e.touches.length === 2) {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -156,7 +168,7 @@ const GameScreen = () => {
         className="grid absolute top-1/2 left-1/2"
         style={{
           gridTemplateColumns: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)`,
-          gridTemplateRows: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)`,
+          gridTemplateRows: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)`
         }}
       >
         {board.map((row, i) =>
@@ -173,11 +185,7 @@ const GameScreen = () => {
           ))
         )}
         {winLine && (
-          <WinLine
-            start={winLine.start}
-            end={winLine.end}
-            cellSize={CELL_SIZE}
-          />
+          <WinLine start={winLine.start} end={winLine.end} cellSize={CELL_SIZE} />
         )}
       </div>
       <div className="absolute bottom-2 right-2 text-xs text-gray-400">
@@ -187,10 +195,4 @@ const GameScreen = () => {
   );
 };
 
-function App() {
-  const [started, setStarted] = useState(false);
-
-  return started ? <GameScreen /> : <StartScreen onStart={() => setStarted(true)} />;
-}
-
-export default App;
+export default Game;

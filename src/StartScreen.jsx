@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import './StartScreen.css';
 import logo from './media/3tICO.svg';
 
-const StartScreen = ({ onStart }) => {
+const StartScreen = () => {
   const [user, setUser] = useState({
     firstName: '',
     lastName: '',
@@ -13,22 +13,27 @@ const StartScreen = ({ onStart }) => {
 
   useEffect(() => {
     const telegram = window.Telegram?.WebApp;
-    const initDataUnsafe = telegram?.initDataUnsafe;
-    const tgUser = initDataUnsafe?.user;
+    const initData = telegram?.initData || '';
 
-    if (tgUser) {
-      const { first_name, last_name, photo_url, id } = tgUser;
-      fetch(`/api/user/${id}`)
-        .then(res => res.json())
-        .then(data => {
+    if (initData) {
+      fetch('/api/auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ initData }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
           setUser({
-            firstName: first_name,
-            lastName: last_name,
-            avatar: photo_url,
+            firstName: data.firstName || '',
+            lastName: data.lastName || '',
+            avatar: telegram.initDataUnsafe?.user?.photo_url || '',
             numGames: data.numGames || 0,
             numWins: data.numWins || 0,
           });
-        });
+        })
+        .catch((err) => console.error('Auth error:', err));
     }
   }, []);
 
@@ -61,13 +66,7 @@ const StartScreen = ({ onStart }) => {
         <div className="call1" style={{ marginBottom: 12 }}>
           To start the game by inviting an opponent, just click on this button
         </div>
-        <button
-          className="button1"
-          style={{ marginBottom: 36 }}
-          onClick={onStart}
-        >
-          Start
-        </button>
+        <button className="button1" style={{ marginBottom: 36 }}>Start</button>
       </div>
     </div>
   );

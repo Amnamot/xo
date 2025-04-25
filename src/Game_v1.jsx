@@ -1,9 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import "./Game.css";
-import "./Shape.css";
-import Shape from "./Shape";
-import GameHeader from "./components/GameHeader";  // Импорт GameHeader
-import EndGame from "./components/EndGame";  // Импорт экрана победителя
+import Shape, { WinLine } from "./Shape";
 
 const BOARD_SIZE = 100;
 const WIN_CONDITION = 5;
@@ -17,7 +13,10 @@ const createEmptyBoard = () =>
 
 const checkWinner = (board, row, col, player) => {
   const directions = [
-    [0, 1], [1, 0], [1, 1], [1, -1],
+    [0, 1],
+    [1, 0],
+    [1, 1],
+    [1, -1],
   ];
 
   for (const [dx, dy] of directions) {
@@ -67,11 +66,15 @@ const getVisibleCells = (board) => {
 };
 
 const Game = () => {
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+  const CELL_SIZE = isMobile ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP;
+
   const [board, setBoard] = useState(() => {
     const newBoard = createEmptyBoard();
     newBoard[INITIAL_POSITION][INITIAL_POSITION] = "X";
     return newBoard;
   });
+
   const [currentPlayer, setCurrentPlayer] = useState("O");
   const [winner, setWinner] = useState(null);
   const [winLine, setWinLine] = useState(null);
@@ -81,18 +84,7 @@ const Game = () => {
   const [initialDistance, setInitialDistance] = useState(null);
   const boardRef = useRef(null);
 
-  const [user, setUser] = useState({
-    avagamer1: "/media/defAva.png",  // Аватар игрока 1
-    avagamer2: "/media/buddha.svg", // Аватар игрока 2
-    firstName1: "John",  // Имя игрока 1
-    firstName2: "Marina" // Имя игрока 2
-  });
-
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-  const CELL_SIZE = isMobile ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP;
-
   useEffect(() => {
-    console.log("Game rendered");
     if (boardRef.current) {
       boardRef.current.style.transform = `translate(-50%, -50%) translate(${position.x}px, ${position.y}px) scale(${scale})`;
     }
@@ -144,76 +136,50 @@ const Game = () => {
 
     const result = checkWinner(newBoard, row, col, currentPlayer);
     if (result) {
-      setWinner({
-        name: result.player,
-        avatar: result.player === "X" ? user.avagamer1 : user.avagamer2, // Пример
-      });
-      setTimeout(() => {
-        setWinLine(result);
-      }, 600);
+      setWinner(result.player);
+      setWinLine(result);
     } else {
       setCurrentPlayer(currentPlayer === "X" ? "O" : "X");
     }
   };
 
-  const calculateWinLineStyle = () => {
-    if (!winLine) return {};
-    const { start, end } = winLine;
-    const startX = (start[1] + 0.5) * CELL_SIZE;
-    const startY = (start[0] + 0.5) * CELL_SIZE;
-    const deltaX = (end[1] - start[1]) * CELL_SIZE;
-    const deltaY = (end[0] - start[0]) * CELL_SIZE;
-    const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-
-    return {
-      top: `${startY}px`,
-      left: `${startX}px`,
-      width: `${length}px`,
-      transform: `translateY(-50%) rotate(${angle}deg)`
-    };
-  };
-
-  // Если есть победитель, отображаем EndGame
-  if (winner) {
-    return <EndGame winner={winner} onBack={() => setWinner(null)} />;
-  }
-
   return (
     <div
-      className="game-container"
+      className="flex flex-col items-center p-0 overflow-hidden h-screen w-screen relative touch-none"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <GameHeader />
-
       <div
         ref={boardRef}
-        className="board-grid"
+        className="grid absolute top-1/2 left-1/2"
         style={{
-          gridTemplateColumns: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)` ,
-          gridTemplateRows: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)`
+          gridTemplateColumns: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)`,
+          gridTemplateRows: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)`,
         }}
       >
         {board.map((row, i) =>
           row.map((cell, j) => (
             <div
               key={`${i}-${j}`}
-              className={`cell ${visibleCells.has(`${i}-${j}`) ? "cell-available" : "cell-blocked"}`}
+              className={`w-[${CELL_SIZE}px] h-[${CELL_SIZE}px] border border-gray-500 flex items-center justify-center ${
+                visibleCells.has(`${i}-${j}`) ? "bg-gray-200" : "bg-gray-500"
+              }`}
               onClick={() => handleCellClick(i, j)}
-              style={{ width: CELL_SIZE, height: CELL_SIZE }}
             >
               {cell && <Shape type={cell} />}
             </div>
           ))
         )}
         {winLine && (
-          <div className="win-line" style={calculateWinLineStyle()} />
+          <WinLine
+            start={winLine.start}
+            end={winLine.end}
+            cellSize={CELL_SIZE}
+          />
         )}
       </div>
-
-      <div className="game-version">
+      <div className="absolute bottom-2 right-2 text-xs text-gray-400">
         Версия: {APP_VERSION}
       </div>
     </div>

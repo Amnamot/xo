@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './StartScreen.css';
-import logo from './media/3tICO.svg';
+import Game from './Game';
 
 const StartScreen = () => {
   const [user, setUser] = useState({
@@ -9,64 +9,106 @@ const StartScreen = () => {
     avatar: '',
     numGames: 0,
     numWins: 0,
+    stars: 0,
   });
 
-  useEffect(() => {
-    const telegram = window.Telegram?.WebApp;
-    const initData = telegram?.initData || '';
+  const [showGame, setShowGame] = useState(false);
 
-    if (initData) {
-      fetch('/api/auth', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ initData }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          setUser({
-            firstName: data.firstName || '',
-            lastName: data.lastName || '',
-            avatar: telegram.initDataUnsafe?.user?.photo_url || '',
-            numGames: data.numGames || 0,
-            numWins: data.numWins || 0,
-          });
-        })
-        .catch((err) => console.error('Auth error:', err));
-    }
+  useEffect(() => {
+    const mockUser = {
+      firstName: 'John',
+      lastName: 'Doe',
+      avatar: '/media/defAva.png',
+      numGames: 12,
+      numWins: 5,
+      stars: 10,
+    };
+
+    setUser(mockUser);
   }, []);
 
   const screenWidth = window.innerWidth;
   const containerWidth = (screenWidth / 12) * 10;
   const avatarSize = screenWidth / 2.5;
 
+  const showEndingGames = user.numGames >= 9;
+  const showStarInfo = user.numGames >= 11;
+  const showTopUp = user.numGames >= 11 && user.stars <= 10;
+  const disableStart = user.numGames >= 12 && user.stars < 10;
+
+  const getEndingText = () => {
+    if (user.numGames === 11) {
+      return "У тебя осталась одна игра\nYou need to top up your balance";
+    }
+    if (user.numGames >= 12 && user.stars < 10) {
+      return "Стоимость одной игры 10 звезд\nTop up your balance";
+    }
+    if (user.numGames >= 9 && user.stars <= 10) {
+      return "У тебя заканчиваются игры\nПотом тебе потребуются звезды";
+    }
+    return null;
+  };
+
+  if (showGame) return <Game />;
+
   return (
     <div className="start-screen">
-      <div className="top-logo" style={{ marginTop: 30 }}>
-        <img src={logo} width={128} alt="Logo" />
+      <div className="top-logo">
+        <img src="/media/3tICO.svg" width={128} alt="Logo" />
       </div>
 
-      <div className="user-block" style={{ width: containerWidth }}>
-        <img
-          className="ava1"
-          src={user.avatar}
-          alt="avatar"
-          style={{ width: avatarSize, borderRadius: 8 }}
-        />
-        <div className="title1" style={{ marginTop: 12 }}>Hello</div>
-        <div className="name1" style={{ marginTop: 9 }}>{user.firstName} {user.lastName}</div>
-        <div className="stata1" style={{ marginTop: 24 }}>
-          You played {user.numGames} games<br />
-          You won {user.numWins} times
+      <div className="user-info">
+        <img className="ava1" src={user.avatar} alt="avatar" />
+        <div className="user-data">
+          <div className="name1">{user.firstName}</div>
+          <div className="stata1">
+            Games: <span className="stata2">{user.numGames}</span> Wins: <span className="stata2">{user.numWins}</span>
+          </div>
         </div>
       </div>
 
-      <div className="bottom-block" style={{ width: containerWidth }}>
-        <div className="call1" style={{ marginBottom: 12 }}>
+      {showEndingGames && (
+        <div className="ninegames" style={{ width: containerWidth }}>
+          <div className="endinggames">{getEndingText()}</div>
+
+          {showStarInfo && (
+            <div className="starinfo">
+              <div className="balance">Balance</div>
+              <div className="star">
+                <img src="/media/TGstar.svg" alt="star" />
+              </div>
+              <div className="starsvalue">{user.stars}</div>
+            </div>
+          )}
+
+          {showTopUp && <button className="topup">Top up</button>}
+        </div>
+      )}
+
+      <div
+        className="bottom-block"
+        style={{
+          width: containerWidth,
+          opacity: disableStart ? 0.3 : 1,
+          pointerEvents: disableStart ? 'none' : 'auto',
+        }}
+      >
+        <div className="call1">
           To start the game by inviting an opponent, just click on this button
         </div>
-        <button className="button1" style={{ marginBottom: 36 }}>Start</button>
+        {user.numGames >= 12 ? (
+          <button
+            className="button2"
+            onClick={() => !disableStart && setShowGame(true)}
+            disabled={disableStart}
+          >
+            Start for 10 stars
+          </button>
+        ) : (
+          <button className="button1" onClick={() => setShowGame(true)}>
+            Start
+          </button>
+        )}
       </div>
     </div>
   );

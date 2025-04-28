@@ -1,6 +1,7 @@
 // StartScreen.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import TopUpModal from './components/TopUpModal';
 import './StartScreen.css';
 
 const StartScreen = () => {
@@ -13,6 +14,7 @@ const StartScreen = () => {
     stars: 0,
   });
 
+  const [showTopUpModal, setShowTopUpModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,7 +32,6 @@ const StartScreen = () => {
 
   const screenWidth = window.innerWidth;
   const containerWidth = (screenWidth / 12) * 10;
-  const avatarSize = screenWidth / 2.5;
 
   const showEndingGames = user.numGames >= 9;
   const showStarInfo = user.numGames >= 11;
@@ -84,7 +85,11 @@ const StartScreen = () => {
             </div>
           )}
 
-          {showTopUp && <button className="topup">Top up</button>}
+          {showTopUp && (
+            <button className="topup" onClick={() => setShowTopUpModal(true)}>
+              Top up
+            </button>
+          )}
         </div>
       )}
 
@@ -113,6 +118,8 @@ const StartScreen = () => {
           </button>
         )}
       </div>
+
+      {showTopUpModal && <TopUpModal onClose={() => setShowTopUpModal(false)} />}
     </div>
   );
 };

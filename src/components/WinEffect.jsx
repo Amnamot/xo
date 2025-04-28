@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "./WinEffect.css";  // Подключаем стили
 
 const getRandom = (min, max) => {
@@ -24,10 +24,23 @@ const getRandomColor = () => {
 // Canvas animation component
 const WinEffect = () => {
   const canvasRef = useRef(null);
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+
+  // Calculate the correct size for the canvas
+  useEffect(() => {
+    const updateCanvasSize = () => {
+      setCanvasSize({ width: window.innerWidth, height: window.innerHeight }); // Set canvas to fill the entire screen
+    };
+
+    updateCanvasSize(); // Initial size calculation
+    window.addEventListener("resize", updateCanvasSize); // Update on window resize
+
+    return () => window.removeEventListener("resize", updateCanvasSize); // Clean up on unmount
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;  // Если canvas не найден, не продолжаем
+    if (!canvas) return;  // If canvas is not found, return
 
     const ctx = canvas.getContext("2d");
 
@@ -117,16 +130,27 @@ const WinEffect = () => {
       requestAnimationFrame(animate);
     };
 
-    // Generate particles every 800 ms
-    const interval = setInterval(generateParticles, 800);
-    animate();
-
-    return () => {
-      clearInterval(interval);
+    // Generate particles with a random interval
+    const generateWithRandomInterval = () => {
+      const randomInterval = getRandom(10, 300); // Random interval between 100ms and 800ms
+      generateParticles(); // Generate particles
+      setTimeout(generateWithRandomInterval, randomInterval); // Recursively call itself with new random interval
     };
-  }, []);
 
-  return <canvas ref={canvasRef} className="win-effect-canvas" width="100%" height="100%"></canvas>;
+    generateWithRandomInterval(); // Start the particle generation
+
+    animate(); // Start the animation loop
+
+  }, [canvasSize]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="win-effect-canvas"
+      width={canvasSize.width}
+      height={canvasSize.height}
+    ></canvas>
+  );
 };
 
 export default WinEffect;

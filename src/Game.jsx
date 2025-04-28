@@ -1,9 +1,10 @@
+// Game.jsx
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Game.css";
 import "./Shape.css";
 import Shape from "./Shape";
-import GameHeader from "./components/GameHeader";  // Импорт GameHeader
-import EndGame from "./components/EndGame";  // Импорт экрана победителя
+import GameHeader from "./components/GameHeader";
 
 const BOARD_SIZE = 100;
 const WIN_CONDITION = 5;
@@ -50,7 +51,7 @@ const getVisibleCells = (board) => {
   const visibleCells = new Set();
   for (let row = 0; row < BOARD_SIZE; row++) {
     for (let col = 0; col < BOARD_SIZE; col++) {
-      if (board[row][col]) {
+      if (board[row] && board[row][col]) {
         for (let dx = -2; dx <= 2; dx++) {
           for (let dy = -2; dy <= 2; dy++) {
             const x = row + dx;
@@ -67,36 +68,56 @@ const getVisibleCells = (board) => {
 };
 
 const Game = () => {
-  const [board, setBoard] = useState(() => {
-    const newBoard = createEmptyBoard();
-    newBoard[INITIAL_POSITION][INITIAL_POSITION] = "X";
-    return newBoard;
-  });
+  const navigate = useNavigate();
+  const [board, setBoard] = useState([]);
   const [currentPlayer, setCurrentPlayer] = useState("O");
-  const [winner, setWinner] = useState(null);
   const [winLine, setWinLine] = useState(null);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [touchStart, setTouchStart] = useState(null);
   const [initialDistance, setInitialDistance] = useState(null);
+  const [moveTimer, setMoveTimer] = useState(2400); // 24 секунды на ход
+  const [time, setTime] = useState(0); // Общее время игры
   const boardRef = useRef(null);
-
-  const [user, setUser] = useState({
-    avagamer1: "/media/defAva.png",  // Аватар игрока 1
-    avagamer2: "/media/buddha.svg", // Аватар игрока 2
-    firstName1: "John",  // Имя игрока 1
-    firstName2: "Marina" // Имя игрока 2
-  });
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const CELL_SIZE = isMobile ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP;
 
   useEffect(() => {
-    console.log("Game rendered");
+    const newBoard = createEmptyBoard();
+    newBoard[INITIAL_POSITION][INITIAL_POSITION] = "X";
+    setBoard(newBoard);
+    setCurrentPlayer("O");
+    setWinLine(null);
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
+  }, []);
+
+  useEffect(() => {
     if (boardRef.current) {
       boardRef.current.style.transform = `translate(-50%, -50%) translate(${position.x}px, ${position.y}px) scale(${scale})`;
     }
   }, [position, scale]);
+
+  useEffect(() => {
+    const moveInterval = setInterval(() => {
+      setMoveTimer((prev) => Math.max(prev - 10, 0));
+    }, 10);
+    return () => clearInterval(moveInterval);
+  }, []);
+
+  useEffect(() => {
+    const timeInterval = setInterval(() => {
+      setTime((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(timeInterval);
+  }, []);
+
+  useEffect(() => {
+    if (moveTimer === 0) {
+      navigate("/lost", { replace: true, state: { lostAvatar: "/media/lostAva.png", lostName: "John" } });
+    }
+  }, [moveTimer, navigate]);
 
   const handleTouchStart = (e) => {
     if (e.touches.length === 1) {
@@ -134,25 +155,29 @@ const Game = () => {
     setInitialDistance(null);
   };
 
-  const visibleCells = getVisibleCells(board);
+  const visibleCells = board.length ? getVisibleCells(board) : new Set();
 
   const handleCellClick = (row, col) => {
-    if (!visibleCells.has(`${row}-${col}`) || winner) return;
+    if (!visibleCells.has(`${row}-${col}`)) return;
     const newBoard = board.map((r) => [...r]);
     newBoard[row][col] = currentPlayer;
     setBoard(newBoard);
 
     const result = checkWinner(newBoard, row, col, currentPlayer);
     if (result) {
-      setWinner({
-        name: result.player,
-        avatar: result.player === "X" ? user.avagamer1 : user.avagamer2, // Пример
-      });
       setTimeout(() => {
         setWinLine(result);
-      }, 600);
+      }, 200);
+      setTimeout(() => {
+        if (currentPlayer === "X") {
+          navigate("/end", { replace: true, state: { winnerAvatar: "/media/JohnAva.png", winnerName: "John" } });
+        } else {
+          navigate("/lost", { replace: true, state: { lostAvatar: "/media/buddha.svg", lostName: "Marina" } });
+        }
+      }, 1500);
     } else {
       setCurrentPlayer(currentPlayer === "X" ? "O" : "X");
+      setMoveTimer(2400); // Сброс таймера на 24 секунды при смене хода
     }
   };
 
@@ -174,11 +199,6 @@ const Game = () => {
     };
   };
 
-  // Если есть победитель, отображаем EndGame
-  if (winner) {
-    return <EndGame winner={winner} onBack={() => setWinner(null)} />;
-  }
-
   return (
     <div
       className="game-container"
@@ -186,13 +206,13 @@ const Game = () => {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <GameHeader />
+      <GameHeader currentPlayer={currentPlayer} moveTimer={moveTimer} time={time} />
 
       <div
         ref={boardRef}
         className="board-grid"
         style={{
-          gridTemplateColumns: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)` ,
+          gridTemplateColumns: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)`,
           gridTemplateRows: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)`
         }}
       >

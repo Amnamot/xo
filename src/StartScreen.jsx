@@ -1,6 +1,7 @@
+// StartScreen.jsx
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './StartScreen.css';
-import Game from './Game';
 
 const StartScreen = () => {
   const [user, setUser] = useState({
@@ -12,13 +13,13 @@ const StartScreen = () => {
     stars: 0,
   });
 
-  const [showGame, setShowGame] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const mockUser = {
       firstName: 'John',
       lastName: 'Doe',
-      avatar: '/media/defAva.png',
+      avatar: '/media/JohnAva.png',
       numGames: 12,
       numWins: 5,
       stars: 10,
@@ -49,7 +50,9 @@ const StartScreen = () => {
     return null;
   };
 
-  if (showGame) return <Game />;
+  const handleStartGame = () => {
+    navigate('/game');
+  };
 
   return (
     <div className="start-screen">
@@ -99,13 +102,13 @@ const StartScreen = () => {
         {user.numGames >= 12 ? (
           <button
             className="button2"
-            onClick={() => !disableStart && setShowGame(true)}
+            onClick={handleStartGame}
             disabled={disableStart}
           >
             Start for 10 stars
           </button>
         ) : (
-          <button className="button1" onClick={() => setShowGame(true)}>
+          <button className="button1" onClick={handleStartGame}>
             Start
           </button>
         )}

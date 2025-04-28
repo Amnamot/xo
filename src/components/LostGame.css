@@ -1,0 +1,63 @@
+.end-game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: #282c34;
+  color: white;
+  text-align: center;
+  position: relative; /* Для корректного позиционирования эффекта */
+}
+
+.winner-info {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Центрируем все элементы по горизонтали */
+}
+
+.gameover {
+  font-family: 'Inter', sans-serif;
+  font-size: 24px;
+  color: #E10303;
+}
+
+.lost-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 7px;
+  margin: 10px 0; /* Вертикальный отступ */
+  display: block; /* Чтобы элемент был блочным */
+  object-fit: cover; /* Чтобы изображение правильно обрезалось по кругу */
+}
+
+.youlost {
+  font-family: 'Inter', sans-serif;
+  font-weight: bold;
+  font-size: 32px;
+  color: #E10303;
+}
+
+.congrat {
+  font-family: 'Inter', sans-serif;
+  font-size: 20px;
+  color: #FFC700;
+  margin-top: 10px;
+}
+
+.back-to-start {
+  padding: 10px 20px;
+  font-size: 18px;
+  color: white;
+  background-color: #6800d7;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  position: absolute;
+  bottom: 64px; /* Отступ от нижней части экрана */
+}
+
+.back-to-start:hover {
+  background-color: #5600b4;
+}

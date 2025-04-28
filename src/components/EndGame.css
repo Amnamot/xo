@@ -7,23 +7,48 @@
     background-color: #282c34;
     color: white;
     text-align: center;
-    position: relative; /* Для корректного позиционирования эффектов */
+    position: relative; /* Для корректного позиционирования эффекта */
   }
   
   .winner-info {
     margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Центрируем все элементы по горизонтали */
+  }
+  
+  .gameoverwin {
+    font-family: 'Inter', sans-serif;
+    font-size: 24px;
+    color: #FFC700;
   }
   
   .winner-avatar {
     width: 120px;
     height: 120px;
-    border-radius: 50%;
-    margin-bottom: 10px;
+    border-radius: 7px;
+    margin: 10px 0; /* Вертикальный отступ */
+    display: block; /* Чтобы элемент был блочным */
+    object-fit: cover; /* Чтобы изображение правильно обрезалось по кругу */
   }
   
-  h2 {
-    font-size: 32px;
+  .youwin {
     font-family: 'Inter', sans-serif;
+    font-weight: bold;
+    font-size: 32px;
+    color: #FFC700;
+  }
+  
+  .cup {
+    font-size: 64px; /* Размер шрифта для эмодзи кубка */
+    margin-top: 10px;
+  }
+  
+  .congrat {
+    font-family: 'Inter', sans-serif;
+    font-size: 20px;
+    color: #FFC700;
+    margin-top: 10px;
   }
   
   .back-to-start {
@@ -34,43 +59,11 @@
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    position: absolute;
+    bottom: 64px; /* Отступ от нижней части экрана */
   }
   
   .back-to-start:hover {
     background-color: #5600b4;
-  }
-  
-  /* Стили для случайных эффектов */
-  .effects-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-  }
-  
-  .effect {
-    position: absolute;
-    width: 50px;
-    height: 50px;
-    background-color: #00A811; /* Цвет эффекта */
-    border-radius: 50%;
-    opacity: 0;
-    animation: flash 2s ease-in-out infinite;
-  }
-  
-  @keyframes flash {
-    0% {
-      opacity: 0;
-      transform: scale(0);
-    }
-    50% {
-      opacity: 1;
-      transform: scale(1);
-    }
-    100% {
-      opacity: 0;
-      transform: scale(0);
-    }
   }
   

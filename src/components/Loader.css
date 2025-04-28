@@ -1,0 +1,38 @@
+/* Loader.css */
+
+.loader-container {
+  background-color: #282c34;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.loader-bar {
+  width: 2px;
+  height: 200px; /* Высота полосы */
+  background-color: #5f687a; /* Цвет фона полосы */
+  position: relative;
+  overflow: hidden;
+}
+
+.loader-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: #CEDCFF; /* Цвет заполнения */
+  height: 0%;
+  transition: height 0.2s linear; /* Плавное заполнение */
+}
+
+.app-version {
+  position: absolute;
+  bottom: 16px;
+  font-size: 10px;
+  color: #626a87;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+}

@@ -21,20 +21,34 @@ const Loader = () => {
   }, []);
 
   useEffect(() => {
-    const initData = window.Telegram?.WebApp?.initDataUnsafe;
-    if (initData?.user) {
-      const user = {
-        telegramId: initData.user.id,
-        userName: initData.user.username,
-        firstName: initData.user.first_name,
-        lastName: initData.user.last_name,
-        avatar: initData.user.photo_url,
-        numGames: 12, // mock
-        numWins: 4,   // mock
-        stars: 10     // mock
+    let initData = window.Telegram?.WebApp?.initDataUnsafe;
+
+    // Fallback для локальной разработки
+    if (!initData || !initData.user) {
+      console.warn("initData not available, using mock");
+      initData = {
+        user: {
+          id: "local-id",
+          username: "devuser",
+          first_name: "Developer",
+          last_name: "Mode",
+          photo_url: "/media/buddha.svg"
+        }
       };
-      localStorage.setItem('user', JSON.stringify(user));
     }
+
+    const user = {
+      telegramId: initData.user.id,
+      userName: initData.user.username,
+      firstName: initData.user.first_name,
+      lastName: initData.user.last_name,
+      avatar: initData.user.photo_url,
+      numGames: 12,
+      numWins: 4,
+      stars: 10
+    };
+
+    localStorage.setItem('user', JSON.stringify(user));
   }, []);
 
   useEffect(() => {

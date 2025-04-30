@@ -10,7 +10,6 @@ const BOARD_SIZE = 100;
 const WIN_CONDITION = 5;
 const CELL_SIZE_DESKTOP = 60;
 const CELL_SIZE_MOBILE = 40;
-const APP_VERSION = "1.0.4";
 const INITIAL_POSITION = Math.floor(BOARD_SIZE / 2);
 
 const createEmptyBoard = () =>
@@ -233,9 +232,6 @@ const Game = () => {
         )}
       </div>
 
-      <div className="game-version">
-        Версия: {APP_VERSION}
-      </div>
     </div>
   );
 };

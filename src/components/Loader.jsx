@@ -1,9 +1,7 @@
 // Loader.jsx
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import "./Loader.css";
-
-const APP_VERSION = "1.0.4";
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import './Loader.css';
 
 const Loader = () => {
   const navigate = useNavigate();
@@ -18,27 +16,39 @@ const Loader = () => {
         }
         return prev + 1;
       });
-    }, 20); // 100 steps * 20ms = 2000ms = 2s
+    }, 20);
+    return () => clearInterval(interval);
+  }, []);
 
-    const timeout = setTimeout(() => {
-      navigate("/start", { replace: true });
-    }, 2000);
+  useEffect(() => {
+    const initData = window.Telegram?.WebApp?.initDataUnsafe;
+    if (initData?.user) {
+      const user = {
+        telegramId: initData.user.id,
+        userName: initData.user.username,
+        firstName: initData.user.first_name,
+        lastName: initData.user.last_name,
+        avatar: initData.user.photo_url,
+        numGames: 12, // mock
+        numWins: 4,   // mock
+        stars: 10     // mock
+      };
+      localStorage.setItem('user', JSON.stringify(user));
+    }
+  }, []);
 
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timeout);
-    };
-  }, [navigate]);
+  useEffect(() => {
+    if (progress >= 100) {
+      navigate('/start');
+    }
+  }, [progress, navigate]);
 
   return (
-    <div className="loader-container">
+    <div className="loader">
       <div className="loader-bar">
-        <div
-          className="loader-fill"
-          style={{ height: `${progress}%` }}
-        ></div>
+        <div className="loader-progress" style={{ width: `${progress}%` }}></div>
       </div>
-      <div className="app-version">Version {APP_VERSION}</div>
+      <div className="loader-version">v1.0.0</div>
     </div>
   );
 };

@@ -5,38 +5,32 @@ import TopUpModal from './components/TopUpModal';
 import './StartScreen.css';
 
 const StartScreen = () => {
-  const [user, setUser] = useState({
-    firstName: '',
-    lastName: '',
-    avatar: '',
-    numGames: 0,
-    numWins: 0,
-    stars: 0,
-  });
-
+  const [user, setUser] = useState(null);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const mockUser = {
-      firstName: 'John',
-      lastName: 'Doe',
-      avatar: '/media/JohnAva.png',
-      numGames: 12,
-      numWins: 5,
-      stars: 10,
-    };
-
-    setUser(mockUser);
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const parsed = JSON.parse(storedUser);
+      setUser({
+        firstName: parsed.firstName,
+        lastName: parsed.lastName,
+        avatar: parsed.avatar,
+        numGames: 12, // замокано
+        numWins: 5,   // замокано
+        stars: 10     // замокано
+      });
+    }
   }, []);
 
   const screenWidth = window.innerWidth;
   const containerWidth = (screenWidth / 12) * 10;
 
-  const showEndingGames = user.numGames >= 9;
-  const showStarInfo = user.numGames >= 11;
-  const showTopUp = user.numGames >= 11 && user.stars <= 10;
-  const disableStart = user.numGames >= 12 && user.stars < 10;
+  const showEndingGames = user?.numGames >= 9;
+  const showStarInfo = user?.numGames >= 11;
+  const showTopUp = user?.numGames >= 11 && user?.stars <= 10;
+  const disableStart = user?.numGames >= 12 && user?.stars < 10;
 
   const getEndingText = () => {
     if (user.numGames === 11) {
@@ -54,6 +48,8 @@ const StartScreen = () => {
   const handleStartGame = () => {
     navigate('/game');
   };
+
+  if (!user) return null; // или экран загрузки
 
   return (
     <div className="start-screen">

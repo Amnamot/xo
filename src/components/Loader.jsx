@@ -6,6 +6,7 @@ import './Loader.css';
 const Loader = () => {
   const navigate = useNavigate();
   const [progress, setProgress] = useState(0);
+  const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -21,41 +22,50 @@ const Loader = () => {
   }, []);
 
   useEffect(() => {
-    let initData = window.Telegram?.WebApp?.initDataUnsafe;
+    const initDataRaw = window.Telegram?.WebApp?.initData;
 
-    // Fallback для локальной разработки
-    if (!initData || !initData.user) {
-      console.warn("initData not available, using mock");
-      initData = {
-        user: {
-          id: "local-id",
-          username: "devuser",
-          first_name: "Developer",
-          last_name: "Mode",
-          photo_url: "/media/buddha.svg"
-        }
+    if (!initDataRaw) {
+      console.warn("initData is missing, using mock");
+      const mockUser = {
+        telegramId: "local-id",
+        userName: "devuser",
+        firstName: "Developer",
+        lastName: "Mode",
+        avatar: "/media/buddha.svg",
+        numGames: 12,
+        numWins: 4,
+        stars: 10
       };
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      setAuthorized(true);
+      return;
     }
 
-    const user = {
-      telegramId: initData.user.id,
-      userName: initData.user.username,
-      firstName: initData.user.first_name,
-      lastName: initData.user.last_name,
-      avatar: initData.user.photo_url,
-      numGames: 12,
-      numWins: 4,
-      stars: 10
-    };
-
-    localStorage.setItem('user', JSON.stringify(user));
+    fetch("https://api.igra.top/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ initData: initDataRaw })
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to authorize");
+        return res.json();
+      })
+      .then((user) => {
+        localStorage.setItem("user", JSON.stringify(user));
+        setAuthorized(true);
+      })
+      .catch((err) => {
+        console.error("Authorization error:", err);
+      });
   }, []);
 
   useEffect(() => {
-    if (progress >= 100) {
+    if (progress >= 100 && authorized) {
       navigate('/start');
     }
-  }, [progress, navigate]);
+  }, [progress, authorized, navigate]);
 
   return (
     <div className="loader">

@@ -12,15 +12,12 @@ const StartScreen = () => {
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      const parsed = JSON.parse(storedUser);
-      setUser({
-        firstName: parsed.firstName,
-        lastName: parsed.lastName,
-        avatar: parsed.avatar,
-        numGames: 12, // замокано
-        numWins: 5,   // замокано
-        stars: 10     // замокано
-      });
+      try {
+        const parsed = JSON.parse(storedUser);
+        setUser(parsed);
+      } catch (error) {
+        console.error("Failed to parse user from localStorage", error);
+      }
     }
   }, []);
 
@@ -49,7 +46,7 @@ const StartScreen = () => {
     navigate('/game');
   };
 
-  if (!user) return null; // или экран загрузки
+  if (!user) return null; // можно заменить на <Loader /> при желании
 
   return (
     <div className="start-screen">

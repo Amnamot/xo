@@ -76,7 +76,7 @@ const Loader = () => {
       <div className="loader-bar">
         <div className="loader-progress" style={{ width: `${progress}%` }}></div>
       </div>
-      <div className="loader-version">v1.0.1</div>
+      <div className="loader-version">v1.0.2</div>
     </div>
   );
 };

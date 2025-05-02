@@ -75,8 +75,10 @@ const Game = () => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [touchStart, setTouchStart] = useState(null);
   const [initialDistance, setInitialDistance] = useState(null);
-  const [moveTimer, setMoveTimer] = useState(2400); // 24 секунды на ход
-  const [time, setTime] = useState(0); // Общее время игры
+  const [moveStartTime, setMoveStartTime] = useState(null);
+  const [gameStartTime, setGameStartTime] = useState(null);
+  const [moveTimer, setMoveTimer] = useState(2400);
+  const [time, setTime] = useState(0);
   const boardRef = useRef(null);
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
@@ -93,30 +95,33 @@ const Game = () => {
   }, []);
 
   useEffect(() => {
-    if (boardRef.current) {
-      boardRef.current.style.transform = `translate(-50%, -50%) translate(${position.x}px, ${position.y}px) scale(${scale})`;
-    }
-  }, [position, scale]);
+    if (moveStartTime === null || gameStartTime === null) return;
 
-  useEffect(() => {
     const moveInterval = setInterval(() => {
-      setMoveTimer((prev) => Math.max(prev - 10, 0));
-    }, 10);
+      const elapsed = Date.now() - moveStartTime;
+      setMoveTimer(Math.max(2400 - Math.floor(elapsed / 10), 0));
+    }, 100);
     return () => clearInterval(moveInterval);
-  }, []);
+  }, [moveStartTime]);
 
   useEffect(() => {
-    const timeInterval = setInterval(() => {
-      setTime((prev) => prev + 1);
+    if (gameStartTime === null) return;
+
+    const interval = setInterval(() => {
+      const elapsedSeconds = Math.floor((Date.now() - gameStartTime) / 1000);
+      setTime(elapsedSeconds);
     }, 1000);
-    return () => clearInterval(timeInterval);
-  }, []);
+    return () => clearInterval(interval);
+  }, [gameStartTime]);
 
   useEffect(() => {
     if (moveTimer === 0) {
-      navigate("/lost", { replace: true, state: { lostAvatar: "/media/lostAva.png", lostName: "John" } });
+      navigate("/lost", {
+        replace: true,
+        state: { lostAvatar: "/media/lostAva.png", lostName: "John", time }
+      });
     }
-  }, [moveTimer, navigate]);
+  }, [moveTimer, navigate, time]);
 
   const handleTouchStart = (e) => {
     if (e.touches.length === 1) {
@@ -157,7 +162,7 @@ const Game = () => {
   const visibleCells = board.length ? getVisibleCells(board) : new Set();
 
   const handleCellClick = (row, col) => {
-    if (!visibleCells.has(`${row}-${col}`)) return;
+    if (!visibleCells.has(`${row}-${col}`) || winLine) return;
     const newBoard = board.map((r) => [...r]);
     newBoard[row][col] = currentPlayer;
     setBoard(newBoard);
@@ -169,16 +174,31 @@ const Game = () => {
       }, 200);
       setTimeout(() => {
         if (currentPlayer === "X") {
-          navigate("/end", { replace: true, state: { winnerAvatar: "/media/JohnAva.png", winnerName: "John" } });
+          navigate("/end", {
+            replace: true,
+            state: { winnerAvatar: "/media/JohnAva.png", winnerName: "John", time }
+          });
         } else {
-          navigate("/lost", { replace: true, state: { lostAvatar: "/media/buddha.svg", lostName: "Marina" } });
+          navigate("/lost", {
+            replace: true,
+            state: { lostAvatar: "/media/buddha.svg", lostName: "Marina", time }
+          });
         }
       }, 1500);
     } else {
       setCurrentPlayer(currentPlayer === "X" ? "O" : "X");
-      setMoveTimer(2400); // Сброс таймера на 24 секунды при смене хода
+      setMoveStartTime(Date.now());
     }
   };
+
+  // 🔄 Симуляция прихода соперника через WebSocket (заглушка)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setGameStartTime(Date.now());
+      setMoveStartTime(Date.now());
+    }, 2000); // через 2 секунды считаем, что соперник подключился
+    return () => clearTimeout(timer);
+  }, []);
 
   const calculateWinLineStyle = () => {
     if (!winLine) return {};
@@ -231,7 +251,6 @@ const Game = () => {
           <div className="win-line" style={calculateWinLineStyle()} />
         )}
       </div>
-
     </div>
   );
 };

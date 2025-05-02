@@ -1,4 +1,3 @@
-// EndGame.jsx
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./EndGame.css";
@@ -9,13 +8,9 @@ const EndGame = () => {
   const location = useLocation();
   const { winnerAvatar, winnerName } = location.state || {};
 
-  // ✅ Подстраховка — если нет winnerAvatar, пробуем взять из Telegram WebApp
+  // ✅ Если avatar не передан — берём из Telegram initData
   const fallbackAvatar = window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url || "/media/JohnAva.png";
   const avatarSrc = winnerAvatar || fallbackAvatar;
-
-  if (!avatarSrc) {
-    return <div>Error: No winner data</div>;
-  }
 
   const handleBackToStart = () => {
     navigate("/", { replace: true });

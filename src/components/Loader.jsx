@@ -41,7 +41,7 @@ const Loader = () => {
       return;
     }
 
-    fetch("https://api.igra.top/users", {
+    fetch("https://api.igra.top/user/init", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

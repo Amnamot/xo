@@ -14,6 +14,15 @@ const StartScreen = () => {
     if (storedUser) {
       try {
         const parsed = JSON.parse(storedUser);
+
+        // ✅ подстраховка: если нет аватара — пробуем взять из Telegram WebApp
+        if (!parsed.avatar) {
+          const tgPhoto = window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url;
+          if (tgPhoto) {
+            parsed.avatar = tgPhoto;
+          }
+        }
+
         setUser(parsed);
       } catch (error) {
         console.error("Failed to parse user from localStorage", error);
@@ -46,7 +55,7 @@ const StartScreen = () => {
     navigate('/game');
   };
 
-  if (!user) return null; // можно заменить на <Loader /> при желании
+  if (!user) return null;
 
   return (
     <div className="start-screen">

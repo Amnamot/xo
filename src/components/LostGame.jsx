@@ -7,7 +7,9 @@ const LostGame = () => {
   const location = useLocation();
   const { lostAvatar, lostName } = location.state || {};
 
-  const avatarSrc = lostAvatar || "/media/buddha.svg"; // ✅ Если нет аватарки, используем buddha.svg
+  // ✅ Подстраховка — берём аватар из initData, если не передан
+  const fallbackAvatar = window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url || "/media/buddha.svg";
+  const avatarSrc = lostAvatar || fallbackAvatar;
 
   const handleBackToStart = () => {
     navigate("/", { replace: true });

@@ -53,6 +53,10 @@ const Loader = () => {
         return res.json();
       })
       .then((user) => {
+        const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        if (tgUser?.photo_url) {
+          user.avatar = tgUser.photo_url; // ✅ подставляем сразу аватар Telegram
+        }
         localStorage.setItem("user", JSON.stringify(user));
         setAuthorized(true);
       })

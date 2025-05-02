@@ -25,7 +25,10 @@ const GameHeader = ({ currentPlayer, moveTimer, time, opponentAvatar }) => {
     return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
 
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  // ✅ Берём данные текущего игрока из Telegram initData
+  const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  const userAvatar = tgUser?.photo_url || "/media/JohnAva.png";
+  const userName = tgUser?.first_name || "You";
 
   return (
     <>
@@ -35,8 +38,8 @@ const GameHeader = ({ currentPlayer, moveTimer, time, opponentAvatar }) => {
 
       <div className="gameplayers">
         <div className="gamer1">
-          <img className="avagamer1" src={user.avatar || "/media/JohnAva.png"} alt="Player 1" />
-          <div className="namegamer1">{user.firstName || "You"}</div>
+          <img className="avagamer1" src={userAvatar} alt="Player 1" />
+          <div className="namegamer1">{userName}</div>
         </div>
 
         <div className="times">

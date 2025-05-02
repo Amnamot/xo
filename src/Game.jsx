@@ -118,7 +118,7 @@ const Game = () => {
     if (moveTimer === 0) {
       navigate("/lost", {
         replace: true,
-        state: { lostAvatar: "/media/lostAva.png", lostName: "John", time }
+        state: { time } // ❗ передаём только время
       });
     }
   }, [moveTimer, navigate, time]);
@@ -176,12 +176,12 @@ const Game = () => {
         if (currentPlayer === "X") {
           navigate("/end", {
             replace: true,
-            state: { winnerAvatar: "/media/JohnAva.png", winnerName: "John", time }
+            state: { time } // ❗ передаём только время
           });
         } else {
           navigate("/lost", {
             replace: true,
-            state: { lostAvatar: "/media/buddha.svg", lostName: "Marina", time }
+            state: { time }
           });
         }
       }, 1500);

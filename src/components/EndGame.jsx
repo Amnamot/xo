@@ -1,16 +1,15 @@
 import React from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "./EndGame.css";
 import WinEffect from "./WinEffect";
 
 const EndGame = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { winnerAvatar, winnerName } = location.state || {};
 
-  // ✅ Если avatar не передан — берём из Telegram initData
-  const fallbackAvatar = window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url || "/media/JohnAva.png";
-  const avatarSrc = winnerAvatar || fallbackAvatar;
+  // ✅ Всегда берём аватарку из initData
+  const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  const avatarSrc = user?.photo_url || "/media/JohnAva.png";
+  const userName = user?.first_name || "You";
 
   const handleBackToStart = () => {
     navigate("/", { replace: true });
@@ -23,7 +22,7 @@ const EndGame = () => {
       <div className="winner-info">
         <h1 className="gameoverwin">GAME OVER</h1>
         <img className="winner-avatar" src={avatarSrc} alt="Winner Avatar" />
-        <h2 className="youwin">{winnerName || "You"} wins!</h2>
+        <h2 className="youwin">{userName} wins!</h2>
         <div className="cup">🏆</div>
         <p className="congrat">Congratulations!</p>
       </div>

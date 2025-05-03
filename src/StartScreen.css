@@ -155,3 +155,94 @@
 .topup:active {
   background-color: rgba(255, 179, 35, 0.5);
 }
+
+/* Приглашение: модальное окно */
+.invite-preview {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 360px;
+  background: rgba(40, 44, 52, 0.95);
+  border: 1px solid #CEDCFF;
+  border-radius: 12px;
+  padding: 16px;
+  color: #CEDCFF;
+  font-size: 16px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.invite-preview .title {
+  font-weight: bold;
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.invite-preview .link {
+  margin-top: 12px;
+  word-break: break-word;
+  color: #FFB323;
+  font-size: 14px;
+}
+
+/* Модалка */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.modal h3 {
+  margin-bottom: 12px;
+  font-size: 1.2rem;
+}
+
+.modal p {
+  margin: 12px 0;
+  font-size: 1rem;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.button-cancel,
+.button-confirm {
+  flex: 1;
+  margin: 0 5px;
+  padding: 10px 0;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.button-cancel {
+  background-color: #ccc;
+  color: black;
+}
+
+.button-confirm {
+  background-color: #0088cc;
+  color: white;
+}

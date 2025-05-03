@@ -24,6 +24,10 @@ const Loader = () => {
   useEffect(() => {
     const initDataRaw = window.Telegram?.WebApp?.initData;
 
+    if (initDataRaw) {
+      localStorage.setItem("initData", initDataRaw); // ✅ сохраняем initData для отладки
+    }
+
     if (!initDataRaw) {
       console.warn("initData is missing, using mock");
       const mockUser = {

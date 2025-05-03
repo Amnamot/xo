@@ -22,10 +22,14 @@ const Loader = () => {
   }, []);
 
   useEffect(() => {
-    const initDataRaw = window.Telegram?.WebApp?.initData;
+    let initDataRaw = window.Telegram?.WebApp?.initData;
 
+    // ✅ фильтруем signature, если есть
     if (initDataRaw) {
-      localStorage.setItem("initData", initDataRaw); // ✅ сохраняем initData для отладки
+      const params = new URLSearchParams(initDataRaw);
+      params.delete('signature');
+      initDataRaw = params.toString();
+      localStorage.setItem("initData", initDataRaw);
     }
 
     if (!initDataRaw) {
@@ -59,7 +63,7 @@ const Loader = () => {
       .then((user) => {
         const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
         if (tgUser?.photo_url) {
-          user.avatar = tgUser.photo_url; // ✅ подставляем сразу аватар Telegram
+          user.avatar = tgUser.photo_url;
         }
         localStorage.setItem("user", JSON.stringify(user));
         setAuthorized(true);

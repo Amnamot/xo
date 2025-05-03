@@ -27,6 +27,14 @@ const StartScreen = () => {
         console.error("Failed to parse user from localStorage", error);
       }
     }
+
+    // ✅ логируем initData без signature
+    const rawInitData = window.Telegram?.WebApp?.initData;
+    if (rawInitData) {
+      const clean = new URLSearchParams(rawInitData);
+      clean.delete('signature');
+      console.log("🧾 Clean initData:", clean.toString());
+    }
   }, []);
 
   const screenWidth = window.innerWidth;

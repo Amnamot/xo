@@ -10,7 +10,7 @@
   position: relative; /* Для корректного позиционирования эффекта */
 }
 
-.winner-info {
+.lost-info {
   margin-bottom: 20px;
   display: flex;
   flex-direction: column;

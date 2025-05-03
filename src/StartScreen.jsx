@@ -15,7 +15,6 @@ const StartScreen = () => {
       try {
         const parsed = JSON.parse(storedUser);
 
-        // ✅ подстраховка: если нет аватара — пробуем взять из Telegram WebApp
         if (!parsed.avatar) {
           const tgPhoto = window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url;
           if (tgPhoto) {
@@ -51,8 +50,22 @@ const StartScreen = () => {
     return null;
   };
 
-  const handleStartGame = () => {
-    navigate('/game');
+  const handleStartGame = async () => {
+    try {
+      const response = await fetch("https://api.igra.top/lobby", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({})
+      });
+      const data = await response.json();
+      if (data.lobbyId) {
+        navigate(`/game?invite=${data.lobbyId}`);
+      }
+    } catch (err) {
+      console.error("Ошибка при создании лобби:", err);
+    }
   };
 
   if (!user) return null;

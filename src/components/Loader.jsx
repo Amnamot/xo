@@ -22,19 +22,11 @@ const Loader = () => {
   }, []);
 
   useEffect(() => {
-    let initDataRaw = window.Telegram?.WebApp?.initData;
+    const initDataRaw = window.Telegram?.WebApp?.initData;
 
     // ✅ Логируем initData для отладки
     console.log("🧪 RAW initData:", initDataRaw);
     console.log("🧪 Parsed initDataUnsafe:", window.Telegram?.WebApp?.initDataUnsafe);
-
-    // ✅ фильтруем signature, если есть
-    if (initDataRaw) {
-      const params = new URLSearchParams(initDataRaw);
-      params.delete('signature');
-      initDataRaw = params.toString();
-      localStorage.setItem("initData", initDataRaw);
-    }
 
     if (!initDataRaw) {
       console.warn("initData is missing, using mock");
@@ -58,7 +50,7 @@ const Loader = () => {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ initData: initDataRaw })
+      body: JSON.stringify({ initData: initDataRaw }) // ← как есть
     })
       .then((res) => {
         if (!res.ok) throw new Error("Failed to authorize");

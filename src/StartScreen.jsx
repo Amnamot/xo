@@ -7,7 +7,6 @@ import './StartScreen.css';
 const StartScreen = () => {
   const [user, setUser] = useState(null);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,6 +28,7 @@ const StartScreen = () => {
       }
     }
 
+    // ✅ логируем initData без signature
     const rawInitData = window.Telegram?.WebApp?.initData;
     if (rawInitData) {
       const clean = new URLSearchParams(rawInitData);
@@ -58,13 +58,14 @@ const StartScreen = () => {
     return null;
   };
 
-  const confirmStartGame = async () => {
+  const handleStartGame = async () => {
     try {
-      const initData = window.Telegram?.WebApp?.initData;
       const response = await fetch("https://api.igra.top/lobby", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData })
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({})
       });
       const data = await response.json();
       if (data.lobbyId) {
@@ -73,10 +74,6 @@ const StartScreen = () => {
     } catch (err) {
       console.error("Ошибка при создании лобби:", err);
     }
-  };
-
-  const handleStartGame = () => {
-    setShowPreviewModal(true);
   };
 
   if (!user) return null;
@@ -146,25 +143,6 @@ const StartScreen = () => {
       </div>
 
       {showTopUpModal && <TopUpModal onClose={() => setShowTopUpModal(false)} />}
-
-      {showPreviewModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>Предпросмотр Telegram-сообщения</h3>
-            <img src="/media/invite-preview.png" alt="Preview" style={{ width: '100%', borderRadius: '12px' }} />
-            <p>Пользователь <strong>{user.firstName}</strong> приглашает вас в игру</p>
-            <div className="modal-buttons">
-              <button className="button-cancel" onClick={() => setShowPreviewModal(false)}>Отмена</button>
-              <button className="button-confirm" onClick={() => {
-                setShowPreviewModal(false);
-                confirmStartGame();
-              }}>
-                Отправить
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

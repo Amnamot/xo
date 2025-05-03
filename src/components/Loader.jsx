@@ -24,6 +24,10 @@ const Loader = () => {
   useEffect(() => {
     let initDataRaw = window.Telegram?.WebApp?.initData;
 
+    // ✅ Логируем initData для отладки
+    console.log("🧪 RAW initData:", initDataRaw);
+    console.log("🧪 Parsed initDataUnsafe:", window.Telegram?.WebApp?.initDataUnsafe);
+
     // ✅ фильтруем signature, если есть
     if (initDataRaw) {
       const params = new URLSearchParams(initDataRaw);

@@ -69,9 +69,10 @@ const StartScreen = () => {
       const response = await fetch("https://api.igra.top/lobby/createInvite", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "x-init-data": initData // ✅ теперь initData передаётся в заголовке
         },
-        body: JSON.stringify({ initData })
+        body: JSON.stringify({})
       });
 
       const data = await response.json();

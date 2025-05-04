@@ -60,16 +60,26 @@ const StartScreen = () => {
 
   const handleStartGame = async () => {
     try {
-      const response = await fetch("https://api.igra.top/lobby", {
+      const initData = window.Telegram?.WebApp?.initData;
+      if (!initData) {
+        alert("initData not found");
+        return;
+      }
+
+      const response = await fetch("https://api.igra.top/lobby/createInvite", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({})
+        body: JSON.stringify({ initData })
       });
+
       const data = await response.json();
       if (data.lobbyId) {
-        navigate(`/game?invite=${data.lobbyId}`);
+        // Открываем канал Telegram с сообщением-приглашением
+        window.Telegram?.WebApp?.openTelegramLink("https://t.me/tactictoeinvites");
+      } else {
+        alert("Ошибка при создании лобби");
       }
     } catch (err) {
       console.error("Ошибка при создании лобби:", err);

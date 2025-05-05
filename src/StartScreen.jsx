@@ -1,4 +1,4 @@
-// src/StartScreen.jsx v3
+// src/StartScreen.jsx v4
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
@@ -78,7 +78,6 @@ const StartScreen = () => {
       console.log("🔵 Ответ от сервера:", data);
       if (typeof data.messageId !== 'undefined') {
         window.Telegram?.WebApp?.shareMessage({
-          chat_id: -1002654297071,
           message_id: data.messageId,
         });
       } else {

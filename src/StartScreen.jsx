@@ -1,4 +1,4 @@
-// StartScreen.jsx v1
+// StartScreen.jsx v2
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
@@ -70,18 +70,20 @@ const StartScreen = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-init-data": initData // ✅ теперь initData передаётся в заголовке
+          "x-init-data": initData
         },
         body: JSON.stringify({})
       });
 
-      // const data = await response.json();
-      // if (data.lobbyId) {
-      //   // Открываем канал Telegram с сообщением-приглашением
-      //   window.Telegram?.WebApp?.openTelegramLink("https://t.me/tactictoeinvites");
-      // } else {
-      //   alert("Ошибка при создании лобби");
-      // }
+      const data = await response.json();
+      if (data.messageId) {
+        window.Telegram?.WebApp?.shareMessage({
+          chat_id: -1002654297071,
+          message_id: data.messageId,
+        });
+      } else {
+        alert("Ошибка при создании лобби");
+      }
     } catch (err) {
       console.error("Ошибка при создании лобби:", err);
     }

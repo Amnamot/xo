@@ -1,4 +1,4 @@
-// StartScreen.jsx v2
+// src/StartScreen.jsx v3
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
@@ -28,7 +28,6 @@ const StartScreen = () => {
       }
     }
 
-    // ✅ логируем initData без signature
     const rawInitData = window.Telegram?.WebApp?.initData;
     if (rawInitData) {
       const clean = new URLSearchParams(rawInitData);
@@ -76,7 +75,8 @@ const StartScreen = () => {
       });
 
       const data = await response.json();
-      if (data.messageId) {
+      console.log("🔵 Ответ от сервера:", data);
+      if (typeof data.messageId !== 'undefined') {
         window.Telegram?.WebApp?.shareMessage({
           chat_id: -1002654297071,
           message_id: data.messageId,

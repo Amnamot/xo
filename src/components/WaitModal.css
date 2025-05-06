@@ -1,0 +1,46 @@
+/* src/components/WaitModal.jsx v1 */
+.waitFrame {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.65);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+  }
+  
+  .waitText {
+    font-family: 'Inter', sans-serif;
+    font-size: 22px;
+    color: #ffffff;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  
+  .waitTimer {
+    font-family: 'Atkinson Hyperlegible Mono', sans-serif;
+    font-size: 36px;
+    color: #ffd700;
+    margin-bottom: 24px;
+  }
+  
+  .waitButton {
+    padding: 12px 32px;
+    font-size: 18px;
+    font-weight: bold;
+    background-color: #e53935;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  
+  .waitButton:hover {
+    background-color: #d32f2f;
+  }
+  

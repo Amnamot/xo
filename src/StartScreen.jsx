@@ -1,4 +1,5 @@
-// src/StartScreen.jsx v8
+// src/StartScreen.jsx v9
+import WaitModal from '../components/WaitModal';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
@@ -7,6 +8,7 @@ import './StartScreen.css';
 const StartScreen = () => {
   const [user, setUser] = useState(null);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
+  const [showWaitModal, setShowWaitModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,6 +37,21 @@ const StartScreen = () => {
       console.log("🧾 Clean initData:", clean.toString());
     }
   }, []);
+
+  const handleCancelLobby = async () => {
+    try {
+      await fetch("https://api.igra.top/lobby/cancel", {
+        method: "DELETE",
+        headers: {
+          "x-init-data": initData,
+        },
+      });
+    } catch (error) {
+      console.error("Ошибка при удалении лобби:", error);
+    } finally {
+      setShowWaitModal(false);
+    }
+  };
 
   const screenWidth = window.innerWidth;
   const containerWidth = (screenWidth / 12) * 10;
@@ -65,7 +82,6 @@ const StartScreen = () => {
         return;
       }
 
-      // 1. Создаём лобби
       await fetch("https://api.igra.top/lobby/createLobby", {
         method: "POST",
         headers: {
@@ -75,10 +91,8 @@ const StartScreen = () => {
         body: JSON.stringify({})
       });
 
-      // 2. Даём Redis время на запись
       await new Promise(res => setTimeout(res, 200));
 
-      // 3. Получаем messageId
       const response = await fetch("https://api.igra.top/lobby/createInvite", {
         method: "POST",
         headers: {
@@ -91,7 +105,8 @@ const StartScreen = () => {
       const data = await response.json();
       console.log("🔵 Ответ от сервера:", data);
       if (typeof data.messageId !== 'undefined') {
-        window.Telegram?.WebApp?.shareMessage(data.messageId); // ✅ как в Dice
+        window.Telegram?.WebApp?.shareMessage(data.messageId);
+        setShowWaitModal(true);
       } else {
         alert("Ошибка при создании лобби");
       }
@@ -104,6 +119,7 @@ const StartScreen = () => {
 
   return (
     <div className="start-screen">
+      {showWaitModal && <WaitModal onCancel={handleCancelLobby} />}
       <div className="top-logo">
         <img src="/media/3tICO.svg" width={128} alt="Logo" />
       </div>

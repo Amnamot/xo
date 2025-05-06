@@ -1,5 +1,5 @@
-// src/App.jsx v1
-import React from "react";
+// src/App.jsx v2
+import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Loader from "./components/Loader";
 import StartScreen from "./StartScreen";
@@ -8,6 +8,12 @@ import EndGame from "./components/EndGame";
 import LostGame from "./components/LostGame";
 
 const App = () => {
+  useEffect(() => {
+    if (window.Telegram?.WebApp) {
+      window.Telegram.WebApp.ready();
+    }
+  }, []);
+
   return (
     <Router>
       <Routes>

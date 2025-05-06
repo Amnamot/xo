@@ -19,6 +19,7 @@
     color: #ffffff;
     margin-bottom: 16px;
     text-align: center;
+    max-width: 80vw;
   }
   
   .waitTimer {

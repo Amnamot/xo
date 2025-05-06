@@ -1,4 +1,4 @@
-// src/StartScreen.jsx v7
+// src/StartScreen.jsx v8
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
@@ -65,6 +65,20 @@ const StartScreen = () => {
         return;
       }
 
+      // 1. Создаём лобби
+      await fetch("https://api.igra.top/lobby/createLobby", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-init-data": initData
+        },
+        body: JSON.stringify({})
+      });
+
+      // 2. Даём Redis время на запись
+      await new Promise(res => setTimeout(res, 200));
+
+      // 3. Получаем messageId
       const response = await fetch("https://api.igra.top/lobby/createInvite", {
         method: "POST",
         headers: {

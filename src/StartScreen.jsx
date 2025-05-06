@@ -1,14 +1,15 @@
 // src/StartScreen.jsx v9
+import WaitModal from './components/WaitModal';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
-import WaitModal from './components/WaitModal';
 import './StartScreen.css';
 
 const StartScreen = () => {
   const [user, setUser] = useState(null);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
   const [showWaitModal, setShowWaitModal] = useState(false);
+  const initData = window.Telegram?.WebApp?.initData;
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -76,7 +77,6 @@ const StartScreen = () => {
 
   const handleStartGame = async () => {
     try {
-      const initData = window.Telegram?.WebApp?.initData;
       if (!initData) {
         alert("initData not found");
         return;

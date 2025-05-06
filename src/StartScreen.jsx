@@ -3,6 +3,7 @@ import WaitModal from '../components/WaitModal';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
+import WaitModal from './components/WaitModal';
 import './StartScreen.css';
 
 const StartScreen = () => {

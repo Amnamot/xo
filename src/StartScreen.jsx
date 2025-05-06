@@ -1,4 +1,4 @@
-// src/StartScreen.jsx v6
+// src/StartScreen.jsx v7
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';

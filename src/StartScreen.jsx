@@ -1,4 +1,4 @@
-// src/StartScreen.jsx v4
+// src/StartScreen.jsx v5
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
@@ -77,9 +77,7 @@ const StartScreen = () => {
       const data = await response.json();
       console.log("🔵 Ответ от сервера:", data);
       if (typeof data.messageId !== 'undefined') {
-        window.Telegram?.WebApp?.shareMessage({
-          message_id: data.messageId,
-        });
+        window.Telegram?.WebApp?.shareMessage(data.messageId); // ✅ как в Dice
       } else {
         alert("Ошибка при создании лобби");
       }

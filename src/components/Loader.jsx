@@ -1,4 +1,4 @@
-// src/components/Loader.jsx v3
+// src/components/Loader.jsx v4
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Loader.css';
@@ -83,6 +83,7 @@ const Loader = () => {
         if (!initData) {
           console.warn("No initData during lobby join. Aborting.");
           localStorage.removeItem("lobbyIdToJoin");
+          console.log("⚠️ Lobby not found or join failed. Redirecting to /nolobby");
           navigate("/nolobby");
           return;
         }
@@ -98,13 +99,17 @@ const Loader = () => {
           .then((res) => {
             localStorage.removeItem("lobbyIdToJoin");
             if (res.ok) {
+              console.log("✅ Lobby join successful");
               navigate("/game");
             } else {
+              console.log("⚠️ Lobby not found or join failed. Redirecting to /nolobby");
               navigate("/nolobby");
             }
           })
-          .catch(() => {
+          .catch((err) => {
+            console.warn("🔥 Fetch error during lobby join:", err);
             localStorage.removeItem("lobbyIdToJoin");
+            console.log("⚠️ Lobby not found or join failed. Redirecting to /nolobby");
             navigate("/nolobby");
           });
       } else {

@@ -1,5 +1,5 @@
-// src/components/Loss.jsx
-import React from 'react';
+// src/components/Loss.jsx v1
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Loss.css';
 import logo from '../media/TiTaTo.svg';
@@ -7,6 +7,10 @@ import lossGif from '../media/Loss.gif';
 
 const Loss = () => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    console.log("📺 Loss screen mounted");
+  }, []);
 
   const handleClick = () => {
     navigate('/start');

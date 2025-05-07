@@ -1,4 +1,4 @@
-// src/components/Loader.jsx v1
+// src/components/Loader.jsx v2
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Loader.css';
@@ -23,8 +23,12 @@ const Loader = () => {
 
   useEffect(() => {
     const initDataRaw = window.Telegram?.WebApp?.initData;
+    const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
 
-    // ✅ Логируем initData для отладки
+    if (startParam) {
+      localStorage.setItem("lobbyIdToJoin", startParam);
+    }
+
     console.log("🧪 RAW initData:", initDataRaw);
     console.log("🧪 Parsed initDataUnsafe:", window.Telegram?.WebApp?.initDataUnsafe);
 
@@ -50,7 +54,7 @@ const Loader = () => {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ initData: initDataRaw }) // ← как есть
+      body: JSON.stringify({ initData: initDataRaw })
     })
       .then((res) => {
         if (!res.ok) throw new Error("Failed to authorize");
@@ -71,7 +75,33 @@ const Loader = () => {
 
   useEffect(() => {
     if (progress >= 100 && authorized) {
-      navigate('/start');
+      const lobbyId = localStorage.getItem("lobbyIdToJoin");
+
+      if (lobbyId) {
+        const initData = window.Telegram?.WebApp?.initData;
+        fetch("https://api.igra.top/lobby/join", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-init-data": initData
+          },
+          body: JSON.stringify({ lobbyId })
+        })
+          .then((res) => {
+            localStorage.removeItem("lobbyIdToJoin");
+            if (res.ok) {
+              navigate("/game");
+            } else {
+              navigate("/nolobby");
+            }
+          })
+          .catch(() => {
+            localStorage.removeItem("lobbyIdToJoin");
+            navigate("/nolobby");
+          });
+      } else {
+        navigate("/start");
+      }
     }
   }, [progress, authorized, navigate]);
 

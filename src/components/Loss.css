@@ -1,0 +1,41 @@
+/* src/components/Loss.css */
+.loss {
+    background-color: #DADADA;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+  }
+  
+  .titato {
+    margin-top: 30px;
+    display: flex;
+    justify-content: center;
+    max-width: 40vw;
+  }
+  
+  .losst1 {
+    font-family: 'Inter', sans-serif;
+    font-size: 24px;
+    color: #182533;
+    margin-top: 30px;
+    text-align: center;
+  }
+  
+  .losst2 {
+    font-family: 'Inter', sans-serif;
+    font-size: 18px;
+    color: #182533;
+    margin-top: 30px;
+    text-align: center;
+  }
+  
+  .gif {
+    width: 100%;
+    position: absolute;
+    bottom: 0;
+  }
+  

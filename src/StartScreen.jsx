@@ -19,7 +19,7 @@ const StartScreen = () => {
 
   useEffect(() => {
     const mockUser = {
-      firstName: 'John',
+      firstName: 'Aimesh',
       lastName: 'Doe',
       avatar: '/media/JohnAva.png',
       numGames: 12,

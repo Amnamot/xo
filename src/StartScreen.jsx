@@ -82,7 +82,7 @@ const StartScreen = () => {
         return;
       }
 
-      await fetch("https://api.igra.top/lobby/createLobby", {
+      await fetch("https://api.igra.top/lobby/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

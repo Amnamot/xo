@@ -1,4 +1,4 @@
-// src/components/Loader.jsx v2
+// src/components/Loader.jsx v3
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Loader.css';
@@ -33,7 +33,7 @@ const Loader = () => {
     console.log("🧪 Parsed initDataUnsafe:", window.Telegram?.WebApp?.initDataUnsafe);
 
     if (!initDataRaw) {
-      console.warn("initData is missing, using mock");
+      console.warn("initData is missing or invalid. Running mock mode.");
       const mockUser = {
         telegramId: "local-id",
         userName: "devuser",
@@ -70,8 +70,9 @@ const Loader = () => {
       })
       .catch((err) => {
         console.error("Authorization error:", err);
+        navigate("/start");
       });
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     if (progress >= 100 && authorized) {
@@ -79,6 +80,13 @@ const Loader = () => {
 
       if (lobbyId) {
         const initData = window.Telegram?.WebApp?.initData;
+        if (!initData) {
+          console.warn("No initData during lobby join. Aborting.");
+          localStorage.removeItem("lobbyIdToJoin");
+          navigate("/nolobby");
+          return;
+        }
+
         fetch("https://api.igra.top/lobby/join", {
           method: "POST",
           headers: {
@@ -110,7 +118,7 @@ const Loader = () => {
       <div className="loader-bar">
         <div className="loader-progress" style={{ width: `${progress}%` }}></div>
       </div>
-      <div className="loader-version">v1.0.2</div>
+      <div className="loader-version">v1.0.3</div>
     </div>
   );
 };

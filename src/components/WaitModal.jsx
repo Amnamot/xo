@@ -1,4 +1,4 @@
-// src/components/WaitModal.jsx v4
+// src/components/WaitModal.jsx v5
 import React, { useEffect, useState } from 'react';
 import './WaitModal.css';
 
@@ -15,6 +15,10 @@ const WaitModal = ({ onCancel }) => {
     })
       .then((res) => {
         if (!res.ok) throw new Error("Bad response");
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          throw new Error("Invalid content-type");
+        }
         return res.json();
       })
       .then((data) => {

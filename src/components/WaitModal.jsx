@@ -1,4 +1,4 @@
-// src/components/WaitModal.jsx v3
+// src/components/WaitModal.jsx v4
 import React, { useEffect, useState } from 'react';
 import './WaitModal.css';
 
@@ -13,7 +13,10 @@ const WaitModal = ({ onCancel }) => {
         "x-init-data": initData
       }
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Bad response");
+        return res.json();
+      })
       .then((data) => {
         if (typeof data.timeLeft === "number") {
           setSecondsLeft(data.timeLeft);

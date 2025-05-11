@@ -6,7 +6,11 @@ const WaitModal = ({ onCancel }) => {
   const [secondsLeft, setSecondsLeft] = useState(180);
 
   useEffect(() => {
-    fetch("/lobby/timeleft")
+    fetch("/lobby/timeleft", {
+      headers: {
+        "x-init-data": window.Telegram?.WebApp?.initData
+      }
+    })
       .then((res) => res.json())
       .then((data) => {
         if (typeof data.timeLeft === "number") {

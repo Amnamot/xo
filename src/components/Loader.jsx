@@ -1,49 +1,131 @@
-// src/components/Loader.jsx v5
-
+// src/components/Loader.jsx v4
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { WebApp } from '@twa-dev/sdk';
-import { upsertUser } from '../api';
-import { getUserFromInitData } from '../utils';
+import './Loader.css';
 
 const Loader = () => {
   const navigate = useNavigate();
+  const [progress, setProgress] = useState(0);
+  const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    const init = async () => {
-      const initData = WebApp.initData;
-      const user = getUserFromInitData(initData);
-      await upsertUser(user);
-
-      const params = new URLSearchParams(window.location.search);
-      const lobbyId = params.get('startapp');
-
-      if (lobbyId) {
-        try {
-          const res = await fetch(`/lobby/join?lobbyId=${lobbyId}`);
-          const data = await res.json();
-
-          if (data.status === 'creator') {
-            navigate('/wait');
-          } else if (data.status === 'joined') {
-            navigate('/game');
-          } else if (data.status === 'not_found') {
-            navigate('/nolobby');
-          } else {
-            navigate('/loss');
-          }
-        } catch (e) {
-          navigate('/loss');
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          return 100;
         }
-      } else {
-        navigate('/start');
-      }
-    };
+        return prev + 1;
+      });
+    }, 20);
+    return () => clearInterval(interval);
+  }, []);
 
-    init();
+  useEffect(() => {
+    const initDataRaw = window.Telegram?.WebApp?.initData;
+    const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+
+    if (startParam) {
+      localStorage.setItem("lobbyIdToJoin", startParam);
+    }
+
+    console.log("🧪 RAW initData:", initDataRaw);
+    console.log("🧪 Parsed initDataUnsafe:", window.Telegram?.WebApp?.initDataUnsafe);
+
+    if (!initDataRaw) {
+      console.warn("initData is missing or invalid. Running mock mode.");
+      const mockUser = {
+        telegramId: "local-id",
+        userName: "devuser",
+        firstName: "Developer",
+        lastName: "Mode",
+        avatar: "/media/buddha.svg",
+        numGames: 12,
+        numWins: 4,
+        stars: 10
+      };
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      setAuthorized(true);
+      return;
+    }
+
+    fetch("https://api.igra.top/user/init", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ initData: initDataRaw })
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to authorize");
+        return res.json();
+      })
+      .then((user) => {
+        const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        if (tgUser?.photo_url) {
+          user.avatar = tgUser.photo_url;
+        }
+        localStorage.setItem("user", JSON.stringify(user));
+        setAuthorized(true);
+      })
+      .catch((err) => {
+        console.error("Authorization error:", err);
+        navigate("/start");
+      });
   }, [navigate]);
 
-  return null;
+  useEffect(() => {
+    if (progress >= 100 && authorized) {
+      const lobbyId = localStorage.getItem("lobbyIdToJoin");
+
+      if (lobbyId) {
+        const initData = window.Telegram?.WebApp?.initData;
+        if (!initData) {
+          console.warn("No initData during lobby join. Aborting.");
+          localStorage.removeItem("lobbyIdToJoin");
+          console.log("⚠️ Lobby not found or join failed. Redirecting to /nolobby");
+          navigate("/nolobby");
+          return;
+        }
+
+        fetch("https://api.igra.top/lobby/join", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-init-data": initData
+          },
+          body: JSON.stringify({ lobbyId })
+        })
+          .then((res) => {
+            localStorage.removeItem("lobbyIdToJoin");
+            if (res.ok) {
+              console.log("✅ Lobby join successful");
+              navigate("/game");
+            } else {
+              console.log("⚠️ Lobby not found or join failed. Redirecting to /nolobby");
+              navigate("/nolobby");
+            }
+          })
+          .catch((err) => {
+            console.warn("🔥 Fetch error during lobby join:", err);
+            localStorage.removeItem("lobbyIdToJoin");
+            console.log("⚠️ Lobby not found or join failed. Redirecting to /nolobby");
+            navigate("/nolobby");
+          });
+      } else {
+        navigate("/start");
+      }
+    }
+  }, [progress, authorized, navigate]);
+
+  return (
+    <div className="loader">
+      <div className="loader-bar">
+        <div className="loader-progress" style={{ width: `${progress}%` }}></div>
+      </div>
+      <div className="loader-version">v1.0.3</div>
+    </div>
+  );
 };
 
 export default Loader;

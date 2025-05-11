@@ -1,4 +1,4 @@
-// src/components/Loader.jsx v4
+// src/components/Loader.jsx v5
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Loader.css';
@@ -99,8 +99,15 @@ const Loader = () => {
           .then((res) => {
             localStorage.removeItem("lobbyIdToJoin");
             if (res.ok) {
-              console.log("✅ Lobby join successful");
-              navigate("/game");
+              res.json().then((data) => {
+                if (data.status === 'creator') {
+                  localStorage.setItem("showWaitModal", "true");
+                  navigate("/start");
+                } else {
+                  console.log("✅ Lobby join successful");
+                  navigate("/game");
+                }
+              });
             } else {
               console.log("⚠️ Lobby not found or join failed. Redirecting to /nolobby");
               navigate("/nolobby");

@@ -1,4 +1,4 @@
-// src/StartScreen.jsx v9
+// src/StartScreen.jsx v10
 import WaitModal from './components/WaitModal';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -13,6 +13,12 @@ const StartScreen = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    const shouldShow = localStorage.getItem("showWaitModal") === "true";
+    if (shouldShow) {
+      setShowWaitModal(true);
+      localStorage.removeItem("showWaitModal");
+    }
+
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       try {

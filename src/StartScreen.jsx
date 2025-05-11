@@ -46,13 +46,12 @@ const StartScreen = () => {
   }, []);
 
   const handleCancelLobby = async () => {
-    const lobbyId = localStorage.getItem("lobbyIdToJoin");
-    const user = JSON.parse(localStorage.getItem("user"));
     try {
       await fetch("https://api.igra.top/lobby/cancel", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lobbyId, telegramId: user?.telegramId })
+        headers: {
+          "x-init-data": initData,
+        },
       });
     } catch (error) {
       console.error("Ошибка при удалении лобби:", error);
@@ -83,6 +82,7 @@ const StartScreen = () => {
   };
 
   const handleStartGame = async () => {
+    if (localStorage.getItem("lobbyIdToJoin")) return;
     try {
       if (!initData) {
         alert("initData not found");
@@ -112,7 +112,11 @@ const StartScreen = () => {
       const data = await response.json();
       console.log("🔵 Ответ от сервера:", data);
       if (typeof data.messageId !== 'undefined') {
-        window.Telegram?.WebApp?.shareMessage(data.messageId);
+        try {
+          window.Telegram?.WebApp?.shareMessage(data.messageId);
+        } catch (err) {
+          console.warn("Ошибка Telegram API:", err);
+        }
         setShowWaitModal(true);
       } else {
         alert("Ошибка при создании лобби");

@@ -1,4 +1,4 @@
-// src/App.jsx v2
+// src/App.jsx v3
 import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Loader from "./components/Loader";
@@ -6,6 +6,7 @@ import StartScreen from "./StartScreen";
 import Game from "./Game";
 import EndGame from "./components/EndGame";
 import LostGame from "./components/LostGame";
+import Loss from "./components/Loss";
 
 const App = () => {
   useEffect(() => {
@@ -31,6 +32,9 @@ const App = () => {
 
         {/* Экран проигравшего */}
         <Route path="/lost" element={<LostGame />} />
+
+        {/* Экран потерянного лобби */}
+        <Route path="/nolobby" element={<Loss />} />
       </Routes>
     </Router>
   );

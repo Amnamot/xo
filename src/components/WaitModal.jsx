@@ -1,4 +1,4 @@
-// src/components/WaitModal.jsx v2
+// src/components/WaitModal.jsx v3
 import React, { useEffect, useState } from 'react';
 import './WaitModal.css';
 
@@ -6,9 +6,11 @@ const WaitModal = ({ onCancel }) => {
   const [secondsLeft, setSecondsLeft] = useState(180);
 
   useEffect(() => {
+    const initData = window.Telegram?.WebApp?.initData;
+    if (!initData) return;
     fetch("/lobby/timeleft", {
       headers: {
-        "x-init-data": window.Telegram?.WebApp?.initData
+        "x-init-data": initData
       }
     })
       .then((res) => res.json())

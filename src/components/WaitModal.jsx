@@ -1,4 +1,4 @@
-// src/components/WaitModal.jsx v5
+// src/components/WaitModal.jsx v6
 import React, { useEffect, useState } from 'react';
 import './WaitModal.css';
 
@@ -6,27 +6,10 @@ const WaitModal = ({ onCancel }) => {
   const [secondsLeft, setSecondsLeft] = useState(180);
 
   useEffect(() => {
-    const initData = window.Telegram?.WebApp?.initData;
-    if (!initData) return;
-    fetch("/lobby/timeleft", {
-      headers: {
-        "x-init-data": initData
-      }
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Bad response");
-        const contentType = res.headers.get("content-type") || "";
-        if (!contentType.includes("application/json")) {
-          throw new Error("Invalid content-type");
-        }
-        return res.json();
-      })
-      .then((data) => {
-        if (typeof data.timeLeft === "number") {
-          setSecondsLeft(data.timeLeft);
-        }
-      })
-      .catch((err) => console.error("Failed to fetch time left:", err));
+    const storedTimeLeft = parseInt(localStorage.getItem("timeLeft"), 10);
+    if (!isNaN(storedTimeLeft) && storedTimeLeft > 0) {
+      setSecondsLeft(storedTimeLeft);
+    }
 
     const timer = setInterval(() => {
       setSecondsLeft((prev) => {

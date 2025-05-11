@@ -1,4 +1,4 @@
-// src/components/Loader.jsx v5
+// src/components/Loader.jsx v5.1
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Loader.css';
@@ -101,6 +101,19 @@ const Loader = () => {
             if (res.ok) {
               res.json().then((data) => {
                 if (data.status === 'creator') {
+                  fetch("https://api.igra.top/lobby/timeleft", {
+                    headers: {
+                      "x-init-data": initData
+                    }
+                  })
+                    .then((res) => res.ok ? res.json() : null)
+                    .then((data) => {
+                      if (data?.timeLeft != null) {
+                        localStorage.setItem("timeLeft", data.timeLeft);
+                      }
+                    })
+                    .catch((e) => console.warn("❌ Failed to preload timeLeft:", e));
+
                   localStorage.setItem("showWaitModal", "true");
                   navigate("/start");
                 } else {

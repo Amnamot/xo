@@ -1,4 +1,4 @@
-// src/components/WaitModal.jsx v1
+// src/components/WaitModal.jsx v2
 import React, { useEffect, useState } from 'react';
 import './WaitModal.css';
 
@@ -6,11 +6,20 @@ const WaitModal = ({ onCancel }) => {
   const [secondsLeft, setSecondsLeft] = useState(180);
 
   useEffect(() => {
+    fetch("/lobby/timeleft")
+      .then((res) => res.json())
+      .then((data) => {
+        if (typeof data.timeLeft === "number") {
+          setSecondsLeft(data.timeLeft);
+        }
+      })
+      .catch((err) => console.error("Failed to fetch time left:", err));
+
     const timer = setInterval(() => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          onCancel(); // Автоматическая отмена
+          onCancel();
           return 0;
         }
         return prev - 1;

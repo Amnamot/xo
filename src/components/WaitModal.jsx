@@ -1,4 +1,4 @@
-// src/components/WaitModal.jsx v6
+// src/components/WaitModal.jsx v6.1
 import React, { useEffect, useState } from 'react';
 import './WaitModal.css';
 

@@ -1,4 +1,4 @@
-// src/StartScreen.jsx v10
+// src/StartScreen.jsx v11
 import WaitModal from './components/WaitModal';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -46,12 +46,13 @@ const StartScreen = () => {
   }, []);
 
   const handleCancelLobby = async () => {
+    const lobbyId = localStorage.getItem("lobbyIdToJoin");
+    const user = JSON.parse(localStorage.getItem("user"));
     try {
       await fetch("https://api.igra.top/lobby/cancel", {
         method: "DELETE",
-        headers: {
-          "x-init-data": initData,
-        },
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lobbyId, telegramId: user?.telegramId })
       });
     } catch (error) {
       console.error("Ошибка при удалении лобби:", error);

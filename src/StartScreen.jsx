@@ -48,22 +48,38 @@ const StartScreen = () => {
   const handleCancelLobby = async () => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
     const lobbyId = localStorage.getItem("lobbyIdToJoin");
+
+    if (!storedUser?.telegramId || !lobbyId) {
+      console.error("Missing required data for lobby cancellation");
+      setShowWaitModal(false);
+      return;
+    }
+
     try {
-      await fetch("https://api.igra.top/lobby/cancel", {
+      const response = await fetch("https://api.igra.top/lobby/cancel", {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           lobbyId,
-          telegramId: storedUser?.telegramId,
+          telegramId: storedUser.telegramId,
         }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+
+      // Очищаем данные лобби только при успешном удалении
+      localStorage.removeItem("lobbyIdToJoin");
     } catch (error) {
       console.error("Ошибка при удалении лобби:", error);
-    } finally {
-      setShowWaitModal(false);
+      alert("Не удалось отменить лобби. Попробуйте еще раз.");
+      return;
     }
+
+    setShowWaitModal(false);
   };
 
   const screenWidth = window.innerWidth;
@@ -95,7 +111,7 @@ const StartScreen = () => {
         return;
       }
 
-      await fetch("https://api.igra.top/lobby/create", {
+      const createResponse = await fetch("https://api.igra.top/lobby/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -103,6 +119,14 @@ const StartScreen = () => {
         },
         body: JSON.stringify({})
       });
+
+      const createData = await createResponse.json();
+      if (!createResponse.ok || !createData.lobbyId) {
+        throw new Error("Failed to create lobby");
+      }
+
+      // Сохраняем lobbyId сразу после создания
+      localStorage.setItem("lobbyIdToJoin", createData.lobbyId);
 
       await new Promise(res => setTimeout(res, 200));
 

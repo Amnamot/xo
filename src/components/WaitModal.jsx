@@ -2,28 +2,22 @@
 import React, { useEffect, useState } from 'react';
 import './WaitModal.css';
 
+const LOBBY_LIFETIME = 180; // время жизни лобби в секундах
+
 const WaitModal = ({ onCancel }) => {
-  const [secondsLeft, setSecondsLeft] = useState(180);
+  const [secondsLeft, setSecondsLeft] = useState(LOBBY_LIFETIME);
 
   useEffect(() => {
-    const storedTimeLeft = parseInt(localStorage.getItem("timeLeft"), 10);
-    if (!isNaN(storedTimeLeft) && storedTimeLeft > 0) {
-      setSecondsLeft(storedTimeLeft);
-    }
-
+    const startTime = Date.now();
+    
     const timer = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          onCancel();
-          return 0;
-        }
-        return prev - 1;
-      });
+      const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+      const remaining = Math.max(0, LOBBY_LIFETIME - elapsedSeconds);
+      setSecondsLeft(remaining);
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [onCancel]);
+  }, []);
 
   const formatTime = (totalSeconds) => {
     const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');

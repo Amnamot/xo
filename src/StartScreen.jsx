@@ -136,8 +136,16 @@ const StartScreen = () => {
         throw new Error("Failed to create lobby");
       }
 
-      // Сохраняем lobbyId сразу после создания
+      // Сохраняем lobbyId и обновляем данные пользователя
       localStorage.setItem("lobbyIdToJoin", createData.lobbyId);
+      
+      // Обновляем объект пользователя с telegramId из WebApp
+      const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+      if (telegramId) {
+        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+        storedUser.telegramId = telegramId.toString();
+        localStorage.setItem("user", JSON.stringify(storedUser));
+      }
 
       await new Promise(res => setTimeout(res, 200));
 

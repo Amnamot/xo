@@ -49,8 +49,19 @@ const StartScreen = () => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
     const lobbyId = localStorage.getItem("lobbyIdToJoin");
 
+    console.log("Debug cancel lobby:", {
+      storedUser,
+      lobbyId,
+      hasStoredUser: !!storedUser,
+      hasTelegramId: !!storedUser?.telegramId,
+      hasLobbyId: !!lobbyId
+    });
+
     if (!storedUser?.telegramId || !lobbyId) {
-      console.error("Missing required data for lobby cancellation");
+      console.error("Missing required data for lobby cancellation:", {
+        telegramId: storedUser?.telegramId,
+        lobbyId
+      });
       setShowWaitModal(false);
       return;
     }

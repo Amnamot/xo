@@ -3,6 +3,7 @@ import WaitModal from './components/WaitModal';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
+import ConnectionStatus from './components/ConnectionStatus';
 import './StartScreen.css';
 import { socket } from './services/socket';
 
@@ -44,12 +45,19 @@ const StartScreen = () => {
     // Подписываемся на события WebSocket
     socket.on('gameStart', (data) => {
       console.log('Game started:', data);
-      const { lobbyId, isCreator } = data;
+      const { creator, opponent, session } = data;
       
-      // Если это создатель лобби, переходим на /game
-      // Если это присоединившийся игрок, переходим на /game/:lobbyId
-      const path = isCreator ? '/game' : `/game/${lobbyId}`;
-      navigate(path);
+      // Получаем текущий telegramId пользователя
+      const currentTelegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
+      
+      // Определяем, является ли текущий пользователь создателем
+      const isCreator = currentTelegramId === creator;
+      
+      // Сохраняем данные сессии
+      localStorage.setItem('gameSession', JSON.stringify(session));
+      
+      // Переходим на страницу игры
+      navigate(`/game/${session.id}`);
     });
 
     const rawInitData = window.Telegram?.WebApp?.initData;
@@ -135,8 +143,17 @@ const StartScreen = () => {
 
       // Создаем лобби через WebSocket
       socket.emit('createLobby', {
-        telegramId: telegramId.toString(),
-        initData
+        telegramId: telegramId.toString()
+      }, (response) => {
+        if (response?.error) {
+          console.error('Failed to create lobby:', response.error);
+          alert('Failed to create game lobby');
+          return;
+        }
+        
+        if (response?.lobbyId) {
+          localStorage.setItem("lobbyIdToJoin", response.lobbyId);
+        }
       });
 
       // Сохраняем telegramId пользователя
@@ -178,6 +195,7 @@ const StartScreen = () => {
 
   return (
     <div className="start-screen">
+      <ConnectionStatus />
       {showWaitModal && <WaitModal onCancel={handleCancelLobby} />}
       <div className="top-logo">
         <img src="../media/3tICO.svg" width={128} alt="Logo" />

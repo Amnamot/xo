@@ -360,6 +360,14 @@ const Game = () => {
 
       onMoveMade: (data) => {
         const { position, player, gameState } = data;
+        const { 
+          currentTurn, 
+          playerTime1, 
+          playerTime2, 
+          serverTime,
+          moveStartTime,
+          gameStartTime
+        } = gameState;
 
         // Денормализуем координаты при получении хода
         let row = position.row;
@@ -379,17 +387,29 @@ const Game = () => {
           col = Math.floor(denormalized.x / CELL_SIZE);
         }
 
+        // Обновляем доску
         setBoard(prevBoard => {
           const newBoard = prevBoard.map(row => [...row]);
           newBoard[row][col] = player;
           return newBoard;
         });
 
-        setCurrentPlayer(gameState.currentTurn);
-        setPlayerTime1(gameState.playerTime1);
-        setPlayerTime2(gameState.playerTime2);
-        setMoveStartTime(Date.now());
+        // Синхронизируем все таймеры с сервером
+        const timeOffset = Date.now() - serverTime;
+        setCurrentPlayer(currentTurn);
+        setPlayerTime1(playerTime1);
+        setPlayerTime2(playerTime2);
+        setMoveStartTime(moveStartTime + timeOffset);
+        
+        // Обновляем время начала игры только если оно изменилось
+        if (gameStartTime !== gameSession?.startedAt) {
+          setGameStartTime(gameStartTime + timeOffset);
+        }
 
+        // Сбрасываем таймер хода
+        setMoveTimer(2400);
+
+        // Подтверждаем получение хода
         socket.emit('moveReceived', { 
           gameId: gameSession.id, 
           moveId: data.moveId 
@@ -458,41 +478,47 @@ const Game = () => {
     }
   }, [scale, position, gameSession]);
 
+  // Эффект для таймера хода и времени игроков
   useEffect(() => {
-    if (moveStartTime === null || gameStartTime === null) return;
+    if (moveStartTime === null || !isConnected) return;
 
     const moveInterval = setInterval(() => {
       const elapsed = Date.now() - moveStartTime;
       setMoveTimer(Math.max(2400 - Math.floor(elapsed / 10), 0));
       
-      // Обновляем время активного игрока
+      // Обновляем время только активного игрока
       if (currentPlayer === "X") {
-        setPlayerTime1(prev => prev + 100); // Добавляем 0.1 секунды
+        setPlayerTime1(prev => prev + 100);
       } else {
         setPlayerTime2(prev => prev + 100);
       }
     }, 100);
-    return () => clearInterval(moveInterval);
-  }, [moveStartTime, currentPlayer]);
 
+    return () => clearInterval(moveInterval);
+  }, [moveStartTime, currentPlayer, isConnected]);
+
+  // Эффект для общего времени игры
   useEffect(() => {
-    if (gameStartTime === null) return;
+    if (gameStartTime === null || !isConnected) return;
 
     const interval = setInterval(() => {
       const elapsedSeconds = Math.floor((Date.now() - gameStartTime) / 1000);
       setTime(elapsedSeconds);
     }, 1000);
-    return () => clearInterval(interval);
-  }, [gameStartTime]);
 
+    return () => clearInterval(interval);
+  }, [gameStartTime, isConnected]);
+
+  // Эффект для проверки окончания времени хода
   useEffect(() => {
-    if (moveTimer === 0) {
-      navigate("/lost", {
-        replace: true,
-        state: { time } // ❗ передаём только время
+    if (moveTimer === 0 && isOurTurn) {
+      // Отправляем событие об окончании времени
+      socket.emit('timeExpired', {
+        gameId: gameSession?.id,
+        player: currentPlayer
       });
     }
-  }, [moveTimer, navigate, time]);
+  }, [moveTimer, isOurTurn, gameSession?.id, currentPlayer]);
 
   // Обновляем размеры доски при изменении размера окна
   useEffect(() => {

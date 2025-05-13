@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = 'https://igra.top:3000';
+const SOCKET_URL = 'https://igra.top';
 
 let reconnectTimer = null;
 const MAX_RECONNECT_ATTEMPTS = 5;

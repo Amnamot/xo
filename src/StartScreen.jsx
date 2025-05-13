@@ -215,10 +215,10 @@ const StartScreen = () => {
       const response = await fetch("https://api.igra.top/lobby/createInvite", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "x-init-data": initData
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
+          initData: initData,
           telegramId: telegramId.toString()
         })
       });

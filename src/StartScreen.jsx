@@ -39,26 +39,30 @@ const StartScreen = () => {
       }
     }
 
-    // Подключаемся к WebSocket при монтировании компонента
-    socket.connect();
+    // Проверяем, есть ли активное лобби
+    const activeLobbyId = localStorage.getItem("lobbyIdToJoin");
+    if (activeLobbyId) {
+      // Подключаемся к WebSocket только если есть активное лобби
+      socket.connect();
 
-    // Подписываемся на события WebSocket
-    socket.on('gameStart', (data) => {
-      console.log('Game started:', data);
-      const { creator, opponent, session } = data;
-      
-      // Получаем текущий telegramId пользователя
-      const currentTelegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
-      
-      // Определяем, является ли текущий пользователь создателем
-      const isCreator = currentTelegramId === creator;
-      
-      // Сохраняем данные сессии
-      localStorage.setItem('gameSession', JSON.stringify(session));
-      
-      // Переходим на страницу игры
-      navigate(`/game/${session.id}`);
-    });
+      // Подписываемся на события WebSocket
+      socket.on('gameStart', (data) => {
+        console.log('Game started:', data);
+        const { creator, opponent, session } = data;
+        
+        // Получаем текущий telegramId пользователя
+        const currentTelegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
+        
+        // Определяем, является ли текущий пользователь создателем
+        const isCreator = currentTelegramId === creator;
+        
+        // Сохраняем данные сессии
+        localStorage.setItem('gameSession', JSON.stringify(session));
+        
+        // Переходим на страницу игры
+        navigate(`/game/${session.id}`);
+      });
+    }
 
     const rawInitData = window.Telegram?.WebApp?.initData;
     if (rawInitData) {
@@ -68,9 +72,11 @@ const StartScreen = () => {
     }
 
     return () => {
-      // Отключаем WebSocket при размонтировании компонента
-      socket.disconnect();
-      socket.off('gameStart');
+      // Отключаем WebSocket при размонтировании компонента только если он был подключен
+      if (socket.connected) {
+        socket.disconnect();
+        socket.off('gameStart');
+      }
     };
   }, [navigate]);
 
@@ -100,6 +106,11 @@ const StartScreen = () => {
       lobbyId,
       telegramId: storedUser.telegramId
     });
+
+    // Отключаем WebSocket после отмены лобби
+    if (socket.connected) {
+      socket.disconnect();
+    }
 
     localStorage.removeItem("lobbyIdToJoin");
     setShowWaitModal(false);
@@ -141,6 +152,27 @@ const StartScreen = () => {
         return;
       }
 
+      // Подключаем WebSocket перед созданием лобби
+      socket.connect();
+
+      // Подписываемся на события WebSocket
+      socket.on('gameStart', (data) => {
+        console.log('Game started:', data);
+        const { creator, opponent, session } = data;
+        
+        // Получаем текущий telegramId пользователя
+        const currentTelegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
+        
+        // Определяем, является ли текущий пользователь создателем
+        const isCreator = currentTelegramId === creator;
+        
+        // Сохраняем данные сессии
+        localStorage.setItem('gameSession', JSON.stringify(session));
+        
+        // Переходим на страницу игры
+        navigate(`/game/${session.id}`);
+      });
+
       // Создаем лобби через WebSocket
       socket.emit('createLobby', {
         telegramId: telegramId.toString()
@@ -148,6 +180,8 @@ const StartScreen = () => {
         if (response?.error) {
           console.error('Failed to create lobby:', response.error);
           alert('Failed to create game lobby');
+          // Отключаем WebSocket при ошибке
+          socket.disconnect();
           return;
         }
         
@@ -184,10 +218,14 @@ const StartScreen = () => {
       } else {
         alert("Ошибка при создании приглашения");
         setShowWaitModal(false);
+        // Отключаем WebSocket при ошибке
+        socket.disconnect();
       }
     } catch (err) {
       console.error("Ошибка при создании лобби:", err);
       setShowWaitModal(false);
+      // Отключаем WebSocket при ошибке
+      socket.disconnect();
     }
   };
 

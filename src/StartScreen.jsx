@@ -155,9 +155,11 @@ const StartScreen = () => {
       // Подключаем WebSocket перед созданием лобби
       socket.connect();
 
+      console.log('🔄 1. Connecting WebSocket...');
+
       // Подписываемся на события WebSocket
       socket.on('gameStart', (data) => {
-        console.log('Game started:', data);
+        console.log('✅ WebSocket: Game started event received:', data);
         const { creator, opponent, session } = data;
         
         // Получаем текущий telegramId пользователя
@@ -165,6 +167,7 @@ const StartScreen = () => {
         
         // Определяем, является ли текущий пользователь создателем
         const isCreator = currentTelegramId === creator;
+        console.log('👤 Current user role:', isCreator ? 'creator' : 'opponent');
         
         // Сохраняем данные сессии
         localStorage.setItem('gameSession', JSON.stringify(session));
@@ -174,11 +177,13 @@ const StartScreen = () => {
       });
 
       // Создаем лобби через WebSocket
+      console.log('🔄 2. Creating lobby via WebSocket...');
       socket.emit('createLobby', {
         telegramId: telegramId.toString()
       }, (response) => {
+        console.log('✅ WebSocket: Create lobby response:', response);
         if (response?.error) {
-          console.error('Failed to create lobby:', response.error);
+          console.error('❌ Failed to create lobby:', response.error);
           alert('Failed to create game lobby');
           // Отключаем WebSocket при ошибке
           socket.disconnect();
@@ -186,6 +191,7 @@ const StartScreen = () => {
         }
         
         if (response?.lobbyId) {
+          console.log('✅ Lobby created, ID:', response.lobbyId);
           localStorage.setItem("lobbyIdToJoin", response.lobbyId);
         }
       });
@@ -198,10 +204,10 @@ const StartScreen = () => {
       // Показываем модальное окно ожидания
       setShowWaitModal(true);
 
-      // Отладочное логирование
-      console.log('Debug createInvite request:', {
+      console.log('🔄 3. Creating invite via REST API...');
+      console.log('Request details:', {
         telegramId: telegramId.toString(),
-        initData,
+        initDataRaw,
         requestBody: {
           initData: initData,
           telegramId: telegramId.toString()
@@ -214,22 +220,28 @@ const StartScreen = () => {
       const response = await fetch("https://api.igra.top/lobby/createInvite", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "x-init-data": initDataRaw
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
+          initData: initDataRaw,
           telegramId: telegramId.toString()
         })
       });
 
+      console.log('📥 API Response status:', response.status);
       const data = await response.json();
+      console.log('📥 API Response data:', data);
+
       if (typeof data.messageId !== 'undefined') {
         try {
+          console.log('🔄 4. Sharing message via Telegram...');
           window.Telegram?.WebApp?.shareMessage(data.messageId);
+          console.log('✅ Message shared successfully');
         } catch (err) {
-          console.warn("Ошибка Telegram API:", err);
+          console.warn("❌ Telegram API error:", err);
         }
       } else {
+        console.error('❌ No messageId in response');
         alert("Ошибка при создании приглашения");
         setShowWaitModal(false);
         // Отключаем WebSocket при ошибке

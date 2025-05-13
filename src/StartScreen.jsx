@@ -142,37 +142,46 @@ const StartScreen = () => {
     
     try {
       if (!initData) {
-        alert("initData not found");
-        return;
+        throw new Error("initData not found");
       }
 
       const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
       if (!telegramId) {
-        alert("Telegram user ID not found");
-        return;
+        throw new Error("Telegram user ID not found");
       }
 
-      // Подключаем WebSocket перед созданием лобби
-      socket.connect();
-
       console.log('🔄 1. Connecting WebSocket...');
+      
+      // Создаем промис для ожидания подключения
+      const connectPromise = new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('WebSocket connection timeout'));
+        }, 5000);
 
-      // Создаем промис для ожидания ответа от createLobby
-      const createLobbyPromise = new Promise((resolve, reject) => {
-        console.log('🔄 2. Creating lobby via WebSocket...');
-        socket.emit('createLobby', { telegramId: telegramId.toString() }, (response) => {
-          console.log('✅ WebSocket: Create lobby response:', response);
-          if (response?.error) {
-            reject(new Error(response.error));
-          } else if (response?.lobbyId) {
-            console.log('✅ Lobby created, ID:', response.lobbyId);
-            localStorage.setItem("lobbyIdToJoin", response.lobbyId);
-            resolve(response);
-          } else {
-            reject(new Error('Invalid response format'));
-          }
-        });
+        const handleConnect = () => {
+          clearTimeout(timeout);
+          window.removeEventListener('websocket_connected', handleConnect);
+          window.removeEventListener('websocket_error', handleError);
+          resolve();
+        };
+
+        const handleError = (event) => {
+          clearTimeout(timeout);
+          window.removeEventListener('websocket_connected', handleConnect);
+          window.removeEventListener('websocket_error', handleError);
+          reject(new Error(event.detail.error));
+        };
+
+        window.addEventListener('websocket_connected', handleConnect);
+        window.addEventListener('websocket_error', handleError);
+        
+        socket.connect();
       });
+
+      // Ждем подключения WebSocket
+      await connectPromise;
+      
+      console.log('✅ WebSocket connected successfully');
 
       // Подписываемся на события WebSocket
       socket.on('gameStart', (data) => {
@@ -187,8 +196,17 @@ const StartScreen = () => {
         navigate(`/game/${session.id}`);
       });
 
-      // Ждем создания лобби перед отправкой приглашения
-      await createLobbyPromise;
+      // Создаем лобби через WebSocket
+      console.log('🔄 2. Creating lobby via WebSocket...');
+      const lobbyResponse = await createLobby(telegramId.toString());
+      console.log('✅ WebSocket: Create lobby response:', lobbyResponse);
+
+      if (lobbyResponse.lobbyId) {
+        console.log('✅ Lobby created, ID:', lobbyResponse.lobbyId);
+        localStorage.setItem("lobbyIdToJoin", lobbyResponse.lobbyId);
+      } else {
+        throw new Error('Failed to create lobby: No lobby ID received');
+      }
 
       // Сохраняем данные пользователя
       const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -198,18 +216,18 @@ const StartScreen = () => {
       // Показываем модальное окно ожидания
       setShowWaitModal(true);
 
+      const initDataRaw = window.Telegram?.WebApp?.initData;
+      
       console.log('🔄 3. Creating invite via REST API...');
       console.log('Request details:', {
         telegramId: telegramId.toString(),
         initDataRaw,
         requestBody: {
-          initData: initData,
+          initData: initDataRaw,
           telegramId: telegramId.toString()
         }
       });
 
-      const initDataRaw = window.Telegram?.WebApp?.initData;
-      
       const response = await fetch("https://api.igra.top/lobby/createInvite", {
         method: "POST",
         headers: {

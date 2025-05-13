@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:3001';
+const SOCKET_URL = 'https://igra.top';
 
 let reconnectTimer = null;
 const MAX_RECONNECT_ATTEMPTS = 5;
@@ -15,102 +15,53 @@ export const socket = io(SOCKET_URL, {
   reconnectionDelay: 1000,
   reconnectionDelayMax: 5000,
   timeout: 20000,
+  forceNew: true,
   query: {
-    telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id
+    telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()
   }
 });
 
-// Обработчики событий по умолчанию
+// Обработка ошибок
+socket.on('connect_error', (error) => {
+  console.error('WebSocket connection error:', error);
+  window.dispatchEvent(new CustomEvent('websocket_error', { 
+    detail: { error: error.message } 
+  }));
+});
+
 socket.on('connect', () => {
   console.log('Connected to WebSocket server');
-  reconnectAttempts = 0; // Сбрасываем счетчик при успешном подключении
-  
-  // Очищаем таймер переподключения если он был
-  if (reconnectTimer) {
-    clearTimeout(reconnectTimer);
-    reconnectTimer = null;
-  }
-  
-  // Отправляем событие для обновления UI
+  reconnectAttempts = 0;
   window.dispatchEvent(new CustomEvent('websocket_connected'));
 });
 
 socket.on('disconnect', (reason) => {
   console.log('Disconnected from WebSocket server:', reason);
   
-  // Отправляем событие для обновления UI
   window.dispatchEvent(new CustomEvent('websocket_disconnected', { 
     detail: { reason } 
   }));
 
-  // Пытаемся переподключиться только если это не намеренное отключение
   if (reason === 'io server disconnect' || reason === 'io client disconnect') {
     return;
   }
 
-  // Начинаем процесс переподключения
-  handleReconnect();
-});
-
-socket.on('connect_error', (error) => {
-  console.error('Connection error:', error);
-  
-  // Отправляем событие для обновления UI
-  window.dispatchEvent(new CustomEvent('websocket_error', { 
-    detail: { error: error.message } 
-  }));
-
-  // Начинаем процесс переподключения
-  handleReconnect();
-});
-
-// Функция для управления переподключением
-const handleReconnect = () => {
-  if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-    console.error('Max reconnection attempts reached');
-    window.dispatchEvent(new CustomEvent('websocket_max_attempts'));
-    return;
-  }
-
-  reconnectAttempts++;
-  
-  // Увеличиваем задержку с каждой попыткой
-  const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
-  
-  if (reconnectTimer) {
-    clearTimeout(reconnectTimer);
-  }
-  
-  reconnectTimer = setTimeout(() => {
-    console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
-    if (!socket.connected) {
+  if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+    reconnectAttempts++;
+    setTimeout(() => {
+      console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
       socket.connect();
-    }
-  }, delay);
-};
-
-// Функции-хелперы для работы с сокетами
-export const connectSocket = () => {
-  if (!socket.connected) {
-    reconnectAttempts = 0; // Сбрасываем счетчик при ручном подключении
-    socket.connect();
+    }, 1000 * reconnectAttempts);
   }
-};
-
-export const disconnectSocket = () => {
-  if (socket.connected) {
-    // Очищаем таймер переподключения если он был
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer);
-      reconnectTimer = null;
-    }
-    socket.disconnect();
-  }
-};
+});
 
 // Функции для игровых событий
 export const createLobby = (telegramId) => {
   return new Promise((resolve, reject) => {
+    if (!socket.connected) {
+      reject(new Error('WebSocket is not connected'));
+      return;
+    }
     socket.emit('createLobby', { telegramId }, (response) => {
       if (response?.error) {
         reject(new Error(response.error));
@@ -122,19 +73,25 @@ export const createLobby = (telegramId) => {
 };
 
 export const joinLobby = (lobbyId, telegramId) => {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    if (!socket.connected) {
+      reject(new Error('WebSocket is not connected'));
+      return;
+    }
     socket.emit('joinLobby', { lobbyId, telegramId }, resolve);
   });
+};
+
+export const updatePlayerTime = (gameId, playerTimes) => {
+  if (socket.connected) {
+    socket.emit('updatePlayerTime', { gameId, playerTimes });
+  }
 };
 
 export const makeMove = (gameId, position, player, moveTime) => {
   return new Promise((resolve) => {
     socket.emit('makeMove', { gameId, position, player, moveTime }, resolve);
   });
-};
-
-export const updatePlayerTime = (gameId, playerTimes) => {
-  socket.emit('updatePlayerTime', { gameId, playerTimes });
 };
 
 export const updateViewport = (gameId, viewport) => {

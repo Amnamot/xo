@@ -6,7 +6,7 @@ import "./Shape.css";
 import Shape from "./Shape";
 import GameHeader from "./components/GameHeader";
 import { 
-  socket, 
+  initSocket,
   connectSocket, 
   makeMove, 
   updatePlayerTime, 
@@ -258,7 +258,7 @@ const Game = () => {
     const savedState = loadGameState();
     if (savedState?.gameSession) {
       // Переподключаемся к игровой сессии
-      socket.emit('joinGame', {
+      initSocket({
         gameId: savedState.gameSession.id,
         telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id
       });
@@ -267,6 +267,16 @@ const Game = () => {
 
   // Обновляем эффект с подключением к WebSocket
   useEffect(() => {
+    const socket = initSocket();
+    
+    if (savedState?.gameSession) {
+      // Переподключаемся к игровой сессии
+      socket.emit('joinGame', {
+        gameId: savedState.gameSession.id,
+        telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id
+      });
+    }
+
     const connect = () => {
       connectSocket();
 
@@ -276,7 +286,6 @@ const Game = () => {
         setReconnectAttempts(0);
         
         if (gameSession?.id) {
-          // Запрашиваем актуальное состояние игры
           socket.emit('requestGameState', {
             gameId: gameSession.id,
             telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id
@@ -284,7 +293,6 @@ const Game = () => {
         }
       });
 
-      // Добавляем обработчик получения состояния игры
       socket.on('gameState', (data) => {
         if (!isValidGameState(data)) {
           console.error('Received invalid game state from server');
@@ -298,7 +306,6 @@ const Game = () => {
         setGameSession(data.gameSession);
         setMoveStartTime(Date.now());
         
-        // Сохраняем актуальное состояние
         saveGameState(data);
       });
 
@@ -306,14 +313,12 @@ const Game = () => {
         console.error('Connection error:', error);
         setIsConnected(false);
         
-        // Пытаемся переподключиться с увеличивающейся задержкой
         if (reconnectAttempts < maxReconnectAttempts) {
           setTimeout(() => {
             setReconnectAttempts(prev => prev + 1);
             connect();
           }, reconnectDelay * (reconnectAttempts + 1));
         } else {
-          // Если все попытки исчерпаны, показываем сообщение
           alert('Не удалось подключиться к серверу. Пожалуйста, обновите страницу.');
         }
       });
@@ -346,7 +351,6 @@ const Game = () => {
         setBoard(gameState.board);
         setCurrentPlayer(gameState.currentPlayer);
         
-        // Сохраняем начальное состояние игры
         saveGameState(gameState);
       },
 
@@ -369,11 +373,9 @@ const Game = () => {
           gameStartTime
         } = gameState;
 
-        // Денормализуем координаты при получении хода
         let row = position.row;
         let col = position.col;
 
-        // Если получены нормализованные координаты, преобразуем их
         if (position.normalizedX !== undefined && position.normalizedY !== undefined) {
           const denormalized = denormalizeCoordinates(
             position.normalizedX,
@@ -382,34 +384,28 @@ const Game = () => {
             boardDimensions.height
           );
           
-          // Преобразуем пиксели в индексы ячеек
           row = Math.floor(denormalized.y / CELL_SIZE);
           col = Math.floor(denormalized.x / CELL_SIZE);
         }
 
-        // Обновляем доску
         setBoard(prevBoard => {
           const newBoard = prevBoard.map(row => [...row]);
           newBoard[row][col] = player;
           return newBoard;
         });
 
-        // Синхронизируем все таймеры с сервером
         const timeOffset = Date.now() - serverTime;
         setCurrentPlayer(currentTurn);
         setPlayerTime1(playerTime1);
         setPlayerTime2(playerTime2);
         setMoveStartTime(moveStartTime + timeOffset);
         
-        // Обновляем время начала игры только если оно изменилось
         if (gameStartTime !== gameSession?.startedAt) {
           setGameStartTime(gameStartTime + timeOffset);
         }
 
-        // Сбрасываем таймер хода
         setMoveTimer(2400);
 
-        // Подтверждаем получение хода
         socket.emit('moveReceived', { 
           gameId: gameSession.id, 
           moveId: data.moveId 
@@ -447,7 +443,6 @@ const Game = () => {
         const { winner, reason } = data;
         setWinLine(data.finalBoard ? checkWinner(data.finalBoard, 0, 0, winner) : null);
         
-        // Очищаем сохраненное состояние
         localStorage.removeItem('gameState');
         
         setTimeout(() => {
@@ -539,7 +534,7 @@ const Game = () => {
   }, []);
 
   // Определяем, является ли текущий ход нашим
-  const isOurTurn = currentPlayer === (socket.telegramId === gameSession?.creatorId ? "X" : "O");
+  const isOurTurn = currentPlayer === (socket?.telegramId === gameSession?.creatorId ? "X" : "O");
 
   const handleTouchStart = (e) => {
     if (!isOurTurn) return; // Блокируем взаимодействие если не наш ход
@@ -583,11 +578,10 @@ const Game = () => {
 
   const handleCellClick = async (row, col) => {
     if (!visibleCells.has(`${row}-${col}`) || winLine || !gameSession) return;
-    if (currentPlayer !== (socket.telegramId === gameSession.creatorId ? "X" : "O")) return;
+    if (currentPlayer !== (socket?.telegramId === gameSession.creatorId ? "X" : "O")) return;
     
     const moveTime = Date.now() - moveStartTime;
     
-    // Нормализуем координаты перед отправкой
     const { normalizedX, normalizedY } = normalizeCoordinates(
       col * CELL_SIZE,
       row * CELL_SIZE,

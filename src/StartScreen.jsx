@@ -198,6 +198,19 @@ const StartScreen = () => {
       // Показываем модальное окно ожидания
       setShowWaitModal(true);
 
+      // Отладочное логирование
+      console.log('Debug createInvite request:', {
+        telegramId: telegramId.toString(),
+        initData,
+        requestBody: {
+          telegramId: telegramId.toString()
+        },
+        headers: {
+          "Content-Type": "application/json",
+          "x-init-data": initData
+        }
+      });
+
       // Создаем приглашение через Telegram
       const response = await fetch("https://api.igra.top/lobby/createInvite", {
         method: "POST",
@@ -205,7 +218,9 @@ const StartScreen = () => {
           "Content-Type": "application/json",
           "x-init-data": initData
         },
-        body: JSON.stringify({})
+        body: JSON.stringify({
+          telegramId: telegramId.toString()
+        })
       });
 
       const data = await response.json();

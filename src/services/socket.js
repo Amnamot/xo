@@ -2,7 +2,7 @@ import { io } from 'socket.io-client';
 
 const SOCKET_URL = 'https://igra.top';
 
-let socket;
+let socket = null;
 let reconnectTimer = null;
 const MAX_RECONNECT_ATTEMPTS = 5;
 let reconnectAttempts = 0;
@@ -28,51 +28,52 @@ export const initSocket = () => {
     query: { telegramId }
   });
 
+  // Обработка ошибок
+  socket.on('connect_error', (error) => {
+    console.error('WebSocket connection error:', error);
+    window.dispatchEvent(new CustomEvent('websocket_error', { 
+      detail: { error: error.message } 
+    }));
+  });
+
+  socket.on('connect', () => {
+    console.log('Connected to WebSocket server');
+    reconnectAttempts = 0;
+    window.dispatchEvent(new CustomEvent('websocket_connected'));
+  });
+
+  socket.on('disconnect', (reason) => {
+    console.log('Disconnected from WebSocket server:', reason);
+    
+    window.dispatchEvent(new CustomEvent('websocket_disconnected', { 
+      detail: { reason } 
+    }));
+
+    if (reason === 'io server disconnect' || reason === 'io client disconnect') {
+      return;
+    }
+
+    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+      reconnectAttempts++;
+      setTimeout(() => {
+        console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+        socket.connect();
+      }, 1000 * reconnectAttempts);
+    }
+  });
+
   return socket;
 };
 
-// Обработка ошибок
-socket.on('connect_error', (error) => {
-  console.error('WebSocket connection error:', error);
-  window.dispatchEvent(new CustomEvent('websocket_error', { 
-    detail: { error: error.message } 
-  }));
-});
-
-socket.on('connect', () => {
-  console.log('Connected to WebSocket server');
-  reconnectAttempts = 0;
-  window.dispatchEvent(new CustomEvent('websocket_connected'));
-});
-
-socket.on('disconnect', (reason) => {
-  console.log('Disconnected from WebSocket server:', reason);
-  
-  window.dispatchEvent(new CustomEvent('websocket_disconnected', { 
-    detail: { reason } 
-  }));
-
-  if (reason === 'io server disconnect' || reason === 'io client disconnect') {
-    return;
-  }
-
-  if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-    reconnectAttempts++;
-    setTimeout(() => {
-      console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
-      socket.connect();
-    }, 1000 * reconnectAttempts);
-  }
-});
-
 // Функции для игровых событий
 export const createLobby = (telegramId) => {
+  const currentSocket = initSocket();
   return new Promise((resolve, reject) => {
-    if (!socket.connected) {
+    if (!currentSocket.connected) {
       reject(new Error('WebSocket is not connected'));
       return;
     }
-    socket.emit('createLobby', { telegramId }, (response) => {
+    currentSocket.emit('createLobby', { telegramId }, (response) => {
       if (response?.error) {
         reject(new Error(response.error));
       } else {
@@ -83,37 +84,43 @@ export const createLobby = (telegramId) => {
 };
 
 export const joinLobby = (lobbyId, telegramId) => {
+  const currentSocket = initSocket();
   return new Promise((resolve, reject) => {
-    if (!socket.connected) {
+    if (!currentSocket.connected) {
       reject(new Error('WebSocket is not connected'));
       return;
     }
-    socket.emit('joinLobby', { lobbyId, telegramId }, resolve);
+    currentSocket.emit('joinLobby', { lobbyId, telegramId }, resolve);
   });
 };
 
 export const updatePlayerTime = (gameId, playerTimes) => {
-  if (socket.connected) {
-    socket.emit('updatePlayerTime', { gameId, playerTimes });
+  const currentSocket = initSocket();
+  if (currentSocket.connected) {
+    currentSocket.emit('updatePlayerTime', { gameId, playerTimes });
   }
 };
 
 export const makeMove = (gameId, position, player, moveTime) => {
+  const currentSocket = initSocket();
   return new Promise((resolve) => {
-    socket.emit('makeMove', { gameId, position, player, moveTime }, resolve);
+    currentSocket.emit('makeMove', { gameId, position, player, moveTime }, resolve);
   });
 };
 
 export const updateViewport = (gameId, viewport) => {
-  socket.emit('updateViewport', { gameId, viewport });
+  const currentSocket = initSocket();
+  currentSocket.emit('updateViewport', { gameId, viewport });
 };
 
 export const confirmMoveReceived = (gameId, moveId) => {
-  socket.emit('moveReceived', { gameId, moveId });
+  const currentSocket = initSocket();
+  currentSocket.emit('moveReceived', { gameId, moveId });
 };
 
 // Функция для подписки на события игры
 export const subscribeToGameEvents = (handlers) => {
+  const currentSocket = initSocket();
   const {
     onGameStart,
     onOpponentJoined,
@@ -126,37 +133,35 @@ export const subscribeToGameEvents = (handlers) => {
     onGameEnded
   } = handlers;
 
-  if (onGameStart) socket.on('gameStart', onGameStart);
-  if (onOpponentJoined) socket.on('opponentJoined', onOpponentJoined);
-  if (onMoveMade) socket.on('moveMade', onMoveMade);
-  if (onTimeUpdated) socket.on('timeUpdated', onTimeUpdated);
-  if (onViewportUpdated) socket.on('viewportUpdated', onViewportUpdated);
-  if (onPlayerStatus) socket.on('playerStatus', onPlayerStatus);
-  if (onPlayerDisconnected) socket.on('playerDisconnected', onPlayerDisconnected);
-  if (onPlayerReconnected) socket.on('playerReconnected', onPlayerReconnected);
-  if (onGameEnded) socket.on('gameEnded', onGameEnded);
+  if (onGameStart) currentSocket.on('gameStart', onGameStart);
+  if (onOpponentJoined) currentSocket.on('opponentJoined', onOpponentJoined);
+  if (onMoveMade) currentSocket.on('moveMade', onMoveMade);
+  if (onTimeUpdated) currentSocket.on('timeUpdated', onTimeUpdated);
+  if (onViewportUpdated) currentSocket.on('viewportUpdated', onViewportUpdated);
+  if (onPlayerStatus) currentSocket.on('playerStatus', onPlayerStatus);
+  if (onPlayerDisconnected) currentSocket.on('playerDisconnected', onPlayerDisconnected);
+  if (onPlayerReconnected) currentSocket.on('playerReconnected', onPlayerReconnected);
+  if (onGameEnded) currentSocket.on('gameEnded', onGameEnded);
 
   // Возвращаем функцию для отписки от событий
   return () => {
-    socket.off('gameStart', onGameStart);
-    socket.off('opponentJoined', onOpponentJoined);
-    socket.off('moveMade', onMoveMade);
-    socket.off('timeUpdated', onTimeUpdated);
-    socket.off('viewportUpdated', onViewportUpdated);
-    socket.off('playerStatus', onPlayerStatus);
-    socket.off('playerDisconnected', onPlayerDisconnected);
-    socket.off('playerReconnected', onPlayerReconnected);
-    socket.off('gameEnded', onGameEnded);
+    currentSocket.off('gameStart', onGameStart);
+    currentSocket.off('opponentJoined', onOpponentJoined);
+    currentSocket.off('moveMade', onMoveMade);
+    currentSocket.off('timeUpdated', onTimeUpdated);
+    currentSocket.off('viewportUpdated', onViewportUpdated);
+    currentSocket.off('playerStatus', onPlayerStatus);
+    currentSocket.off('playerDisconnected', onPlayerDisconnected);
+    currentSocket.off('playerReconnected', onPlayerReconnected);
+    currentSocket.off('gameEnded', onGameEnded);
   };
 };
 
 // Функции-хелперы для работы с сокетами
 export const connectSocket = () => {
-  if (!socket) {
-    socket = initSocket();
-  }
+  const currentSocket = initSocket();
   return new Promise((resolve, reject) => {
-    if (socket.connected) {
+    if (currentSocket.connected) {
       resolve();
       return;
     }
@@ -186,12 +191,12 @@ export const connectSocket = () => {
     window.addEventListener('websocket_error', handleError);
     
     reconnectAttempts = 0;
-    socket.connect();
+    currentSocket.connect();
   });
 };
 
 export const disconnectSocket = () => {
-  if (socket.connected) {
+  if (socket?.connected) {
     socket.disconnect();
   }
   reconnectAttempts = 0;

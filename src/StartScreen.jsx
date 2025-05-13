@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
 import ConnectionStatus from './components/ConnectionStatus';
 import './StartScreen.css';
-import { socket } from './services/socket';
+import { socket, connectSocket, disconnectSocket, createLobby } from './services/socket';
 
 const StartScreen = () => {
   const [user, setUser] = useState(null);

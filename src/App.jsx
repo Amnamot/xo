@@ -25,7 +25,8 @@ const App = () => {
         <Route path="/start" element={<StartScreen />} />
 
         {/* Игровой экран */}
-        <Route path="/game" element={<Game />} />
+        <Route path="/game" element={<Game />} /> {/* Для создателя лобби */}
+        <Route path="/game/:lobbyId" element={<Game />} /> {/* Для присоединяющегося игрока */}
 
         {/* Экран победителя */}
         <Route path="/end" element={<EndGame />} />

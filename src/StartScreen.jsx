@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
 import './StartScreen.css';
+import { socket } from './services/socket';
 
 const StartScreen = () => {
   const [user, setUser] = useState(null);
@@ -37,13 +38,33 @@ const StartScreen = () => {
       }
     }
 
+    // Подключаемся к WebSocket при монтировании компонента
+    socket.connect();
+
+    // Подписываемся на события WebSocket
+    socket.on('gameStart', (data) => {
+      console.log('Game started:', data);
+      const { lobbyId, isCreator } = data;
+      
+      // Если это создатель лобби, переходим на /game
+      // Если это присоединившийся игрок, переходим на /game/:lobbyId
+      const path = isCreator ? '/game' : `/game/${lobbyId}`;
+      navigate(path);
+    });
+
     const rawInitData = window.Telegram?.WebApp?.initData;
     if (rawInitData) {
       const clean = new URLSearchParams(rawInitData);
       clean.delete('signature');
       console.log("🧾 Clean initData:", clean.toString());
     }
-  }, []);
+
+    return () => {
+      // Отключаем WebSocket при размонтировании компонента
+      socket.disconnect();
+      socket.off('gameStart');
+    };
+  }, [navigate]);
 
   const handleCancelLobby = async () => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
@@ -66,30 +87,13 @@ const StartScreen = () => {
       return;
     }
 
-    try {
-      const response = await fetch("https://api.igra.top/lobby/cancel", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          lobbyId,
-          telegramId: storedUser.telegramId,
-        }),
-      });
+    // Отправляем событие отмены лобби через WebSocket
+    socket.emit('cancelLobby', {
+      lobbyId,
+      telegramId: storedUser.telegramId
+    });
 
-      if (!response.ok) {
-        throw new Error(`Server responded with status: ${response.status}`);
-      }
-
-      // Очищаем данные лобби только при успешном удалении
-      localStorage.removeItem("lobbyIdToJoin");
-    } catch (error) {
-      console.error("Ошибка при удалении лобби:", error);
-      alert("Не удалось отменить лобби. Попробуйте еще раз.");
-      return;
-    }
-
+    localStorage.removeItem("lobbyIdToJoin");
     setShowWaitModal(false);
   };
 
@@ -116,39 +120,34 @@ const StartScreen = () => {
 
   const handleStartGame = async () => {
     if (localStorage.getItem("lobbyIdToJoin")) return;
+    
     try {
       if (!initData) {
         alert("initData not found");
         return;
       }
 
-      const createResponse = await fetch("https://api.igra.top/lobby/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-init-data": initData
-        },
-        body: JSON.stringify({})
+      const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+      if (!telegramId) {
+        alert("Telegram user ID not found");
+        return;
+      }
+
+      // Создаем лобби через WebSocket
+      socket.emit('createLobby', {
+        telegramId: telegramId.toString(),
+        initData
       });
 
-      const createData = await createResponse.json();
-      if (!createResponse.ok || !createData.lobbyId) {
-        throw new Error("Failed to create lobby");
-      }
+      // Сохраняем telegramId пользователя
+      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      storedUser.telegramId = telegramId.toString();
+      localStorage.setItem("user", JSON.stringify(storedUser));
 
-      // Сохраняем lobbyId и обновляем данные пользователя
-      localStorage.setItem("lobbyIdToJoin", createData.lobbyId);
-      
-      // Обновляем объект пользователя с telegramId из WebApp
-      const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
-      if (telegramId) {
-        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-        storedUser.telegramId = telegramId.toString();
-        localStorage.setItem("user", JSON.stringify(storedUser));
-      }
+      // Показываем модальное окно ожидания
+      setShowWaitModal(true);
 
-      await new Promise(res => setTimeout(res, 200));
-
+      // Создаем приглашение через Telegram
       const response = await fetch("https://api.igra.top/lobby/createInvite", {
         method: "POST",
         headers: {
@@ -159,19 +158,19 @@ const StartScreen = () => {
       });
 
       const data = await response.json();
-      console.log("🔵 Ответ от сервера:", data);
       if (typeof data.messageId !== 'undefined') {
         try {
           window.Telegram?.WebApp?.shareMessage(data.messageId);
         } catch (err) {
           console.warn("Ошибка Telegram API:", err);
         }
-        setShowWaitModal(true);
       } else {
-        alert("Ошибка при создании лобби");
+        alert("Ошибка при создании приглашения");
+        setShowWaitModal(false);
       }
     } catch (err) {
       console.error("Ошибка при создании лобби:", err);
+      setShowWaitModal(false);
     }
   };
 
@@ -181,7 +180,7 @@ const StartScreen = () => {
     <div className="start-screen">
       {showWaitModal && <WaitModal onCancel={handleCancelLobby} />}
       <div className="top-logo">
-        <img src="/media/3tICO.svg" width={128} alt="Logo" />
+        <img src="../media/3tICO.svg" width={128} alt="Logo" />
       </div>
 
       <div className="user-info">

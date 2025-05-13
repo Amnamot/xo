@@ -1,10 +1,18 @@
 // Game.jsx
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import "./Game.css";
 import "./Shape.css";
 import Shape from "./Shape";
 import GameHeader from "./components/GameHeader";
+import { 
+  socket, 
+  connectSocket, 
+  makeMove, 
+  updatePlayerTime, 
+  updateViewport,
+  subscribeToGameEvents 
+} from "./services/socket";
 
 const BOARD_SIZE = 100;
 const WIN_CONDITION = 5;
@@ -66,33 +74,389 @@ const getVisibleCells = (board) => {
   return visibleCells;
 };
 
+// Функции для работы с localStorage
+const saveGameState = (state) => {
+  try {
+    localStorage.setItem('gameState', JSON.stringify(state));
+  } catch (error) {
+    console.error('Failed to save game state:', error);
+  }
+};
+
+const isValidGameState = (state) => {
+  if (!state || typeof state !== 'object') return false;
+
+  // Проверка основных полей
+  const requiredFields = {
+    board: Array.isArray,
+    currentPlayer: (val) => typeof val === 'string' && ['X', 'O'].includes(val),
+    scale: (val) => typeof val === 'number' && val > 0,
+    position: (val) => val && typeof val.x === 'number' && typeof val.y === 'number',
+    time: (val) => typeof val === 'number' && val >= 0,
+    playerTime1: (val) => typeof val === 'number' && val >= 0,
+    playerTime2: (val) => typeof val === 'number' && val >= 0
+  };
+
+  for (const [field, validator] of Object.entries(requiredFields)) {
+    if (!validator(state[field])) {
+      console.error(`Invalid game state: ${field} is invalid`);
+      return false;
+    }
+  }
+
+  // Проверка структуры доски
+  if (!state.board.every(row => 
+    Array.isArray(row) && 
+    row.length === BOARD_SIZE && 
+    row.every(cell => cell === null || cell === 'X' || cell === 'O')
+  )) {
+    console.error('Invalid game state: board structure is invalid');
+    return false;
+  }
+
+  // Проверка игровой сессии
+  if (state.gameSession) {
+    if (!state.gameSession.id || typeof state.gameSession.id !== 'string') {
+      console.error('Invalid game state: gameSession.id is invalid');
+      return false;
+    }
+  }
+
+  return true;
+};
+
+const loadGameState = () => {
+  try {
+    const savedState = localStorage.getItem('gameState');
+    if (!savedState) return null;
+    
+    const state = JSON.parse(savedState);
+    return isValidGameState(state) ? state : null;
+  } catch (error) {
+    console.error('Failed to load game state:', error);
+    return null;
+  }
+};
+
+// Функции нормализации координат
+const normalizeCoordinates = (x, y, boardWidth, boardHeight) => {
+  // Преобразуем координаты в проценты от размера поля
+  return {
+    normalizedX: x / boardWidth,
+    normalizedY: y / boardHeight
+  };
+};
+
+const denormalizeCoordinates = (normalizedX, normalizedY, boardWidth, boardHeight) => {
+  // Преобразуем нормализованные координаты обратно в пиксели
+  return {
+    x: Math.floor(normalizedX * boardWidth),
+    y: Math.floor(normalizedY * boardHeight)
+  };
+};
+
+const calculateBoardDimensions = (cellSize) => {
+  return {
+    width: BOARD_SIZE * cellSize,
+    height: BOARD_SIZE * cellSize
+  };
+};
+
 const Game = () => {
   const navigate = useNavigate();
-  const [board, setBoard] = useState([]);
-  const [currentPlayer, setCurrentPlayer] = useState("O");
+  const { lobbyId } = useParams();
+  const [board, setBoard] = useState(() => {
+    const savedState = loadGameState();
+    return savedState?.board || createEmptyBoard();
+  });
+  const [currentPlayer, setCurrentPlayer] = useState(() => {
+    const savedState = loadGameState();
+    return savedState?.currentPlayer || "O";
+  });
   const [winLine, setWinLine] = useState(null);
-  const [scale, setScale] = useState(1);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [scale, setScale] = useState(() => {
+    const savedState = loadGameState();
+    return savedState?.scale || 1;
+  });
+  const [position, setPosition] = useState(() => {
+    const savedState = loadGameState();
+    return savedState?.position || { x: 0, y: 0 };
+  });
   const [touchStart, setTouchStart] = useState(null);
   const [initialDistance, setInitialDistance] = useState(null);
-  const [moveStartTime, setMoveStartTime] = useState(null);
-  const [gameStartTime, setGameStartTime] = useState(null);
+  const [moveStartTime, setMoveStartTime] = useState(() => {
+    const savedState = loadGameState();
+    return savedState?.moveStartTime || null;
+  });
+  const [gameStartTime, setGameStartTime] = useState(() => {
+    const savedState = loadGameState();
+    return savedState?.gameStartTime || null;
+  });
   const [moveTimer, setMoveTimer] = useState(2400);
-  const [time, setTime] = useState(0);
+  const [time, setTime] = useState(() => {
+    const savedState = loadGameState();
+    return savedState?.time || 0;
+  });
+  const [playerTime1, setPlayerTime1] = useState(() => {
+    const savedState = loadGameState();
+    return savedState?.playerTime1 || 0;
+  });
+  const [playerTime2, setPlayerTime2] = useState(() => {
+    const savedState = loadGameState();
+    return savedState?.playerTime2 || 0;
+  });
+  const [gameSession, setGameSession] = useState(() => {
+    const savedState = loadGameState();
+    return savedState?.gameSession || null;
+  });
+  const [opponentInfo, setOpponentInfo] = useState(() => {
+    const savedState = loadGameState();
+    return savedState?.opponentInfo || null;
+  });
+  const [isConnected, setIsConnected] = useState(false);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const maxReconnectAttempts = 5;
+  const reconnectDelay = 2000;
   const boardRef = useRef(null);
+  const [boardDimensions, setBoardDimensions] = useState({ width: 0, height: 0 });
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const CELL_SIZE = isMobile ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP;
 
+  // Сохраняем состояние при изменении важных данных
   useEffect(() => {
-    const newBoard = createEmptyBoard();
-    newBoard[INITIAL_POSITION][INITIAL_POSITION] = "X";
-    setBoard(newBoard);
-    setCurrentPlayer("O");
-    setWinLine(null);
-    setScale(1);
-    setPosition({ x: 0, y: 0 });
+    const gameState = {
+      board,
+      currentPlayer,
+      scale,
+      position,
+      moveStartTime,
+      gameStartTime,
+      time,
+      playerTime1,
+      playerTime2,
+      gameSession,
+      opponentInfo
+    };
+    saveGameState(gameState);
+  }, [
+    board,
+    currentPlayer,
+    scale,
+    position,
+    moveStartTime,
+    gameStartTime,
+    time,
+    playerTime1,
+    playerTime2,
+    gameSession,
+    opponentInfo
+  ]);
+
+  // При монтировании компонента проверяем сохраненное состояние
+  useEffect(() => {
+    const savedState = loadGameState();
+    if (savedState?.gameSession) {
+      // Переподключаемся к игровой сессии
+      socket.emit('joinGame', {
+        gameId: savedState.gameSession.id,
+        telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id
+      });
+    }
   }, []);
+
+  // Обновляем эффект с подключением к WebSocket
+  useEffect(() => {
+    const connect = () => {
+      connectSocket();
+
+      socket.on('connect', () => {
+        console.log('Connected to game server');
+        setIsConnected(true);
+        setReconnectAttempts(0);
+        
+        if (gameSession?.id) {
+          // Запрашиваем актуальное состояние игры
+          socket.emit('requestGameState', {
+            gameId: gameSession.id,
+            telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id
+          });
+        }
+      });
+
+      // Добавляем обработчик получения состояния игры
+      socket.on('gameState', (data) => {
+        if (!isValidGameState(data)) {
+          console.error('Received invalid game state from server');
+          return;
+        }
+
+        setBoard(data.board);
+        setCurrentPlayer(data.currentPlayer);
+        setPlayerTime1(data.playerTime1);
+        setPlayerTime2(data.playerTime2);
+        setGameSession(data.gameSession);
+        setMoveStartTime(Date.now());
+        
+        // Сохраняем актуальное состояние
+        saveGameState(data);
+      });
+
+      socket.on('connect_error', (error) => {
+        console.error('Connection error:', error);
+        setIsConnected(false);
+        
+        // Пытаемся переподключиться с увеличивающейся задержкой
+        if (reconnectAttempts < maxReconnectAttempts) {
+          setTimeout(() => {
+            setReconnectAttempts(prev => prev + 1);
+            connect();
+          }, reconnectDelay * (reconnectAttempts + 1));
+        } else {
+          // Если все попытки исчерпаны, показываем сообщение
+          alert('Не удалось подключиться к серверу. Пожалуйста, обновите страницу.');
+        }
+      });
+
+      socket.on('disconnect', () => {
+        console.log('Disconnected from game server');
+        setIsConnected(false);
+      });
+    };
+
+    connect();
+
+    // Подписываемся на события игры
+    const unsubscribe = subscribeToGameEvents({
+      onGameStart: (data) => {
+        const gameState = {
+          session: data.session,
+          startTime: Date.now(),
+          board: data.session.board || createEmptyBoard(),
+          currentPlayer: data.session.currentTurn,
+          playerTime1: data.session.playerTime1,
+          playerTime2: data.session.playerTime2
+        };
+        
+        setGameSession(gameState.session);
+        setGameStartTime(gameState.startTime);
+        setMoveStartTime(gameState.startTime);
+        setPlayerTime1(gameState.playerTime1);
+        setPlayerTime2(gameState.playerTime2);
+        setBoard(gameState.board);
+        setCurrentPlayer(gameState.currentPlayer);
+        
+        // Сохраняем начальное состояние игры
+        saveGameState(gameState);
+      },
+
+      onOpponentJoined: (data) => {
+        setOpponentInfo({
+          id: data.opponentId,
+          name: data.opponentName,
+          avatar: data.opponentAvatar
+        });
+      },
+
+      onMoveMade: (data) => {
+        const { position, player, gameState } = data;
+
+        // Денормализуем координаты при получении хода
+        let row = position.row;
+        let col = position.col;
+
+        // Если получены нормализованные координаты, преобразуем их
+        if (position.normalizedX !== undefined && position.normalizedY !== undefined) {
+          const denormalized = denormalizeCoordinates(
+            position.normalizedX,
+            position.normalizedY,
+            boardDimensions.width,
+            boardDimensions.height
+          );
+          
+          // Преобразуем пиксели в индексы ячеек
+          row = Math.floor(denormalized.y / CELL_SIZE);
+          col = Math.floor(denormalized.x / CELL_SIZE);
+        }
+
+        setBoard(prevBoard => {
+          const newBoard = prevBoard.map(row => [...row]);
+          newBoard[row][col] = player;
+          return newBoard;
+        });
+
+        setCurrentPlayer(gameState.currentTurn);
+        setPlayerTime1(gameState.playerTime1);
+        setPlayerTime2(gameState.playerTime2);
+        setMoveStartTime(Date.now());
+
+        socket.emit('moveReceived', { 
+          gameId: gameSession.id, 
+          moveId: data.moveId 
+        });
+      },
+
+      onTimeUpdated: (data) => {
+        setPlayerTime1(data.playerTime1);
+        setPlayerTime2(data.playerTime2);
+      },
+
+      onViewportUpdated: (data) => {
+        if (data.telegramId !== socket.telegramId) {
+          setScale(data.viewport.scale);
+          setPosition(data.viewport.position);
+        }
+      },
+
+      onPlayerDisconnected: (data) => {
+        console.log(`Player ${data.telegramId} disconnected`);
+        // Показываем уведомление об отключении оппонента
+        if (opponentInfo?.id === data.telegramId) {
+          alert('Оппонент отключился. Ожидаем переподключения...');
+        }
+      },
+
+      onPlayerReconnected: (data) => {
+        console.log(`Player ${data.telegramId} reconnected`);
+        if (opponentInfo?.id === data.telegramId) {
+          alert('Оппонент вернулся в игру');
+        }
+      },
+
+      onGameEnded: (data) => {
+        const { winner, reason } = data;
+        setWinLine(data.finalBoard ? checkWinner(data.finalBoard, 0, 0, winner) : null);
+        
+        // Очищаем сохраненное состояние
+        localStorage.removeItem('gameState');
+        
+        setTimeout(() => {
+          navigate(winner === socket.telegramId ? "/end" : "/lost", {
+            replace: true,
+            state: { 
+              time,
+              statistics: data.statistics
+            }
+          });
+        }, 1500);
+      }
+    });
+
+    return () => {
+      socket.off('gameState');
+      unsubscribe();
+      socket.off('connect');
+      socket.off('connect_error');
+      socket.off('disconnect');
+    };
+  }, [navigate, time, reconnectAttempts, gameSession, boardDimensions]);
+
+  // Обновляем viewport при изменении масштаба или позиции
+  useEffect(() => {
+    if (gameSession) {
+      updateViewport(gameSession.id, { scale, position });
+    }
+  }, [scale, position, gameSession]);
 
   useEffect(() => {
     if (moveStartTime === null || gameStartTime === null) return;
@@ -100,9 +464,16 @@ const Game = () => {
     const moveInterval = setInterval(() => {
       const elapsed = Date.now() - moveStartTime;
       setMoveTimer(Math.max(2400 - Math.floor(elapsed / 10), 0));
+      
+      // Обновляем время активного игрока
+      if (currentPlayer === "X") {
+        setPlayerTime1(prev => prev + 100); // Добавляем 0.1 секунды
+      } else {
+        setPlayerTime2(prev => prev + 100);
+      }
     }, 100);
     return () => clearInterval(moveInterval);
-  }, [moveStartTime]);
+  }, [moveStartTime, currentPlayer]);
 
   useEffect(() => {
     if (gameStartTime === null) return;
@@ -123,7 +494,29 @@ const Game = () => {
     }
   }, [moveTimer, navigate, time]);
 
+  // Обновляем размеры доски при изменении размера окна
+  useEffect(() => {
+    const updateBoardDimensions = () => {
+      if (boardRef.current) {
+        const cellSize = window.innerWidth < 768 ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP;
+        const dimensions = calculateBoardDimensions(cellSize);
+        setBoardDimensions(dimensions);
+      }
+    };
+
+    updateBoardDimensions();
+    window.addEventListener('resize', updateBoardDimensions);
+
+    return () => {
+      window.removeEventListener('resize', updateBoardDimensions);
+    };
+  }, []);
+
+  // Определяем, является ли текущий ход нашим
+  const isOurTurn = currentPlayer === (socket.telegramId === gameSession?.creatorId ? "X" : "O");
+
   const handleTouchStart = (e) => {
+    if (!isOurTurn) return; // Блокируем взаимодействие если не наш ход
     if (e.touches.length === 1) {
       setTouchStart({
         x: e.touches[0].clientX - position.x,
@@ -137,6 +530,7 @@ const Game = () => {
   };
 
   const handleTouchMove = (e) => {
+    if (!isOurTurn) return; // Блокируем взаимодействие если не наш ход
     if (e.touches.length === 1 && touchStart) {
       setPosition({
         x: e.touches[0].clientX - touchStart.x,
@@ -161,44 +555,36 @@ const Game = () => {
 
   const visibleCells = board.length ? getVisibleCells(board) : new Set();
 
-  const handleCellClick = (row, col) => {
-    if (!visibleCells.has(`${row}-${col}`) || winLine) return;
-    const newBoard = board.map((r) => [...r]);
-    newBoard[row][col] = currentPlayer;
-    setBoard(newBoard);
-
-    const result = checkWinner(newBoard, row, col, currentPlayer);
-    if (result) {
-      setTimeout(() => {
-        setWinLine(result);
-      }, 200);
-      setTimeout(() => {
-        if (currentPlayer === "X") {
-          navigate("/end", {
-            replace: true,
-            state: { time } // ❗ передаём только время
-          });
-        } else {
-          navigate("/lost", {
-            replace: true,
-            state: { time }
-          });
-        }
-      }, 1500);
-    } else {
-      setCurrentPlayer(currentPlayer === "X" ? "O" : "X");
-      setMoveStartTime(Date.now());
+  const handleCellClick = async (row, col) => {
+    if (!visibleCells.has(`${row}-${col}`) || winLine || !gameSession) return;
+    if (currentPlayer !== (socket.telegramId === gameSession.creatorId ? "X" : "O")) return;
+    
+    const moveTime = Date.now() - moveStartTime;
+    
+    // Нормализуем координаты перед отправкой
+    const { normalizedX, normalizedY } = normalizeCoordinates(
+      col * CELL_SIZE,
+      row * CELL_SIZE,
+      boardDimensions.width,
+      boardDimensions.height
+    );
+    
+    try {
+      await makeMove(
+        gameSession.id,
+        { 
+          row,
+          col,
+          normalizedX,
+          normalizedY
+        },
+        currentPlayer,
+        moveTime
+      );
+    } catch (error) {
+      console.error('Failed to make move:', error);
     }
   };
-
-  // 🔄 Симуляция прихода соперника через WebSocket (заглушка)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setGameStartTime(Date.now());
-      setMoveStartTime(Date.now());
-    }, 2000); // через 2 секунды считаем, что соперник подключился
-    return () => clearTimeout(timer);
-  }, []);
 
   const calculateWinLineStyle = () => {
     if (!winLine) return {};
@@ -224,15 +610,30 @@ const Game = () => {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      style={{ 
+        cursor: isOurTurn ? 'default' : 'not-allowed',
+        pointerEvents: isOurTurn ? 'auto' : 'none' // Полностью блокируем взаимодействие
+      }}
     >
-      <GameHeader currentPlayer={currentPlayer} moveTimer={moveTimer} time={time} />
+      <GameHeader 
+        currentPlayer={currentPlayer} 
+        moveTimer={moveTimer} 
+        time={time}
+        playerTime1={playerTime1}
+        playerTime2={playerTime2}
+        opponentAvatar={opponentInfo?.avatar}
+        isConnected={isConnected}
+      />
 
       <div
         ref={boardRef}
         className="board-grid"
         style={{
           gridTemplateColumns: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)`,
-          gridTemplateRows: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)`
+          gridTemplateRows: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)`,
+          width: boardDimensions.width,
+          height: boardDimensions.height,
+          opacity: isOurTurn ? 1 : 0.7 // Визуально показываем, что поле неактивно
         }}
       >
         {board.map((row, i) =>

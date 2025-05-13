@@ -1,6 +1,6 @@
 // src/StartScreen.jsx v14
 import WaitModal from './components/WaitModal';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
 import ConnectionStatus from './components/ConnectionStatus';
@@ -13,6 +13,7 @@ const StartScreen = () => {
   const [showWaitModal, setShowWaitModal] = useState(false);
   const initData = window.Telegram?.WebApp?.initData;
   const navigate = useNavigate();
+  const socketRef = useRef(null);
 
   useEffect(() => {
     const shouldShow = localStorage.getItem("showWaitModal") === "true";
@@ -43,24 +44,18 @@ const StartScreen = () => {
     const activeLobbyId = localStorage.getItem("lobbyIdToJoin");
     if (activeLobbyId) {
       try {
-        const socket = initSocket();
-        socket.connect();
+        socketRef.current = initSocket();
+        socketRef.current.connect();
 
         // Подписываемся на события WebSocket
-        socket.on('gameStart', (data) => {
+        socketRef.current.on('gameStart', (data) => {
           console.log('Game started:', data);
           const { creator, opponent, session } = data;
           
-          // Получаем текущий telegramId пользователя
           const currentTelegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
-          
-          // Определяем, является ли текущий пользователь создателем
           const isCreator = currentTelegramId === creator;
           
-          // Сохраняем данные сессии
           localStorage.setItem('gameSession', JSON.stringify(session));
-          
-          // Переходим на страницу игры
           navigate(`/game/${session.id}`);
         });
       } catch (error) {
@@ -76,10 +71,10 @@ const StartScreen = () => {
     }
 
     return () => {
-      // Отключаем WebSocket при размонтировании компонента только если он был подключен
-      if (socket.connected) {
-        socket.disconnect();
-        socket.off('gameStart');
+      // Отключаем WebSocket при размонтировании компонента
+      if (socketRef.current?.connected) {
+        socketRef.current.disconnect();
+        socketRef.current.off('gameStart');
       }
     };
   }, [navigate]);
@@ -105,19 +100,25 @@ const StartScreen = () => {
       return;
     }
 
-    // Отправляем событие отмены лобби через WebSocket
-    socket.emit('cancelLobby', {
-      lobbyId,
-      telegramId: storedUser.telegramId
-    });
+    try {
+      const socket = initSocket();
+      // Отправляем событие отмены лобби через WebSocket
+      socket.emit('cancelLobby', {
+        lobbyId,
+        telegramId: storedUser.telegramId
+      });
 
-    // Отключаем WebSocket после отмены лобби
-    if (socket.connected) {
-      socket.disconnect();
+      // Отключаем WebSocket после отмены лобби
+      if (socket.connected) {
+        socket.disconnect();
+      }
+
+      localStorage.removeItem("lobbyIdToJoin");
+      setShowWaitModal(false);
+    } catch (error) {
+      console.error('Failed to cancel lobby:', error);
+      setShowWaitModal(false);
     }
-
-    localStorage.removeItem("lobbyIdToJoin");
-    setShowWaitModal(false);
   };
 
   const screenWidth = window.innerWidth;
@@ -158,6 +159,7 @@ const StartScreen = () => {
       await connectSocket();
       console.log('✅ WebSocket connected successfully');
 
+      const socket = initSocket();
       // Подписываемся на события WebSocket
       socket.on('gameStart', (data) => {
         console.log('✅ WebSocket: Game started event received:', data);
@@ -233,6 +235,7 @@ const StartScreen = () => {
     } catch (err) {
       console.error("❌ Error during lobby creation:", err);
       setShowWaitModal(false);
+      const socket = initSocket();
       if (socket.connected) {
         disconnectSocket();
       }

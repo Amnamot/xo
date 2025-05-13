@@ -151,36 +151,7 @@ const StartScreen = () => {
       }
 
       console.log('🔄 1. Connecting WebSocket...');
-      
-      // Создаем промис для ожидания подключения
-      const connectPromise = new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('WebSocket connection timeout'));
-        }, 5000);
-
-        const handleConnect = () => {
-          clearTimeout(timeout);
-          window.removeEventListener('websocket_connected', handleConnect);
-          window.removeEventListener('websocket_error', handleError);
-          resolve();
-        };
-
-        const handleError = (event) => {
-          clearTimeout(timeout);
-          window.removeEventListener('websocket_connected', handleConnect);
-          window.removeEventListener('websocket_error', handleError);
-          reject(new Error(event.detail.error));
-        };
-
-        window.addEventListener('websocket_connected', handleConnect);
-        window.addEventListener('websocket_error', handleError);
-        
-        socket.connect();
-      });
-
-      // Ждем подключения WebSocket
-      await connectPromise;
-      
+      await connectSocket();
       console.log('✅ WebSocket connected successfully');
 
       // Подписываемся на события WebSocket
@@ -259,7 +230,7 @@ const StartScreen = () => {
       console.error("❌ Error during lobby creation:", err);
       setShowWaitModal(false);
       if (socket.connected) {
-        socket.disconnect();
+        disconnectSocket();
       }
       alert(err.message || "Ошибка при создании лобби");
     }

@@ -138,4 +138,48 @@ export const subscribeToGameEvents = (handlers) => {
     socket.off('playerReconnected', onPlayerReconnected);
     socket.off('gameEnded', onGameEnded);
   };
+};
+
+// Функции-хелперы для работы с сокетами
+export const connectSocket = () => {
+  return new Promise((resolve, reject) => {
+    if (socket.connected) {
+      resolve();
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('WebSocket connection timeout'));
+    }, 5000);
+
+    const handleConnect = () => {
+      cleanup();
+      resolve();
+    };
+
+    const handleError = (event) => {
+      cleanup();
+      reject(new Error(event.detail.error));
+    };
+
+    const cleanup = () => {
+      clearTimeout(timeout);
+      window.removeEventListener('websocket_connected', handleConnect);
+      window.removeEventListener('websocket_error', handleError);
+    };
+
+    window.addEventListener('websocket_connected', handleConnect);
+    window.addEventListener('websocket_error', handleError);
+    
+    reconnectAttempts = 0;
+    socket.connect();
+  });
+};
+
+export const disconnectSocket = () => {
+  if (socket.connected) {
+    socket.disconnect();
+  }
+  reconnectAttempts = 0;
 }; 

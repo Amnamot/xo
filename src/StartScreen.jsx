@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
 import ConnectionStatus from './components/ConnectionStatus';
 import './StartScreen.css';
-import { socket, connectSocket, disconnectSocket, createLobby } from './services/socket';
+import { initSocket, connectSocket, disconnectSocket, createLobby } from './services/socket';
 
 const StartScreen = () => {
   const [user, setUser] = useState(null);
@@ -42,26 +42,30 @@ const StartScreen = () => {
     // Проверяем, есть ли активное лобби
     const activeLobbyId = localStorage.getItem("lobbyIdToJoin");
     if (activeLobbyId) {
-      // Подключаемся к WebSocket только если есть активное лобби
-      socket.connect();
+      try {
+        const socket = initSocket();
+        socket.connect();
 
-      // Подписываемся на события WebSocket
-      socket.on('gameStart', (data) => {
-        console.log('Game started:', data);
-        const { creator, opponent, session } = data;
-        
-        // Получаем текущий telegramId пользователя
-        const currentTelegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
-        
-        // Определяем, является ли текущий пользователь создателем
-        const isCreator = currentTelegramId === creator;
-        
-        // Сохраняем данные сессии
-        localStorage.setItem('gameSession', JSON.stringify(session));
-        
-        // Переходим на страницу игры
-        navigate(`/game/${session.id}`);
-      });
+        // Подписываемся на события WebSocket
+        socket.on('gameStart', (data) => {
+          console.log('Game started:', data);
+          const { creator, opponent, session } = data;
+          
+          // Получаем текущий telegramId пользователя
+          const currentTelegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
+          
+          // Определяем, является ли текущий пользователь создателем
+          const isCreator = currentTelegramId === creator;
+          
+          // Сохраняем данные сессии
+          localStorage.setItem('gameSession', JSON.stringify(session));
+          
+          // Переходим на страницу игры
+          navigate(`/game/${session.id}`);
+        });
+      } catch (error) {
+        console.error('Failed to initialize socket:', error);
+      }
     }
 
     const rawInitData = window.Telegram?.WebApp?.initData;

@@ -2,25 +2,34 @@ import { io } from 'socket.io-client';
 
 const SOCKET_URL = 'https://igra.top';
 
+let socket;
 let reconnectTimer = null;
 const MAX_RECONNECT_ATTEMPTS = 5;
 let reconnectAttempts = 0;
 
-// Создаем экземпляр Socket.io
-export const socket = io(SOCKET_URL, {
-  autoConnect: false,
-  transports: ['websocket', 'polling'],
-  path: '/socket.io/',
-  reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
-  reconnectionDelay: 1000,
-  reconnectionDelayMax: 5000,
-  timeout: 20000,
-  forceNew: true,
-  withCredentials: true,
-  query: {
-    telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()
+export const initSocket = () => {
+  if (socket) return socket;
+  
+  const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
+  if (!telegramId) {
+    throw new Error('Telegram user ID not found');
   }
-});
+
+  socket = io(SOCKET_URL, {
+    autoConnect: false,
+    transports: ['websocket', 'polling'],
+    path: '/socket.io/',
+    reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    timeout: 20000,
+    forceNew: true,
+    withCredentials: true,
+    query: { telegramId }
+  });
+
+  return socket;
+};
 
 // Обработка ошибок
 socket.on('connect_error', (error) => {
@@ -143,6 +152,9 @@ export const subscribeToGameEvents = (handlers) => {
 
 // Функции-хелперы для работы с сокетами
 export const connectSocket = () => {
+  if (!socket) {
+    socket = initSocket();
+  }
   return new Promise((resolve, reject) => {
     if (socket.connected) {
       resolve();

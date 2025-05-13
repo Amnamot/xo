@@ -157,46 +157,40 @@ const StartScreen = () => {
 
       console.log('🔄 1. Connecting WebSocket...');
 
+      // Создаем промис для ожидания ответа от createLobby
+      const createLobbyPromise = new Promise((resolve, reject) => {
+        console.log('🔄 2. Creating lobby via WebSocket...');
+        socket.emit('createLobby', { telegramId: telegramId.toString() }, (response) => {
+          console.log('✅ WebSocket: Create lobby response:', response);
+          if (response?.error) {
+            reject(new Error(response.error));
+          } else if (response?.lobbyId) {
+            console.log('✅ Lobby created, ID:', response.lobbyId);
+            localStorage.setItem("lobbyIdToJoin", response.lobbyId);
+            resolve(response);
+          } else {
+            reject(new Error('Invalid response format'));
+          }
+        });
+      });
+
       // Подписываемся на события WebSocket
       socket.on('gameStart', (data) => {
         console.log('✅ WebSocket: Game started event received:', data);
         const { creator, opponent, session } = data;
         
-        // Получаем текущий telegramId пользователя
         const currentTelegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
-        
-        // Определяем, является ли текущий пользователь создателем
         const isCreator = currentTelegramId === creator;
         console.log('👤 Current user role:', isCreator ? 'creator' : 'opponent');
         
-        // Сохраняем данные сессии
         localStorage.setItem('gameSession', JSON.stringify(session));
-        
-        // Переходим на страницу игры
         navigate(`/game/${session.id}`);
       });
 
-      // Создаем лобби через WebSocket
-      console.log('🔄 2. Creating lobby via WebSocket...');
-      socket.emit('createLobby', {
-        telegramId: telegramId.toString()
-      }, (response) => {
-        console.log('✅ WebSocket: Create lobby response:', response);
-        if (response?.error) {
-          console.error('❌ Failed to create lobby:', response.error);
-          alert('Failed to create game lobby');
-          // Отключаем WebSocket при ошибке
-          socket.disconnect();
-          return;
-        }
-        
-        if (response?.lobbyId) {
-          console.log('✅ Lobby created, ID:', response.lobbyId);
-          localStorage.setItem("lobbyIdToJoin", response.lobbyId);
-        }
-      });
+      // Ждем создания лобби перед отправкой приглашения
+      await createLobbyPromise;
 
-      // Сохраняем telegramId пользователя
+      // Сохраняем данные пользователя
       const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
       storedUser.telegramId = telegramId.toString();
       localStorage.setItem("user", JSON.stringify(storedUser));
@@ -216,7 +210,6 @@ const StartScreen = () => {
 
       const initDataRaw = window.Telegram?.WebApp?.initData;
       
-      // Создаем приглашение через Telegram
       const response = await fetch("https://api.igra.top/lobby/createInvite", {
         method: "POST",
         headers: {
@@ -235,23 +228,22 @@ const StartScreen = () => {
       if (typeof data.messageId !== 'undefined') {
         try {
           console.log('🔄 4. Sharing message via Telegram...');
-          window.Telegram?.WebApp?.shareMessage(data.messageId);
+          await window.Telegram?.WebApp?.shareMessage(data.messageId);
           console.log('✅ Message shared successfully');
         } catch (err) {
           console.warn("❌ Telegram API error:", err);
+          throw new Error('Failed to share message');
         }
       } else {
-        console.error('❌ No messageId in response');
-        alert("Ошибка при создании приглашения");
-        setShowWaitModal(false);
-        // Отключаем WebSocket при ошибке
-        socket.disconnect();
+        throw new Error('No messageId in response');
       }
     } catch (err) {
-      console.error("Ошибка при создании лобби:", err);
+      console.error("❌ Error during lobby creation:", err);
       setShowWaitModal(false);
-      // Отключаем WebSocket при ошибке
-      socket.disconnect();
+      if (socket.connected) {
+        socket.disconnect();
+      }
+      alert(err.message || "Ошибка при создании лобби");
     }
   };
 

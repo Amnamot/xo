@@ -1,4 +1,4 @@
-// src/StartScreen.jsx v12
+// src/StartScreen.jsx v14
 import WaitModal from './components/WaitModal';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';

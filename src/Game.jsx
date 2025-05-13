@@ -258,7 +258,8 @@ const Game = () => {
     const savedState = loadGameState();
     if (savedState?.gameSession) {
       // Переподключаемся к игровой сессии
-      initSocket({
+      const socket = initSocket();
+      socket.emit('joinGame', {
         gameId: savedState.gameSession.id,
         telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id
       });
@@ -268,6 +269,7 @@ const Game = () => {
   // Обновляем эффект с подключением к WebSocket
   useEffect(() => {
     const socket = initSocket();
+    const savedState = loadGameState();
     
     if (savedState?.gameSession) {
       // Переподключаемся к игровой сессии
@@ -506,6 +508,8 @@ const Game = () => {
 
   // Эффект для проверки окончания времени хода
   useEffect(() => {
+    const socket = initSocket();
+    
     if (moveTimer === 0 && isOurTurn) {
       // Отправляем событие об окончании времени
       socket.emit('timeExpired', {
@@ -534,7 +538,7 @@ const Game = () => {
   }, []);
 
   // Определяем, является ли текущий ход нашим
-  const isOurTurn = currentPlayer === (socket?.telegramId === gameSession?.creatorId ? "X" : "O");
+  const isOurTurn = currentPlayer === (gameSession?.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id ? "X" : "O");
 
   const handleTouchStart = (e) => {
     if (!isOurTurn) return; // Блокируем взаимодействие если не наш ход
@@ -578,7 +582,7 @@ const Game = () => {
 
   const handleCellClick = async (row, col) => {
     if (!visibleCells.has(`${row}-${col}`) || winLine || !gameSession) return;
-    if (currentPlayer !== (socket?.telegramId === gameSession.creatorId ? "X" : "O")) return;
+    if (currentPlayer !== (gameSession?.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id ? "X" : "O")) return;
     
     const moveTime = Date.now() - moveStartTime;
     

@@ -203,14 +203,13 @@ const StartScreen = () => {
         telegramId: telegramId.toString(),
         initData,
         requestBody: {
+          initData: initData,
           telegramId: telegramId.toString()
-        },
-        headers: {
-          "Content-Type": "application/json",
-          "x-init-data": initData
         }
       });
 
+      const initDataRaw = window.Telegram?.WebApp?.initData;
+      
       // Создаем приглашение через Telegram
       const response = await fetch("https://api.igra.top/lobby/createInvite", {
         method: "POST",
@@ -218,7 +217,7 @@ const StartScreen = () => {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          initData: initData,
+          initData: initDataRaw,
           telegramId: telegramId.toString()
         })
       });

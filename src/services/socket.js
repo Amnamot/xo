@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = 'https://igra.top';
+const SOCKET_URL = 'https://igra.top:3000';
 
 let reconnectTimer = null;
 const MAX_RECONNECT_ATTEMPTS = 5;
@@ -16,6 +16,7 @@ export const socket = io(SOCKET_URL, {
   reconnectionDelayMax: 5000,
   timeout: 20000,
   forceNew: true,
+  withCredentials: true,
   query: {
     telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()
   }

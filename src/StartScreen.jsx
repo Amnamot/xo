@@ -193,6 +193,10 @@ const StartScreen = () => {
       // Показываем модальное окно ожидания
       setShowWaitModal(true);
 
+      // Добавляем небольшую задержку перед созданием инвайта
+      console.log('⏳ Waiting for lobby to be saved...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       const initDataRaw = window.Telegram?.WebApp?.initData;
       
       console.log('🔄 3. Creating invite via REST API...');

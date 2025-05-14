@@ -151,27 +151,71 @@ const StartScreen = () => {
     const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
     
     if (!telegramId) {
-      console.error("Missing telegramId for lobby cancellation");
+      console.error("❌ Missing telegramId for lobby cancellation");
       setShowWaitModal(false);
       return;
     }
 
+    console.log('🔄 Starting lobby cancellation process for user:', telegramId);
+
     try {
       const socket = initSocket();
-      // Отправляем событие отмены лобби через WebSocket
-      socket.emit('cancelLobby', {
-        telegramId: telegramId.toString()
+      
+      // Создаем Promise для ожидания ответа от сервера
+      const cancelPromise = new Promise((resolve, reject) => {
+        // Устанавливаем таймаут
+        const timeoutId = setTimeout(() => {
+          console.error('⏰ Lobby cancellation timeout after 5 seconds');
+          reject(new Error('Lobby cancellation timeout'));
+        }, 5000);
+
+        // Слушаем событие подтверждения удаления
+        socket.once('lobbyDeleted', (data) => {
+          clearTimeout(timeoutId);
+          console.log('✅ Received lobby deletion confirmation:', {
+            reason: data.reason,
+            timestamp: new Date(data.timestamp).toISOString()
+          });
+          resolve(data);
+        });
+
+        // Отправляем событие отмены лобби
+        console.log('📤 Sending cancelLobby request...');
+        socket.emit('cancelLobby', {
+          telegramId: telegramId.toString()
+        }, (response) => {
+          console.log('📨 Received cancelLobby response:', response);
+          if (response?.status === 'error') {
+            clearTimeout(timeoutId);
+            reject(new Error(response.message || 'Failed to cancel lobby'));
+          }
+        });
       });
 
-      // Отключаем WebSocket после отмены лобби
+      // Ждем ответа от сервера
+      console.log('⏳ Waiting for server confirmation...');
+      await cancelPromise;
+
+      // Только после успешного удаления закрываем модальное окно
+      console.log('🚫 Closing WaitModal...');
+      setShowWaitModal(false);
+
+      // И только потом отключаем сокет
       if (socket.connected) {
+        console.log('🔌 Disconnecting socket...');
         socket.disconnect();
       }
 
-      setShowWaitModal(false);
+      console.log('✅ Lobby cancellation process completed successfully');
+
     } catch (error) {
-      console.error('Failed to cancel lobby:', error);
+      console.error('❌ Failed to cancel lobby:', {
+        error: error.message,
+        stack: error.stack
+      });
+      // В случае ошибки тоже закрываем модальное окно
       setShowWaitModal(false);
+      alert(error.message || "Failed to cancel lobby");
     }
   };
 

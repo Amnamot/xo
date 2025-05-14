@@ -8,22 +8,9 @@ const Loader = () => {
   const navigate = useNavigate();
   const [progress, setProgress] = useState(0);
   const [authorized, setAuthorized] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Подключаем сокет и логируем показ лоадера
-    const logLoaderState = async () => {
-      await connectSocket();
-      const socket = initSocket();
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      socket.emit('uiState', { 
-        state: 'loader', 
-        telegramId: user.telegramId || 'unknown',
-        details: { progress: 0 }
-      });
-    };
-    
-    logLoaderState();
-    
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
@@ -39,6 +26,7 @@ const Loader = () => {
   useEffect(() => {
     const initDataRaw = window.Telegram?.WebApp?.initData;
     const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+    const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
 
     console.log("🧪 RAW initData:", initDataRaw);
     console.log("🧪 Parsed initDataUnsafe:", window.Telegram?.WebApp?.initDataUnsafe);
@@ -56,7 +44,25 @@ const Loader = () => {
         stars: 10
       };
       localStorage.setItem('user', JSON.stringify(mockUser));
-      setAuthorized(true);
+      
+      // Подключаем сокет и логируем состояние для мок-режима
+      const connectAndLog = async () => {
+        try {
+          await connectSocket();
+          const socket = initSocket();
+          socket.emit('uiState', { 
+            state: 'loader', 
+            telegramId: mockUser.telegramId,
+            details: { progress: 0 }
+          });
+          setAuthorized(true);
+        } catch (err) {
+          console.error("Socket connection error in mock mode:", err);
+          setError("Failed to connect to game server");
+        }
+      };
+      
+      connectAndLog();
       return;
     }
 
@@ -71,16 +77,38 @@ const Loader = () => {
         if (!res.ok) throw new Error("Failed to authorize");
         return res.json();
       })
-      .then((user) => {
+      .then(async (user) => {
         const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
         if (tgUser?.photo_url) {
           user.avatar = tgUser.photo_url;
         }
         localStorage.setItem("user", JSON.stringify(user));
-        setAuthorized(true);
+        
+        // Подключаем сокет и логируем состояние после успешной авторизации
+        try {
+          await connectSocket();
+          const socket = initSocket();
+          socket.emit('uiState', { 
+            state: 'loader', 
+            telegramId: telegramId || user.telegramId,
+            details: { progress: 0 }
+          });
+          setAuthorized(true);
+        } catch (err) {
+          console.error("Socket connection error:", err);
+          setError("Failed to connect to game server");
+          navigate("/loss", {
+            state: {
+              type: 'losst2',
+              message: 'Failed to connect to game server.<br />Please try again.',
+              redirectTo: '/start'
+            }
+          });
+        }
       })
       .catch((err) => {
         console.error("Authorization error:", err);
+        setError("Failed to authorize");
         navigate("/start");
       });
   }, [navigate]);
@@ -88,6 +116,7 @@ const Loader = () => {
   useEffect(() => {
     if (progress >= 100 && authorized) {
       const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+      const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
       const user = JSON.parse(localStorage.getItem('user') || '{}');
 
       if (startParam) {
@@ -108,8 +137,7 @@ const Loader = () => {
         const connectAndJoin = async () => {
           try {
             console.log('🔄 Connecting to WebSocket and joining lobby:', startParam);
-            await connectSocket();
-            const joinResponse = await joinLobby(startParam, user.telegramId);
+            const joinResponse = await joinLobby(startParam, telegramId || user.telegramId);
             
             if (joinResponse.status === 'error') {
               console.warn('❌ Error joining lobby:', joinResponse);
@@ -170,8 +198,8 @@ const Loader = () => {
         // Проверяем, есть ли активное лобби для этого пользователя
         const socket = initSocket();
         
-        if (user.telegramId) {
-          socket.emit('checkActiveLobby', { telegramId: user.telegramId }, (response) => {
+        if (telegramId || user.telegramId) {
+          socket.emit('checkActiveLobby', { telegramId: telegramId || user.telegramId }, (response) => {
             if (response?.lobbyId) {
               // Если есть активное лобби, устанавливаем флаг для показа WaitModal
               localStorage.setItem('showWaitModal', 'true');
@@ -186,6 +214,14 @@ const Loader = () => {
       }
     }
   }, [progress, authorized, navigate]);
+
+  if (error) {
+    return (
+      <div className="loader">
+        <div className="loader-error">{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="loader">

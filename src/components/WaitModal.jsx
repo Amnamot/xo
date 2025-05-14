@@ -14,10 +14,16 @@ const WaitModal = ({ onCancel }) => {
       const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
       const remaining = Math.max(0, LOBBY_LIFETIME - elapsedSeconds);
       setSecondsLeft(remaining);
+
+      // Если таймер дошел до нуля, отменяем лобби
+      if (remaining === 0) {
+        clearInterval(timer);
+        onCancel();
+      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [onCancel]);
 
   const formatTime = (totalSeconds) => {
     const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');

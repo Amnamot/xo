@@ -10,6 +10,7 @@ const Loader = () => {
   const [authorized, setAuthorized] = useState(false);
   const [error, setError] = useState(null);
 
+  // Эффект для прогресс-бара
   useEffect(() => {
     const interval = setInterval(() => {
       setProgress((prev) => {
@@ -23,6 +24,7 @@ const Loader = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Эффект для авторизации
   useEffect(() => {
     const initDataRaw = window.Telegram?.WebApp?.initData;
     const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
@@ -113,6 +115,7 @@ const Loader = () => {
       });
   }, [navigate]);
 
+  // Эффект для обработки параметра start_param и перехода на нужный экран
   useEffect(() => {
     if (progress >= 100 && authorized) {
       const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
@@ -133,7 +136,7 @@ const Loader = () => {
           return;
         }
 
-        // Подключаемся к сокету и пытаемся присоединиться к лобби
+        // Пытаемся присоединиться к лобби
         const connectAndJoin = async () => {
           try {
             console.log('🔄 Connecting to WebSocket and joining lobby:', startParam);
@@ -193,7 +196,10 @@ const Loader = () => {
           }
         };
 
-        connectAndJoin();
+        // Ждем полной загрузки UI перед подключением к лобби
+        setTimeout(() => {
+          connectAndJoin();
+        }, 500);
       } else {
         // Проверяем, есть ли активное лобби для этого пользователя
         const socket = initSocket();

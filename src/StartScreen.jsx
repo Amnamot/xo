@@ -52,18 +52,24 @@ const StartScreen = () => {
           localStorage.removeItem('showWaitModal');
           localStorage.removeItem('lobbyTTL');
           
-          // Отправляем состояние UI
+          // Отправляем состояние UI с корректным telegramId
           socket.emit('uiState', { 
             state: 'waitModal', 
             telegramId: parsed.telegramId,
-            details: { timeLeft: ttl }
+            details: { 
+              timeLeft: ttl,
+              isReconnect: true 
+            }
           });
         } else {
-          // Логируем показ стартового экрана
+          // Логируем показ стартового экрана с корректным telegramId
           socket.emit('uiState', { 
             state: 'startScreen', 
             telegramId: parsed.telegramId,
-            details: { numGames: parsed.numGames, numWins: parsed.numWins }
+            details: { 
+              numGames: parsed.numGames, 
+              numWins: parsed.numWins 
+            }
           });
         }
       } catch (error) {
@@ -186,17 +192,37 @@ const StartScreen = () => {
       console.log('👁️ Showing wait modal');
 
       // Создание инвайта через WebSocket
-      console.log('📤 Creating invite via WebSocket...');
+      console.log('📤 Creating invite via WebSocket...', {
+        telegramId,
+        timestamp: new Date().toISOString()
+      });
+      
       const inviteData = await createInviteWS(telegramId.toString());
-      console.log('📬 Invite created:', inviteData);
+      console.log('📬 Invite created:', {
+        ...inviteData,
+        timestamp: new Date().toISOString()
+      });
 
       // Отправка сообщения через Telegram
-      console.log('📤 Sharing message via Telegram...');
-      await window.Telegram?.WebApp?.shareMessage(inviteData.messageId);
-      console.log('✅ Message shared successfully');
+      console.log('📱 Preparing to share message via Telegram...', {
+        messageId: inviteData.messageId,
+        timestamp: new Date().toISOString()
+      });
+      
+      const shareResult = await window.Telegram?.WebApp?.shareMessage(inviteData.messageId);
+      console.log('📨 Share message result:', {
+        success: true,
+        messageId: inviteData.messageId,
+        timestamp: new Date().toISOString(),
+        shareResult
+      });
 
     } catch (err) {
-      console.error('❌ Error during game start:', err);
+      console.error('❌ Error during game start:', {
+        error: err,
+        message: err.message,
+        timestamp: new Date().toISOString()
+      });
       
       setShowWaitModal(false);
       

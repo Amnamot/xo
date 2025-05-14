@@ -33,7 +33,7 @@ const WaitModal = ({ onCancel }) => {
 
   return (
     <div className="waitFrame">
-      <div className="waitText">Ожидаем присоединения противника</div>
+      <div className="waitText">We are waiting for\nthe zero to join</div>
       <div className="waitTimer">{formatTime(secondsLeft)}</div>
       <button className="waitButton" onClick={onCancel}>Cancel</button>
     </div>

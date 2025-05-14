@@ -126,12 +126,31 @@ const StartScreen = () => {
       console.log('⏳ Setting up lobby ready listener');
       const lobbyReadyPromise = new Promise((resolve, reject) => {
         const socket = initSocket();
+        console.log('🔌 Socket instance for lobby ready:', socket.id);
+        
+        socket.on('connect', () => {
+          console.log('🔄 Socket reconnected during lobby creation');
+        });
+        
+        socket.on('disconnect', (reason) => {
+          console.log('❌ Socket disconnected during lobby creation:', reason);
+        });
+        
+        socket.on('error', (error) => {
+          console.error('🚨 Socket error during lobby creation:', error);
+        });
+        
         socket.once('lobbyReady', (data) => {
           console.log('✅ Received lobbyReady event:', data);
           resolve(data);
         });
+        
         setTimeout(() => {
-          console.error('❌ Lobby creation timeout');
+          console.error('❌ Lobby creation timeout. Socket state:', {
+            id: socket.id,
+            connected: socket.connected,
+            disconnected: socket.disconnected
+          });
           reject(new Error('Lobby creation timeout'));
         }, 5000);
       });

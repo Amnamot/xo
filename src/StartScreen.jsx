@@ -13,13 +13,14 @@ const StartScreen = () => {
   const initData = window.Telegram?.WebApp?.initData;
   const navigate = useNavigate();
   const socketRef = useRef(null);
+  const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
 
   useEffect(() => {
     // Подключаем сокет сразу
     const socket = initSocket();
     socketRef.current = socket;
 
-    // Слушаем все события до загрузки пользователя
+    // Сначала устанавливаем все слушатели событий
     socket.on('gameStart', (data) => {
       console.log('✅ Received gameStart event:', data);
       navigate(`/game/${data.session.id}`, { replace: true });
@@ -29,20 +30,24 @@ const StartScreen = () => {
       console.log('📱 Received setShowWaitModal event:', data);
       if (data.show) {
         setShowWaitModal(true);
-        // Отправляем состояние UI только если у нас есть данные пользователя
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          const parsed = JSON.parse(storedUser);
-          socket.emit('uiState', { 
-            state: 'waitModal', 
-            telegramId: parsed.telegramId || 'unknown',
-            details: { 
-              timeLeft: data.ttl,
-              isReconnect: true 
-            }
-          });
-        }
+        socket.emit('uiState', { 
+          state: 'waitModal', 
+          telegramId: telegramId || 'unknown',
+          details: { 
+            timeLeft: data.ttl,
+            isReconnect: true 
+          }
+        });
+      } else {
+        setShowWaitModal(false);
       }
+    });
+
+    // Только после установки всех слушателей отправляем начальное состояние UI
+    socket.emit('uiState', { 
+      state: 'loader', 
+      telegramId: telegramId || 'unknown',
+      details: { progress: 0 }
     });
 
     const storedUser = localStorage.getItem('user');
@@ -72,7 +77,7 @@ const StartScreen = () => {
           // Отправляем состояние UI
           socket.emit('uiState', { 
             state: 'waitModal', 
-            telegramId: parsed.telegramId || 'unknown',
+            telegramId: telegramId || 'unknown',
             details: { 
               timeLeft: ttl,
               isReconnect: true 
@@ -82,7 +87,7 @@ const StartScreen = () => {
           // Логируем показ стартового экрана
           socket.emit('uiState', { 
             state: 'startScreen', 
-            telegramId: parsed.telegramId || 'unknown',
+            telegramId: telegramId || 'unknown',
             details: { 
               numGames: parsed.numGames, 
               numWins: parsed.numWins 

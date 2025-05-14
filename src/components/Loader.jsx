@@ -108,84 +108,27 @@ const Loader = () => {
           return;
         }
 
-        fetch("https://api.igra.top/lobby/join", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-init-data": initData
-          },
-          body: JSON.stringify({ lobbyId })
-        })
-          .then((res) => {
-            localStorage.removeItem("lobbyIdToJoin");
-            if (res.ok) {
-              return res.json().then((data) => {
-                if (data.status === 'error') {
-                  if (data.errorType === 'disconnected') {
-                    navigate("/loss", { 
-                      state: { 
-                        type: 'losst2',
-                        message: data.message,
-                        timer: data.ttl,
-                        redirectTo: '/start'
-                      } 
-                    });
-                  } else if (data.errorType === 'expired') {
-                    navigate("/loss", { 
-                      state: { 
-                        type: 'losst2',
-                        message: data.message,
-                        redirectTo: '/start'
-                      } 
-                    });
-                  }
-                  return;
-                }
-                
-                if (data.status === 'creator') {
-                  fetch("https://api.igra.top/lobby/timeleft", {
-                    headers: {
-                      "x-init-data": initData
-                    }
-                  })
-                    .then((res) => res.ok ? res.json() : null)
-                    .then((data) => {
-                      if (data?.timeLeft != null) {
-                        localStorage.setItem("timeLeft", data.timeLeft);
-                      }
-                    })
-                    .catch((e) => console.warn("❌ Failed to preload timeLeft:", e));
-
-                  localStorage.setItem("showWaitModal", "true");
-                  navigate("/start");
-                } else {
-                  console.log("✅ Lobby join successful");
-                  navigate("/game");
-                }
-              });
-            } else {
-              navigate("/loss", { 
-                state: { 
-                  type: 'losst2',
-                  message: 'Either the battle is over,<br />or the link is very old...',
-                  redirectTo: '/start'
-                } 
-              });
-            }
-          })
-          .catch((err) => {
-            console.warn("🔥 Fetch error during lobby join:", err);
-            localStorage.removeItem("lobbyIdToJoin");
-            navigate("/loss", { 
-              state: { 
-                type: 'losst2',
-                message: 'Either the battle is over,<br />or the link is very old...',
-                redirectTo: '/start'
-              } 
-            });
-          });
+        // Переходим на страницу игры с lobbyId
+        navigate(`/game/${lobbyId}`, { replace: true });
+        localStorage.removeItem("lobbyIdToJoin"); // Очищаем после использования
       } else {
-        navigate("/start");
+        // Проверяем, есть ли активное лобби для этого пользователя
+        const socket = initSocket();
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        
+        if (user.telegramId) {
+          socket.emit('checkActiveLobby', { telegramId: user.telegramId }, (response) => {
+            if (response?.lobbyId) {
+              // Если есть активное лобби, устанавливаем флаг для показа WaitModal
+              localStorage.setItem('showWaitModal', 'true');
+              localStorage.setItem('lobbyTTL', response.ttl.toString());
+            }
+            // В любом случае переходим на стартовый экран
+            navigate("/start", { replace: true });
+          });
+        } else {
+          navigate("/start", { replace: true });
+        }
       }
     }
   }, [progress, authorized, navigate]);

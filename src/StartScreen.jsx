@@ -29,13 +29,43 @@ const StartScreen = () => {
 
         setUser(parsed);
         
-        // Логируем показ стартового экрана
+        // Подключаем сокет
         const socket = initSocket();
-        socket.emit('uiState', { 
-          state: 'startScreen', 
-          telegramId: parsed.telegramId,
-          details: { numGames: parsed.numGames, numWins: parsed.numWins }
+        
+        // Слушаем событие начала игры
+        socket.on('gameStart', (data) => {
+          console.log('✅ Received gameStart event:', data);
+          // Перенаправляем на экран игры с gameId
+          navigate(`/game/${data.session.id}`, { replace: true });
         });
+        
+        // Сохраняем ссылку на сокет для очистки
+        socketRef.current = socket;
+        
+        // Проверяем флаг showWaitModal
+        const shouldShowWaitModal = localStorage.getItem('showWaitModal') === 'true';
+        if (shouldShowWaitModal) {
+          const ttl = parseInt(localStorage.getItem('lobbyTTL') || '180', 10);
+          setShowWaitModal(true);
+          
+          // Очищаем флаги
+          localStorage.removeItem('showWaitModal');
+          localStorage.removeItem('lobbyTTL');
+          
+          // Отправляем состояние UI
+          socket.emit('uiState', { 
+            state: 'waitModal', 
+            telegramId: parsed.telegramId,
+            details: { timeLeft: ttl }
+          });
+        } else {
+          // Логируем показ стартового экрана
+          socket.emit('uiState', { 
+            state: 'startScreen', 
+            telegramId: parsed.telegramId,
+            details: { numGames: parsed.numGames, numWins: parsed.numWins }
+          });
+        }
       } catch (error) {
         console.error("Failed to parse user from localStorage", error);
       }
@@ -49,10 +79,12 @@ const StartScreen = () => {
     }
 
     return () => {
-      // Отключаем WebSocket при размонтировании компонента
-      if (socketRef.current?.connected) {
-        socketRef.current.disconnect();
+      // Отключаем WebSocket и очищаем слушатели при размонтировании
+      if (socketRef.current) {
         socketRef.current.off('gameStart');
+        if (socketRef.current.connected) {
+          socketRef.current.disconnect();
+        }
       }
     };
   }, [navigate]);

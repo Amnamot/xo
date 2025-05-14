@@ -3,7 +3,6 @@ import WaitModal from './components/WaitModal';
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
-import ConnectionStatus from './components/ConnectionStatus';
 import './StartScreen.css';
 import { initSocket, connectSocket, disconnectSocket, createLobby, createInviteWS } from './services/socket';
 
@@ -176,7 +175,6 @@ const StartScreen = () => {
 
   return (
     <div className="start-screen">
-      <ConnectionStatus />
       {showWaitModal && <WaitModal onCancel={handleCancelLobby} />}
       <div className="top-logo">
         <img src="../media/3tICO.svg" width={128} alt="Logo" />

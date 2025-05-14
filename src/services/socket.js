@@ -31,24 +31,16 @@ export const initSocket = () => {
   // Обработка ошибок
   socket.on('connect_error', (error) => {
     console.error('WebSocket connection error:', error);
-    window.dispatchEvent(new CustomEvent('websocket_error', { 
-      detail: { error: error.message } 
-    }));
   });
 
   socket.on('connect', () => {
     console.log('Connected to WebSocket server');
     reconnectAttempts = 0;
-    window.dispatchEvent(new CustomEvent('websocket_connected'));
   });
 
   socket.on('disconnect', (reason) => {
     console.log('Disconnected from WebSocket server:', reason);
     
-    window.dispatchEvent(new CustomEvent('websocket_disconnected', { 
-      detail: { reason } 
-    }));
-
     if (reason === 'io server disconnect' || reason === 'io client disconnect') {
       return;
     }
@@ -193,20 +185,12 @@ export const connectSocket = () => {
       resolve();
     };
 
-    const handleError = (event) => {
-      cleanup();
-      reject(new Error(event.detail.error));
-    };
-
     const cleanup = () => {
       clearTimeout(timeout);
-      window.removeEventListener('websocket_connected', handleConnect);
-      window.removeEventListener('websocket_error', handleError);
+      currentSocket.off('connect', handleConnect);
     };
 
-    window.addEventListener('websocket_connected', handleConnect);
-    window.addEventListener('websocket_error', handleError);
-    
+    currentSocket.once('connect', handleConnect);
     reconnectAttempts = 0;
     currentSocket.connect();
   });

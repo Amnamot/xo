@@ -83,8 +83,13 @@ const Loader = () => {
         if (!initData) {
           console.warn("No initData during lobby join. Aborting.");
           localStorage.removeItem("lobbyIdToJoin");
-          console.log("⚠️ Lobby not found or join failed. Redirecting to /nolobby");
-          navigate("/nolobby");
+          navigate("/loss", { 
+            state: { 
+              type: 'losst2',
+              message: 'Either the battle is over,<br />or the link is very old...',
+              redirectTo: '/start'
+            } 
+          });
           return;
         }
 
@@ -99,7 +104,29 @@ const Loader = () => {
           .then((res) => {
             localStorage.removeItem("lobbyIdToJoin");
             if (res.ok) {
-              res.json().then((data) => {
+              return res.json().then((data) => {
+                if (data.status === 'error') {
+                  if (data.errorType === 'disconnected') {
+                    navigate("/loss", { 
+                      state: { 
+                        type: 'losst2',
+                        message: data.message,
+                        timer: data.ttl,
+                        redirectTo: '/start'
+                      } 
+                    });
+                  } else if (data.errorType === 'expired') {
+                    navigate("/loss", { 
+                      state: { 
+                        type: 'losst2',
+                        message: data.message,
+                        redirectTo: '/start'
+                      } 
+                    });
+                  }
+                  return;
+                }
+                
                 if (data.status === 'creator') {
                   fetch("https://api.igra.top/lobby/timeleft", {
                     headers: {
@@ -122,15 +149,25 @@ const Loader = () => {
                 }
               });
             } else {
-              console.log("⚠️ Lobby not found or join failed. Redirecting to /nolobby");
-              navigate("/nolobby");
+              navigate("/loss", { 
+                state: { 
+                  type: 'losst2',
+                  message: 'Either the battle is over,<br />or the link is very old...',
+                  redirectTo: '/start'
+                } 
+              });
             }
           })
           .catch((err) => {
             console.warn("🔥 Fetch error during lobby join:", err);
             localStorage.removeItem("lobbyIdToJoin");
-            console.log("⚠️ Lobby not found or join failed. Redirecting to /nolobby");
-            navigate("/nolobby");
+            navigate("/loss", { 
+              state: { 
+                type: 'losst2',
+                message: 'Either the battle is over,<br />or the link is very old...',
+                redirectTo: '/start'
+              } 
+            });
           });
       } else {
         navigate("/start");

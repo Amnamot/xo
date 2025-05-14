@@ -117,12 +117,7 @@ const StartScreen = () => {
         const socket = initSocket();
         console.log('🔌 Socket instance for lobby ready:', socket.id);
         
-        socket.once('lobbyReady', (data) => {
-          console.log('✅ Received lobbyReady event:', data);
-          resolve(data);
-        });
-        
-        setTimeout(() => {
+        let timeoutId = setTimeout(() => {
           console.error('❌ Lobby creation timeout. Socket state:', {
             id: socket.id,
             connected: socket.connected,
@@ -130,6 +125,12 @@ const StartScreen = () => {
           });
           reject(new Error('Lobby creation timeout'));
         }, 5000);
+        
+        socket.once('lobbyReady', (data) => {
+          clearTimeout(timeoutId);
+          console.log('✅ Received lobbyReady event:', data);
+          resolve(data);
+        });
       });
 
       // Создаем лобби через WebSocket

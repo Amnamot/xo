@@ -1,5 +1,5 @@
 // src/App.jsx v3
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Loader from "./components/Loader";
 import StartScreen from "./StartScreen";
@@ -10,7 +10,13 @@ import Loss from "./components/Loss";
 import { initSocket, connectSocket } from './services/socket';
 
 const App = () => {
+  const [telegramId, setTelegramId] = useState(null);
+
   useEffect(() => {
+    // Получаем telegramId из localStorage при инициализации
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    setTelegramId(user.telegramId || 'unknown');
+
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.ready();
       
@@ -19,7 +25,6 @@ const App = () => {
         if (!window.Telegram.WebApp.isExpanded) {
           await connectSocket();
           const socket = initSocket();
-          const user = JSON.parse(localStorage.getItem('user') || '{}');
           socket.emit('uiState', { 
             state: 'appClosed', 
             telegramId: user.telegramId || 'unknown',
@@ -33,14 +38,24 @@ const App = () => {
     }
   }, []);
 
+  // Функция для отправки состояния UI
+  const emitUiState = (state, details = {}) => {
+    const socket = initSocket();
+    socket.emit('uiState', {
+      state,
+      telegramId,
+      details
+    });
+  };
+
   return (
     <Router>
       <Routes>
         {/* Стартовый экран при загрузке приложения */}
-        <Route path="/" element={<Loader />} />
+        <Route path="/" element={<Loader onMount={() => emitUiState('loader', { progress: 0 })} />} />
 
         {/* Экран после загрузки */}
-        <Route path="/start" element={<StartScreen />} />
+        <Route path="/start" element={<StartScreen onMount={() => emitUiState('startScreen')} />} />
 
         {/* Игровой экран */}
         <Route path="/game" element={<Game />} /> {/* Для создателя лобби */}
@@ -53,7 +68,7 @@ const App = () => {
         <Route path="/lost" element={<LostGame />} />
 
         {/* Экран потерянного лобби */}
-        <Route path="/nolobby" element={<Loss />} />
+        <Route path="/nolobby" element={<Loss onMount={() => emitUiState('loss')} />} />
       </Routes>
     </Router>
   );

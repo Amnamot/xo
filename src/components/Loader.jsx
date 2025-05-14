@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Loader.css';
-import { initSocket, connectSocket } from '../services/socket';
+import { initSocket, connectSocket, joinLobby, disconnectSocket } from '../services/socket';
 
 const Loader = () => {
   const navigate = useNavigate();
@@ -39,10 +39,6 @@ const Loader = () => {
   useEffect(() => {
     const initDataRaw = window.Telegram?.WebApp?.initData;
     const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
-
-    if (startParam) {
-      localStorage.setItem("lobbyIdToJoin", startParam);
-    }
 
     console.log("🧪 RAW initData:", initDataRaw);
     console.log("🧪 Parsed initDataUnsafe:", window.Telegram?.WebApp?.initDataUnsafe);
@@ -91,13 +87,13 @@ const Loader = () => {
 
   useEffect(() => {
     if (progress >= 100 && authorized) {
-      const lobbyId = localStorage.getItem("lobbyIdToJoin");
+      const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
 
-      if (lobbyId) {
+      if (startParam) {
         const initData = window.Telegram?.WebApp?.initData;
         if (!initData) {
           console.warn("No initData during lobby join. Aborting.");
-          localStorage.removeItem("lobbyIdToJoin");
           navigate("/loss", { 
             state: { 
               type: 'losst2',
@@ -108,13 +104,71 @@ const Loader = () => {
           return;
         }
 
-        // Переходим на страницу игры с lobbyId
-        navigate(`/game/${lobbyId}`, { replace: true });
-        localStorage.removeItem("lobbyIdToJoin"); // Очищаем после использования
+        // Подключаемся к сокету и пытаемся присоединиться к лобби
+        const connectAndJoin = async () => {
+          try {
+            console.log('🔄 Connecting to WebSocket and joining lobby:', startParam);
+            await connectSocket();
+            const joinResponse = await joinLobby(startParam, user.telegramId);
+            
+            if (joinResponse.status === 'error') {
+              console.warn('❌ Error joining lobby:', joinResponse);
+              
+              // Отключаем сокет при ошибке
+              disconnectSocket();
+              
+              if (joinResponse.errorType === 'expired') {
+                navigate("/loss", {
+                  state: {
+                    type: 'losst2',
+                    message: joinResponse.message || 'The game session has expired.',
+                    redirectTo: '/start'
+                  }
+                });
+              } else if (joinResponse.errorType === 'disconnected') {
+                navigate("/loss", {
+                  state: {
+                    type: 'losst2',
+                    message: joinResponse.message || 'Waiting for the opponent to reconnect...',
+                    timer: joinResponse.ttl,
+                    redirectTo: '/start'
+                  }
+                });
+              } else {
+                navigate("/loss", {
+                  state: {
+                    type: 'losst2',
+                    message: joinResponse.message || 'Failed to join the game.',
+                    redirectTo: '/start'
+                  }
+                });
+              }
+              return;
+            }
+
+            console.log('✅ Successfully joined lobby:', joinResponse);
+            // Если всё успешно, переходим на страницу игры
+            navigate(`/game/${startParam}`, { replace: true });
+          } catch (error) {
+            console.error("❌ Failed to join lobby:", error);
+            
+            // Отключаем сокет при ошибке
+            disconnectSocket();
+            
+            navigate("/loss", {
+              state: {
+                type: 'losst2',
+                message: 'Failed to join the game.<br />Please try again.',
+                redirectTo: '/start'
+              }
+            });
+          }
+        };
+
+        connectAndJoin();
       } else {
         // Проверяем, есть ли активное лобби для этого пользователя
         const socket = initSocket();
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
         
         if (user.telegramId) {
           socket.emit('checkActiveLobby', { telegramId: user.telegramId }, (response) => {

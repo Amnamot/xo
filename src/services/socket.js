@@ -82,7 +82,21 @@ export const joinLobby = (lobbyId, telegramId) => {
       reject(new Error('WebSocket is not connected'));
       return;
     }
-    currentSocket.emit('joinLobby', { lobbyId, telegramId }, resolve);
+    
+    // Устанавливаем слушатель для события начала игры
+    currentSocket.once('gameStart', (data) => {
+      console.log('✅ Game started:', data);
+      resolve(data);
+    });
+
+    // Отправляем запрос на присоединение к лобби
+    currentSocket.emit('joinLobby', { lobbyId, telegramId }, (response) => {
+      if (response?.status === 'error') {
+        reject(response);
+      } else {
+        resolve(response);
+      }
+    });
   });
 };
 

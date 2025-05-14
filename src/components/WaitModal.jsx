@@ -8,6 +8,14 @@ const WaitModal = ({ onCancel }) => {
   const [secondsLeft, setSecondsLeft] = useState(LOBBY_LIFETIME);
 
   useEffect(() => {
+    // Логируем показ WaitModal
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    window.socket?.emit('uiState', { 
+      state: 'waitModal', 
+      telegramId: user.telegramId,
+      details: { timeLeft: LOBBY_LIFETIME }
+    });
+
     const startTime = Date.now();
     
     const timer = setInterval(() => {

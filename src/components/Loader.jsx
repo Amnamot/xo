@@ -9,6 +9,14 @@ const Loader = () => {
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
+    // Логируем показ лоадера
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    window.socket?.emit('uiState', { 
+      state: 'loader', 
+      telegramId: user.telegramId || 'unknown',
+      details: { progress: 0 }
+    });
+    
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {

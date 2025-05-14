@@ -13,6 +13,18 @@ const Loss = () => {
   useEffect(() => {
     console.log("📺 Loss screen mounted", location.state);
 
+    // Логируем показ экрана Loss
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    window.socket?.emit('uiState', { 
+      state: 'loss', 
+      telegramId: user.telegramId,
+      details: { 
+        message: location.state?.message,
+        timer: location.state?.timer,
+        type: location.state?.type
+      }
+    });
+
     if (location.state?.timer) {
       const timer = setInterval(() => {
         setTimeLeft(prev => {

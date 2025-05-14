@@ -28,6 +28,13 @@ const StartScreen = () => {
         }
 
         setUser(parsed);
+        
+        // Логируем показ стартового экрана
+        window.socket?.emit('uiState', { 
+          state: 'startScreen', 
+          telegramId: parsed.telegramId,
+          details: { numGames: parsed.numGames, numWins: parsed.numWins }
+        });
       } catch (error) {
         console.error("Failed to parse user from localStorage", error);
       }

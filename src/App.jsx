@@ -7,11 +7,29 @@ import Game from "./Game";
 import EndGame from "./components/EndGame";
 import LostGame from "./components/LostGame";
 import Loss from "./components/Loss";
+import { initSocket, connectSocket } from './services/socket';
 
 const App = () => {
   useEffect(() => {
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.ready();
+      
+      // Отслеживаем закрытие приложения
+      window.Telegram.WebApp.onEvent('viewportChanged', async () => {
+        if (!window.Telegram.WebApp.isExpanded) {
+          await connectSocket();
+          const socket = initSocket();
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          socket.emit('uiState', { 
+            state: 'appClosed', 
+            telegramId: user.telegramId || 'unknown',
+            details: { 
+              lastScreen: window.location.pathname,
+              timestamp: Date.now()
+            }
+          });
+        }
+      });
     }
   }, []);
 

@@ -1,6 +1,7 @@
 // src/components/WaitModal.jsx v6.1
 import React, { useEffect, useState } from 'react';
 import './WaitModal.css';
+import { initSocket } from '../services/socket';
 
 const LOBBY_LIFETIME = 180; // время жизни лобби в секундах
 
@@ -8,9 +9,10 @@ const WaitModal = ({ onCancel }) => {
   const [secondsLeft, setSecondsLeft] = useState(LOBBY_LIFETIME);
 
   useEffect(() => {
-    // Логируем показ WaitModal
+    // Используем существующий сокет для логирования
+    const socket = initSocket();
     const user = JSON.parse(localStorage.getItem('user') || '{}');
-    window.socket?.emit('uiState', { 
+    socket.emit('uiState', { 
       state: 'waitModal', 
       telegramId: user.telegramId,
       details: { timeLeft: LOBBY_LIFETIME }

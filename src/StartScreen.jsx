@@ -30,7 +30,8 @@ const StartScreen = () => {
         setUser(parsed);
         
         // Логируем показ стартового экрана
-        window.socket?.emit('uiState', { 
+        const socket = initSocket();
+        socket.emit('uiState', { 
           state: 'startScreen', 
           telegramId: parsed.telegramId,
           details: { numGames: parsed.numGames, numWins: parsed.numWins }

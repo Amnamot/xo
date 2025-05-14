@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Loader.css';
+import { initSocket, connectSocket } from '../services/socket';
 
 const Loader = () => {
   const navigate = useNavigate();
@@ -9,13 +10,19 @@ const Loader = () => {
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    // Логируем показ лоадера
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    window.socket?.emit('uiState', { 
-      state: 'loader', 
-      telegramId: user.telegramId || 'unknown',
-      details: { progress: 0 }
-    });
+    // Подключаем сокет и логируем показ лоадера
+    const logLoaderState = async () => {
+      await connectSocket();
+      const socket = initSocket();
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      socket.emit('uiState', { 
+        state: 'loader', 
+        telegramId: user.telegramId || 'unknown',
+        details: { progress: 0 }
+      });
+    };
+    
+    logLoaderState();
     
     const interval = setInterval(() => {
       setProgress((prev) => {

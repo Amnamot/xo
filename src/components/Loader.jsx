@@ -99,7 +99,7 @@ const Loader = () => {
         } catch (err) {
           console.error("Socket connection error:", err);
           setError("Failed to connect to game server");
-          navigate("/loss", {
+          navigate("/nolobby", {
             state: {
               type: 'losst2',
               message: 'Failed to connect to game server.<br />Please try again.',
@@ -126,7 +126,7 @@ const Loader = () => {
         const initData = window.Telegram?.WebApp?.initData;
         if (!initData) {
           console.warn("No initData during lobby join. Aborting.");
-          navigate("/loss", { 
+          navigate("/nolobby", { 
             state: { 
               type: 'losst2',
               message: 'Either the battle is over,<br />or the link is very old...',
@@ -149,7 +149,7 @@ const Loader = () => {
               disconnectSocket();
               
               if (joinResponse.errorType === 'expired') {
-                navigate("/loss", {
+                navigate("/nolobby", {
                   state: {
                     type: 'losst2',
                     message: joinResponse.message || 'The game session has expired.',
@@ -157,7 +157,7 @@ const Loader = () => {
                   }
                 });
               } else if (joinResponse.errorType === 'disconnected') {
-                navigate("/loss", {
+                navigate("/nolobby", {
                   state: {
                     type: 'losst2',
                     message: joinResponse.message || 'Waiting for the opponent to reconnect...',
@@ -166,7 +166,7 @@ const Loader = () => {
                   }
                 });
               } else {
-                navigate("/loss", {
+                navigate("/nolobby", {
                   state: {
                     type: 'losst2',
                     message: joinResponse.message || 'Failed to join the game.',
@@ -186,7 +186,7 @@ const Loader = () => {
             // Отключаем сокет при ошибке
             disconnectSocket();
             
-            navigate("/loss", {
+            navigate("/nolobby", {
               state: {
                 type: 'losst2',
                 message: 'Failed to join the game.<br />Please try again.',

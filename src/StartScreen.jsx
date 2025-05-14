@@ -15,6 +15,36 @@ const StartScreen = () => {
   const socketRef = useRef(null);
 
   useEffect(() => {
+    // Подключаем сокет сразу
+    const socket = initSocket();
+    socketRef.current = socket;
+
+    // Слушаем все события до загрузки пользователя
+    socket.on('gameStart', (data) => {
+      console.log('✅ Received gameStart event:', data);
+      navigate(`/game/${data.session.id}`, { replace: true });
+    });
+
+    socket.on('setShowWaitModal', (data) => {
+      console.log('📱 Received setShowWaitModal event:', data);
+      if (data.show) {
+        setShowWaitModal(true);
+        // Отправляем состояние UI только если у нас есть данные пользователя
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const parsed = JSON.parse(storedUser);
+          socket.emit('uiState', { 
+            state: 'waitModal', 
+            telegramId: parsed.telegramId || 'unknown',
+            details: { 
+              timeLeft: data.ttl,
+              isReconnect: true 
+            }
+          });
+        }
+      }
+    });
+
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       try {
@@ -29,36 +59,6 @@ const StartScreen = () => {
 
         setUser(parsed);
         
-        // Подключаем сокет
-        const socket = initSocket();
-        
-        // Слушаем событие начала игры
-        socket.on('gameStart', (data) => {
-          console.log('✅ Received gameStart event:', data);
-          // Перенаправляем на экран игры с gameId
-          navigate(`/game/${data.session.id}`, { replace: true });
-        });
-
-        // Слушаем событие показа WaitModal
-        socket.on('setShowWaitModal', (data) => {
-          console.log('📱 Received setShowWaitModal event:', data);
-          if (data.show) {
-            setShowWaitModal(true);
-            // Отправляем состояние UI
-            socket.emit('uiState', { 
-              state: 'waitModal', 
-              telegramId: parsed.telegramId || 'unknown',
-              details: { 
-                timeLeft: data.ttl,
-                isReconnect: true 
-              }
-            });
-          }
-        });
-        
-        // Сохраняем ссылку на сокет для очистки
-        socketRef.current = socket;
-        
         // Проверяем флаг showWaitModal
         const shouldShowWaitModal = localStorage.getItem('showWaitModal') === 'true';
         if (shouldShowWaitModal) {
@@ -69,7 +69,7 @@ const StartScreen = () => {
           localStorage.removeItem('showWaitModal');
           localStorage.removeItem('lobbyTTL');
           
-          // Отправляем состояние UI с корректным telegramId
+          // Отправляем состояние UI
           socket.emit('uiState', { 
             state: 'waitModal', 
             telegramId: parsed.telegramId || 'unknown',
@@ -79,7 +79,7 @@ const StartScreen = () => {
             }
           });
         } else {
-          // Логируем показ стартового экрана с корректным telegramId
+          // Логируем показ стартового экрана
           socket.emit('uiState', { 
             state: 'startScreen', 
             telegramId: parsed.telegramId || 'unknown',
@@ -102,9 +102,9 @@ const StartScreen = () => {
     }
 
     return () => {
-      // Отключаем WebSocket и очищаем слушатели при размонтировании
       if (socketRef.current) {
         socketRef.current.off('gameStart');
+        socketRef.current.off('setShowWaitModal');
         if (socketRef.current.connected) {
           socketRef.current.disconnect();
         }

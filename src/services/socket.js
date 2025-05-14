@@ -118,6 +118,23 @@ export const confirmMoveReceived = (gameId, moveId) => {
   currentSocket.emit('moveReceived', { gameId, moveId });
 };
 
+export const createInviteWS = (telegramId) => {
+  const currentSocket = initSocket();
+  return new Promise((resolve, reject) => {
+    if (!currentSocket.connected) {
+      reject(new Error('WebSocket is not connected'));
+      return;
+    }
+    currentSocket.emit('createInvite', { telegramId }, (response) => {
+      if (response?.error) {
+        reject(new Error(response.error));
+      } else {
+        resolve(response);
+      }
+    });
+  });
+};
+
 // Функция для подписки на события игры
 export const subscribeToGameEvents = (handlers) => {
   const currentSocket = initSocket();

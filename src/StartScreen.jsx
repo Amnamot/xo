@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
 import ConnectionStatus from './components/ConnectionStatus';
 import './StartScreen.css';
-import { initSocket, connectSocket, disconnectSocket, createLobby } from './services/socket';
+import { initSocket, connectSocket, disconnectSocket, createLobby, createInviteWS } from './services/socket';
 
 const StartScreen = () => {
   const [user, setUser] = useState(null);
@@ -100,24 +100,13 @@ const StartScreen = () => {
   };
 
   const handleStartGame = async () => {
-    console.log('🎮 Starting game initialization');
-    
     try {
-      // Проверка initData
-      if (!initData) {
-        console.error('❌ initData not found');
-        throw new Error("initData not found");
-      }
-      
-      // Проверка telegramId
       const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
       if (!telegramId) {
-        console.error('❌ Telegram user ID not found');
-        throw new Error("Telegram user ID not found");
+        throw new Error("Missing Telegram ID");
       }
-      console.log('✅ User validation passed:', { telegramId });
 
-      // Подключение WebSocket
+      // Подключаем WebSocket
       console.log('🔄 Connecting to WebSocket...');
       await connectSocket();
       console.log('✅ WebSocket connected successfully');
@@ -127,18 +116,6 @@ const StartScreen = () => {
       const lobbyReadyPromise = new Promise((resolve, reject) => {
         const socket = initSocket();
         console.log('🔌 Socket instance for lobby ready:', socket.id);
-        
-        socket.on('connect', () => {
-          console.log('🔄 Socket reconnected during lobby creation');
-        });
-        
-        socket.on('disconnect', (reason) => {
-          console.log('❌ Socket disconnected during lobby creation:', reason);
-        });
-        
-        socket.on('error', (error) => {
-          console.error('🚨 Socket error during lobby creation:', error);
-        });
         
         socket.once('lobbyReady', (data) => {
           console.log('✅ Received lobbyReady event:', data);
@@ -155,7 +132,7 @@ const StartScreen = () => {
         }, 5000);
       });
 
-      // Создание лобби через WebSocket
+      // Создаем лобби через WebSocket
       console.log('🎲 Creating lobby...');
       const lobbyResponse = await createLobby(telegramId.toString());
       console.log('📦 Lobby creation response:', lobbyResponse);
@@ -168,35 +145,14 @@ const StartScreen = () => {
       setShowWaitModal(true);
       console.log('👁️ Showing wait modal');
 
-      // Создание инвайта через REST API
-      console.log('�� Creating invite...', {
-        initData,
-        headers: {
-          "Content-Type": "application/json",
-          "x-init-data": initData
-        }
-      });
-      const response = await fetch("https://api.igra.top/lobby/createInvite", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-init-data": initData
-        },
-        body: JSON.stringify({
-          telegramId: telegramId.toString()
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to create invite: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('📬 Invite created:', data);
+      // Создание инвайта через WebSocket
+      console.log('📤 Creating invite via WebSocket...');
+      const inviteData = await createInviteWS(telegramId.toString());
+      console.log('📬 Invite created:', inviteData);
 
       // Отправка сообщения через Telegram
       console.log('📤 Sharing message via Telegram...');
-      await window.Telegram?.WebApp?.shareMessage(data.messageId);
+      await window.Telegram?.WebApp?.shareMessage(inviteData.messageId);
       console.log('✅ Message shared successfully');
 
     } catch (err) {

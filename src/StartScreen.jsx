@@ -38,6 +38,23 @@ const StartScreen = () => {
           // Перенаправляем на экран игры с gameId
           navigate(`/game/${data.session.id}`, { replace: true });
         });
+
+        // Слушаем событие показа WaitModal
+        socket.on('setShowWaitModal', (data) => {
+          console.log('📱 Received setShowWaitModal event:', data);
+          if (data.show) {
+            setShowWaitModal(true);
+            // Отправляем состояние UI
+            socket.emit('uiState', { 
+              state: 'waitModal', 
+              telegramId: parsed.telegramId || 'unknown',
+              details: { 
+                timeLeft: data.ttl,
+                isReconnect: true 
+              }
+            });
+          }
+        });
         
         // Сохраняем ссылку на сокет для очистки
         socketRef.current = socket;
@@ -55,7 +72,7 @@ const StartScreen = () => {
           // Отправляем состояние UI с корректным telegramId
           socket.emit('uiState', { 
             state: 'waitModal', 
-            telegramId: parsed.telegramId,
+            telegramId: parsed.telegramId || 'unknown',
             details: { 
               timeLeft: ttl,
               isReconnect: true 
@@ -65,7 +82,7 @@ const StartScreen = () => {
           // Логируем показ стартового экрана с корректным telegramId
           socket.emit('uiState', { 
             state: 'startScreen', 
-            telegramId: parsed.telegramId,
+            telegramId: parsed.telegramId || 'unknown',
             details: { 
               numGames: parsed.numGames, 
               numWins: parsed.numWins 

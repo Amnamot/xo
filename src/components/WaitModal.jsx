@@ -8,17 +8,19 @@ const LOBBY_LIFETIME = 180; // время жизни лобби в секунд�
 const WaitModal = ({ onCancel }) => {
   const [secondsLeft, setSecondsLeft] = useState(LOBBY_LIFETIME);
   const [startTime, setStartTime] = useState(Date.now());
+  const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
 
   useEffect(() => {
     const socket = initSocket();
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
 
     // Отправляем начальное состояние
-    socket.emit('uiState', { 
-      state: 'waitModal', 
-      telegramId: user.telegramId,
-      details: { timeLeft: LOBBY_LIFETIME }
-    });
+    if (telegramId) {
+      socket.emit('uiState', { 
+        state: 'waitModal', 
+        telegramId,
+        details: { timeLeft: LOBBY_LIFETIME }
+      });
+    }
 
     // Слушаем событие uiState для восстановления таймера
     socket.on('uiState', (data) => {
@@ -45,7 +47,7 @@ const WaitModal = ({ onCancel }) => {
       clearInterval(timer);
       socket.off('uiState');
     };
-  }, [onCancel, startTime]);
+  }, [onCancel, startTime, telegramId]);
 
   const formatTime = (totalSeconds) => {
     const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');

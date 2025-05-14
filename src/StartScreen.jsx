@@ -30,74 +30,104 @@ const StartScreen = () => {
       console.log('📱 Received setShowWaitModal event:', data);
       if (data.show) {
         setShowWaitModal(true);
-        socket.emit('uiState', { 
-          state: 'waitModal', 
-          telegramId: telegramId || 'unknown',
-          details: { 
-            timeLeft: data.ttl,
-            isReconnect: true 
-          }
-        });
+        if (telegramId) {
+          socket.emit('uiState', { 
+            state: 'waitModal', 
+            telegramId,
+            details: { 
+              timeLeft: data.ttl,
+              isReconnect: true 
+            }
+          });
+        }
       } else {
         setShowWaitModal(false);
       }
     });
 
-    // Только после установки всех слушателей отправляем начальное состояние UI
-    socket.emit('uiState', { 
-      state: 'loader', 
-      telegramId: telegramId || 'unknown',
-      details: { progress: 0 }
-    });
-
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+    const initializeUI = async () => {
       try {
-        const parsed = JSON.parse(storedUser);
+        // Проверяем наличие активного лобби при инициализации
+        if (telegramId) {
+          socket.emit('checkActiveLobby', { telegramId }, (response) => {
+            console.log('🔍 Checking active lobby response:', response);
+            if (response?.lobbyId && response?.ttl > 0) {
+              setShowWaitModal(true);
+              socket.emit('uiState', { 
+                state: 'waitModal', 
+                telegramId,
+                details: { 
+                  timeLeft: response.ttl,
+                  isReconnect: true 
+                }
+              });
+            }
+          });
+        }
 
-        if (!parsed.avatar) {
-          const tgPhoto = window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url;
-          if (tgPhoto) {
-            parsed.avatar = tgPhoto;
+        // Отправляем начальное состояние UI только если есть telegramId
+        if (telegramId) {
+          socket.emit('uiState', { 
+            state: 'loader', 
+            telegramId,
+            details: { progress: 0 }
+          });
+        }
+
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const parsed = JSON.parse(storedUser);
+
+          if (!parsed.avatar) {
+            const tgPhoto = window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url;
+            if (tgPhoto) {
+              parsed.avatar = tgPhoto;
+            }
+          }
+
+          setUser(parsed);
+          
+          // Проверяем флаг showWaitModal
+          const shouldShowWaitModal = localStorage.getItem('showWaitModal') === 'true';
+          if (shouldShowWaitModal) {
+            const ttl = parseInt(localStorage.getItem('lobbyTTL') || '180', 10);
+            setShowWaitModal(true);
+            
+            // Очищаем флаги
+            localStorage.removeItem('showWaitModal');
+            localStorage.removeItem('lobbyTTL');
+            
+            // Отправляем состояние UI только если есть telegramId
+            if (telegramId) {
+              socket.emit('uiState', { 
+                state: 'waitModal', 
+                telegramId,
+                details: { 
+                  timeLeft: ttl,
+                  isReconnect: true 
+                }
+              });
+            }
+          } else {
+            // Логируем показ стартового экрана только если есть telegramId
+            if (telegramId) {
+              socket.emit('uiState', { 
+                state: 'startScreen', 
+                telegramId,
+                details: { 
+                  numGames: parsed.numGames, 
+                  numWins: parsed.numWins 
+                }
+              });
+            }
           }
         }
-
-        setUser(parsed);
-        
-        // Проверяем флаг showWaitModal
-        const shouldShowWaitModal = localStorage.getItem('showWaitModal') === 'true';
-        if (shouldShowWaitModal) {
-          const ttl = parseInt(localStorage.getItem('lobbyTTL') || '180', 10);
-          setShowWaitModal(true);
-          
-          // Очищаем флаги
-          localStorage.removeItem('showWaitModal');
-          localStorage.removeItem('lobbyTTL');
-          
-          // Отправляем состояние UI
-          socket.emit('uiState', { 
-            state: 'waitModal', 
-            telegramId: telegramId || 'unknown',
-            details: { 
-              timeLeft: ttl,
-              isReconnect: true 
-            }
-          });
-        } else {
-          // Логируем показ стартового экрана
-          socket.emit('uiState', { 
-            state: 'startScreen', 
-            telegramId: telegramId || 'unknown',
-            details: { 
-              numGames: parsed.numGames, 
-              numWins: parsed.numWins 
-            }
-          });
-        }
       } catch (error) {
-        console.error("Failed to parse user from localStorage", error);
+        console.error("Failed to initialize UI:", error);
       }
-    }
+    };
+
+    initializeUI();
 
     const rawInitData = window.Telegram?.WebApp?.initData;
     if (rawInitData) {
@@ -115,7 +145,7 @@ const StartScreen = () => {
         }
       }
     };
-  }, [navigate]);
+  }, [navigate, telegramId]);
 
   const handleCancelLobby = async () => {
     const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;

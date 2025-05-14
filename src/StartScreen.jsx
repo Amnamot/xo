@@ -169,7 +169,13 @@ const StartScreen = () => {
       console.log('👁️ Showing wait modal');
 
       // Создание инвайта через REST API
-      console.log('🔄 Creating invite...');
+      console.log('�� Creating invite...', {
+        initData,
+        headers: {
+          "Content-Type": "application/json",
+          "x-init-data": initData
+        }
+      });
       const response = await fetch("https://api.igra.top/lobby/createInvite", {
         method: "POST",
         headers: {

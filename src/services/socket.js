@@ -1,3 +1,5 @@
+// src/services/socket.js 
+// v1
 import { io } from 'socket.io-client';
 
 let socket = null;

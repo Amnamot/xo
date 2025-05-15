@@ -165,6 +165,13 @@ const calculateBoardDimensions = (cellSize) => {
 const Game = () => {
   const navigate = useNavigate();
   const { lobbyId } = useParams();
+  
+  // Добавляем логирование инициализации состояний
+  console.log('🎮 Game component initialization', {
+    lobbyId,
+    timestamp: new Date().toISOString()
+  });
+
   const [board, setBoard] = useState(() => {
     const savedState = loadGameState();
     return savedState?.board || createEmptyBoard();
@@ -225,6 +232,21 @@ const Game = () => {
 
   // Сохраняем состояние при изменении важных данных
   useEffect(() => {
+    console.log('💾 Game state update', {
+      board: board.length,
+      currentPlayer,
+      scale,
+      position,
+      moveStartTime: moveStartTime ? new Date(moveStartTime).toISOString() : null,
+      gameStartTime: gameStartTime ? new Date(gameStartTime).toISOString() : null,
+      time,
+      playerTime1,
+      playerTime2,
+      gameSession: gameSession?.id,
+      isConnected,
+      timestamp: new Date().toISOString()
+    });
+
     const gameState = {
       board,
       currentPlayer,
@@ -250,7 +272,8 @@ const Game = () => {
     playerTime1,
     playerTime2,
     gameSession,
-    opponentInfo
+    opponentInfo,
+    isConnected
   ]);
 
   // При монтировании компонента проверяем сохраненное состояние
@@ -268,29 +291,34 @@ const Game = () => {
 
   // Обновляем эффект с подключением к WebSocket
   useEffect(() => {
-    // Инициализируем сокет до определения функции connect
     const socket = initSocket();
-    const savedState = loadGameState();
-    
-    if (savedState?.gameSession) {
-      socket.emit('joinGame', {
-        gameId: savedState.gameSession.id,
-        telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id
-      });
-    }
+    console.log('🔌 Socket initialization', {
+      socketId: socket?.id,
+      connected: socket?.connected,
+      timestamp: new Date().toISOString()
+    });
 
     const connect = () => {
-      if (!socket) return; // Проверка на существование сокета
+      if (!socket) {
+        console.warn('⚠️ Socket not initialized in connect()');
+        return;
+      }
       
       connectSocket();
 
       socket.on('connect', () => {
-        console.log('Connected to game server');
+        console.log('✅ Socket connected', {
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
         setIsConnected(true);
         setReconnectAttempts(0);
         
-        // Проверяем существование gameSession перед использованием
         if (gameSession?.id) {
+          console.log('🔄 Requesting game state', {
+            gameId: gameSession.id,
+            timestamp: new Date().toISOString()
+          });
           socket.emit('requestGameState', {
             gameId: gameSession.id,
             telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id
@@ -299,6 +327,15 @@ const Game = () => {
       });
 
       socket.on('gameState', (data) => {
+        console.log('📥 Received game state', {
+          valid: isValidGameState(data),
+          data: {
+            currentPlayer: data?.currentPlayer,
+            gameSessionId: data?.gameSession?.id,
+            boardSize: data?.board?.length
+          },
+          timestamp: new Date().toISOString()
+        });
         if (!data || !isValidGameState(data)) {
           console.error('Received invalid game state from server');
           return;
@@ -497,6 +534,10 @@ const Game = () => {
     });
 
     return () => {
+      console.log('🔌 Cleaning up socket connections', {
+        socketId: socket?.id,
+        timestamp: new Date().toISOString()
+      });
       socket.off('gameState');
       unsubscribe();
       socket.off('connect');
@@ -578,52 +619,105 @@ const Game = () => {
   const isOurTurn = currentPlayer === (gameSession?.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id ? "X" : "O");
 
   const handleTouchStart = (e) => {
-    if (!isOurTurn) return; // Блокируем взаимодействие если не наш ход
-    if (e.touches.length === 1) {
-      setTouchStart({
+    console.log('👆 Touch start event', {
+      isOurTurn,
+      touchCount: e?.touches?.length,
+      timestamp: new Date().toISOString()
+    });
+
+    if (!isOurTurn) return;
+    
+    if (e?.touches?.length === 1) {
+      const newTouchStart = {
         x: e.touches[0].clientX - position.x,
         y: e.touches[0].clientY - position.y,
+      };
+      console.log('📱 Single touch start', {
+        position,
+        newTouchStart,
+        timestamp: new Date().toISOString()
       });
-    } else if (e.touches.length === 2) {
+      setTouchStart(newTouchStart);
+    } else if (e?.touches?.length === 2) {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
-      setInitialDistance(Math.sqrt(dx * dx + dy * dy));
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      console.log('📱 Double touch start', {
+        distance,
+        timestamp: new Date().toISOString()
+      });
+      setInitialDistance(distance);
     }
   };
 
   const handleTouchMove = (e) => {
-    if (!isOurTurn || !e?.touches) return; // Проверяем наличие события и прав на ход
+    console.log('👆 Touch move event', {
+      isOurTurn,
+      touchCount: e?.touches?.length,
+      touchStart: !!touchStart,
+      initialDistance: !!initialDistance,
+      timestamp: new Date().toISOString()
+    });
+
+    if (!isOurTurn || !e?.touches) return;
 
     try {
       if (e.touches.length === 1) {
-        // Проверяем наличие начальной точки касания
-        if (!touchStart) return;
+        if (!touchStart) {
+          console.warn('⚠️ Touch move without touchStart');
+          return;
+        }
         
-        setPosition({
+        const newPosition = {
           x: e.touches[0].clientX - touchStart.x,
           y: e.touches[0].clientY - touchStart.y,
+        };
+        console.log('📱 Moving board', {
+          from: position,
+          to: newPosition,
+          timestamp: new Date().toISOString()
         });
+        setPosition(newPosition);
       } else if (e.touches.length === 2) {
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         const newDistance = Math.sqrt(dx * dx + dy * dy);
         
-        // Проверяем наличие начального расстояния
         if (!initialDistance) {
+          console.log('📏 Setting initial distance', {
+            distance: newDistance,
+            timestamp: new Date().toISOString()
+          });
           setInitialDistance(newDistance);
           return;
         }
         
         const zoom = newDistance / initialDistance;
+        console.log('🔍 Zooming board', {
+          currentScale: scale,
+          zoom,
+          newDistance,
+          initialDistance,
+          timestamp: new Date().toISOString()
+        });
         setScale((prev) => Math.min(Math.max(prev * zoom, 0.5), 2));
         setInitialDistance(newDistance);
       }
     } catch (error) {
-      console.error('Error in handleTouchMove:', error);
+      console.error('❌ Error in handleTouchMove:', {
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
     }
   };
 
   const handleTouchEnd = () => {
+    console.log('👆 Touch end event', {
+      hadTouchStart: !!touchStart,
+      hadInitialDistance: !!initialDistance,
+      timestamp: new Date().toISOString()
+    });
     setTouchStart(null);
     setInitialDistance(null);
   };

@@ -6,6 +6,7 @@ let socket = null;
 let socketInstance = null;
 const MAX_RECONNECT_ATTEMPTS = 5;
 let reconnectAttempts = 0;
+let connectionPromise = null;
 
 // Объявляем все обработчики событий до их использования
 const handleConnect = (socket) => {
@@ -85,26 +86,81 @@ export const disconnectSocket = () => {
     socket.disconnect();
     socket = null;
     socketInstance = null; // Очищаем обе ссылки
+    connectionPromise = null;
   }
   reconnectAttempts = 0;
 };
 
-// Объявляем обработчики событий для joinLobby
-const createGameStartHandler = (cleanup, resolve) => (data) => {
-  cleanup();
-  console.log('✅ Game started:', {
-    data,
-    timestamp: new Date().toISOString()
+// Функция для подключения сокета с Promise
+export const connectSocket = async () => {
+  if (connectionPromise) {
+    return connectionPromise;
+  }
+
+  connectionPromise = new Promise((resolve, reject) => {
+    const newSocket = io(process.env.REACT_APP_SOCKET_URL, {
+      transports: ['websocket'],
+      query: {
+        telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()
+      }
+    });
+
+    const timeoutId = setTimeout(() => {
+      if (!newSocket.connected) {
+        newSocket.close();
+        reject(new Error('Socket connection timeout'));
+        connectionPromise = null;
+      }
+    }, 5000);
+
+    newSocket.on('connect', () => {
+      clearTimeout(timeoutId);
+      socket = newSocket;
+      socketInstance = newSocket;
+      resolve(newSocket);
+    });
+
+    newSocket.on('connect_error', (error) => {
+      clearTimeout(timeoutId);
+      reject(error);
+      connectionPromise = null;
+    });
   });
-  resolve(data);
+
+  return connectionPromise;
 };
 
-export const joinLobby = (lobbyId, telegramId) => {
-  const currentSocket = initSocket();
-  
-  if (!currentSocket?.connected) {
-    return Promise.reject(new Error('WebSocket is not connected'));
+// Вспомогательная функция для проверки и ожидания подключения
+const ensureConnection = async () => {
+  if (socket?.connected) {
+    return socket;
   }
+
+  try {
+    return await connectSocket();
+  } catch (error) {
+    console.error('Failed to connect socket:', error);
+    throw error;
+  }
+};
+
+// Обновляем все методы для использования ensureConnection
+export const createLobby = async (telegramId) => {
+  const currentSocket = await ensureConnection();
+  
+  return new Promise((resolve, reject) => {
+    currentSocket.emit('createLobby', { telegramId }, (response) => {
+      if (response?.error) {
+        reject(new Error(response.error));
+      } else {
+        resolve(response);
+      }
+    });
+  });
+};
+
+export const joinLobby = async (lobbyId, telegramId) => {
+  const currentSocket = await ensureConnection();
 
   return new Promise((resolve, reject) => {
     let gameStartHandler;
@@ -122,13 +178,54 @@ export const joinLobby = (lobbyId, telegramId) => {
       reject(new Error('Join lobby timeout'));
     }, 10000);
 
-    gameStartHandler = createGameStartHandler(cleanup, resolve);
+    gameStartHandler = (data) => {
+      cleanup();
+      resolve(data);
+    };
+    
     currentSocket.once('gameStart', gameStartHandler);
 
     currentSocket.emit('joinLobby', { lobbyId, telegramId }, (response) => {
       if (response?.status === 'error') {
         cleanup();
         reject(response);
+      }
+    });
+  });
+};
+
+export const makeMove = async (gameId, position, player, moveTime) => {
+  const currentSocket = await ensureConnection();
+
+  return new Promise((resolve) => {
+    currentSocket.emit('makeMove', { gameId, position, player, moveTime }, resolve);
+  });
+};
+
+export const updatePlayerTime = async (gameId, playerTimes) => {
+  const currentSocket = await ensureConnection();
+  currentSocket.emit('updatePlayerTime', { gameId, playerTimes });
+};
+
+export const updateViewport = async (gameId, viewport) => {
+  const currentSocket = await ensureConnection();
+  currentSocket.emit('updateViewport', { gameId, viewport });
+};
+
+export const confirmMoveReceived = async (gameId, moveId) => {
+  const currentSocket = await ensureConnection();
+  currentSocket.emit('moveReceived', { gameId, moveId });
+};
+
+export const createInviteWS = async (telegramId) => {
+  const currentSocket = await ensureConnection();
+
+  return new Promise((resolve, reject) => {
+    currentSocket.emit('createInvite', { telegramId }, (response) => {
+      if (response?.error) {
+        reject(new Error(response.error));
+      } else {
+        resolve(response);
       }
     });
   });
@@ -183,87 +280,4 @@ export const subscribeToGameEvents = (handlers) => {
       }
     });
   };
-};
-
-export const makeMove = (gameId, position, player, moveTime) => {
-  const currentSocket = initSocket();
-  
-  if (!currentSocket?.connected) {
-    return Promise.reject(new Error('WebSocket is not connected'));
-  }
-
-  return new Promise((resolve) => {
-    currentSocket.emit('makeMove', { gameId, position, player, moveTime }, resolve);
-  });
-};
-
-export const updatePlayerTime = (gameId, playerTimes) => {
-  const currentSocket = initSocket();
-  if (currentSocket?.connected) {
-    currentSocket.emit('updatePlayerTime', { gameId, playerTimes });
-  }
-};
-
-export const updateViewport = (gameId, viewport) => {
-  const currentSocket = initSocket();
-  if (currentSocket?.connected) {
-    currentSocket.emit('updateViewport', { gameId, viewport });
-  }
-};
-
-export const confirmMoveReceived = (gameId, moveId) => {
-  const currentSocket = initSocket();
-  if (currentSocket?.connected) {
-    currentSocket.emit('moveReceived', { gameId, moveId });
-  }
-};
-
-export const createLobby = (telegramId) => {
-  const currentSocket = initSocket();
-  
-  if (!currentSocket?.connected) {
-    return Promise.reject(new Error('WebSocket is not connected'));
-  }
-
-  return new Promise((resolve, reject) => {
-    currentSocket.emit('createLobby', { telegramId }, (response) => {
-      if (response?.error) {
-        reject(new Error(response.error));
-      } else {
-        resolve(response);
-      }
-    });
-  });
-};
-
-export const createInviteWS = (telegramId) => {
-  const currentSocket = initSocket();
-  
-  if (!currentSocket?.connected) {
-    return Promise.reject(new Error('WebSocket is not connected'));
-  }
-
-  return new Promise((resolve, reject) => {
-    currentSocket.emit('createInvite', { telegramId }, (response) => {
-      if (response?.error) {
-        reject(new Error(response.error));
-      } else {
-        resolve(response);
-      }
-    });
-  });
-};
-
-// Функция для подключения сокета
-export const connectSocket = async () => {
-  const newSocket = io(process.env.REACT_APP_SOCKET_URL, {
-    transports: ['websocket'],
-    query: {
-      telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()
-    }
-  });
-  
-  socket = newSocket;
-  socketInstance = newSocket;
-  return newSocket;
 }; 

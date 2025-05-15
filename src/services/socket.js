@@ -3,6 +3,7 @@
 import { io } from 'socket.io-client';
 
 let socket = null;
+let socketInstance = null;
 const MAX_RECONNECT_ATTEMPTS = 5;
 let reconnectAttempts = 0;
 
@@ -52,25 +53,11 @@ export const initSocket = () => {
     });
 
     // Добавляем базовые обработчики событий
-    socket.on('connect', () => {
-      console.log('✅ Socket connected:', {
-        id: socket.id,
-        timestamp: new Date().toISOString()
-      });
-    });
-
-    socket.on('connect_error', (error) => {
-      console.error('❌ Socket connection error:', {
-        error: error.message,
-        timestamp: new Date().toISOString()
-      });
-    });
-
-    socket.on('disconnect', () => {
-      console.log('🔌 Socket disconnected:', {
-        timestamp: new Date().toISOString()
-      });
-    });
+    socket.on('connect', () => handleConnect(socket));
+    socket.on('connect_error', handleConnectError);
+    socket.on('disconnect', (reason) => handleDisconnect(socket, reason));
+    
+    socketInstance = socket; // Синхронизируем socketInstance с socket
   }
   return socket;
 };
@@ -97,6 +84,7 @@ export const disconnectSocket = () => {
   if (socket?.connected) {
     socket.disconnect();
     socket = null;
+    socketInstance = null; // Очищаем обе ссылки
   }
   reconnectAttempts = 0;
 };
@@ -266,15 +254,16 @@ export const createInviteWS = (telegramId) => {
   });
 };
 
-// Функции-хелперы для работы с сокетами
+// Функция для подключения сокета
 export const connectSocket = async () => {
-  const socket = io(process.env.REACT_APP_SOCKET_URL, {
+  const newSocket = io(process.env.REACT_APP_SOCKET_URL, {
     transports: ['websocket'],
     query: {
       telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()
     }
   });
   
-  socketInstance = socket;
-  return socket;
+  socket = newSocket;
+  socketInstance = newSocket;
+  return newSocket;
 }; 

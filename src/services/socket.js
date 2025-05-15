@@ -1,5 +1,5 @@
 // src/services/socket.js 
-// v2
+// v3
 import { io } from 'socket.io-client';
 
 let socket = null;
@@ -9,10 +9,20 @@ let reconnectAttempts = 0;
 let connectionPromise = null;
 let isInitializing = false;
 
+// Получение telegramId с проверкой
+const getTelegramId = () => {
+  const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
+  if (!telegramId) {
+    throw new Error('TelegramId not available');
+  }
+  return telegramId;
+};
+
 // Объявляем все обработчики событий до их использования
 const handleConnect = (socket) => {
   console.log('✅ Connected to WebSocket server', {
     socketId: socket.id,
+    telegramId: getTelegramId(),
     timestamp: new Date().toISOString()
   });
   reconnectAttempts = 0;
@@ -21,6 +31,7 @@ const handleConnect = (socket) => {
 const handleConnectError = (error) => {
   console.error('❌ WebSocket connection error:', {
     error: error.message,
+    telegramId: getTelegramId(),
     timestamp: new Date().toISOString()
   });
 };
@@ -28,6 +39,7 @@ const handleConnectError = (error) => {
 const handleDisconnect = (socket, reason) => {
   console.log('🔌 Disconnected from WebSocket server:', {
     reason,
+    telegramId: getTelegramId(),
     timestamp: new Date().toISOString()
   });
   
@@ -93,18 +105,24 @@ export const initSocket = async () => {
   try {
     isInitializing = true;
 
+    // Получаем telegramId до создания сокета
+    const telegramId = getTelegramId();
+    console.log('🔑 Got telegramId for socket connection:', {
+      telegramId,
+      timestamp: new Date().toISOString()
+    });
+
     if (!socket) {
-      const socketUrl = `${process.env.REACT_APP_SOCKET_URL}/game`; // Добавляем namespace
+      const socketUrl = `${process.env.REACT_APP_SOCKET_URL}/game`;
       console.log('🔌 Initializing socket connection to:', {
         url: socketUrl,
+        telegramId,
         timestamp: new Date().toISOString()
       });
 
       socket = io(socketUrl, {
         transports: ['websocket', 'polling'],
-        query: {
-          telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()
-        }
+        query: { telegramId }
       });
 
       // Добавляем базовые обработчики событий
@@ -117,11 +135,18 @@ export const initSocket = async () => {
 
     // Ждем подключения
     await waitForConnection(socket);
-    console.log('✅ Socket successfully initialized and connected');
+    console.log('✅ Socket successfully initialized and connected', {
+      telegramId,
+      socketId: socket.id,
+      timestamp: new Date().toISOString()
+    });
     
     return socket;
   } catch (error) {
-    console.error('❌ Failed to initialize socket:', error);
+    console.error('❌ Failed to initialize socket:', {
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
     throw error;
   } finally {
     isInitializing = false;
@@ -172,7 +197,7 @@ export const connectSocket = async () => {
     const newSocket = io(socketUrl, {
       transports: ['websocket'],
       query: {
-        telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()
+        telegramId: getTelegramId()
       }
     });
 
@@ -217,27 +242,34 @@ const ensureConnection = async () => {
 
 // Обновляем все методы для использования ensureConnection
 export const createLobby = async (telegramId) => {
-  console.log('🎮 Creating lobby for:', {
-    telegramId,
-    timestamp: new Date().toISOString()
-  });
-
   try {
+    // Проверяем telegramId
+    if (!telegramId) {
+      telegramId = getTelegramId();
+    }
+
+    console.log('🎮 Creating lobby for:', {
+      telegramId,
+      timestamp: new Date().toISOString()
+    });
+
     const currentSocket = await initSocket();
     
     return new Promise((resolve, reject) => {
-      const LOBBY_CREATION_TIMEOUT = 20000; // увеличиваем таймаут до 20 секунд
+      const LOBBY_CREATION_TIMEOUT = 10000;
       let isResolved = false;
 
       const timeoutId = setTimeout(() => {
         if (!isResolved) {
+          const error = new Error('Create lobby timeout - server not responding');
           console.error('❌ Create lobby timeout:', {
             telegramId,
             socketId: currentSocket.id,
             connected: currentSocket.connected,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            error: error.message
           });
-          reject(new Error('Create lobby timeout - server not responding'));
+          reject(error);
         }
       }, LOBBY_CREATION_TIMEOUT);
 
@@ -248,33 +280,34 @@ export const createLobby = async (telegramId) => {
       });
 
       currentSocket.emit('createLobby', { telegramId }, (response) => {
-        isResolved = true;
-        clearTimeout(timeoutId);
-        
         console.log('📥 Received createLobby response:', {
           response,
           telegramId,
           socketId: currentSocket.id,
           timestamp: new Date().toISOString()
         });
-        
-        if (response?.error) {
+
+        isResolved = true;
+        clearTimeout(timeoutId);
+
+        if (response?.status === 'error') {
           console.error('❌ Failed to create lobby:', {
-            error: response.error,
+            error: response.message,
             telegramId,
             socketId: currentSocket.id,
             timestamp: new Date().toISOString()
           });
-          reject(new Error(response.error));
-        } else {
-          console.log('✅ Lobby created successfully:', {
-            response,
-            telegramId,
-            socketId: currentSocket.id,
-            timestamp: new Date().toISOString()
-          });
-          resolve(response);
+          reject(new Error(response.message));
+          return;
         }
+
+        console.log('✅ Lobby created successfully:', {
+          response,
+          telegramId,
+          socketId: currentSocket.id,
+          timestamp: new Date().toISOString()
+        });
+        resolve(response);
       });
     });
   } catch (error) {

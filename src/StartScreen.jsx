@@ -28,6 +28,7 @@ const StartScreen = () => {
 
       if (showWaitModalFlag === 'true' && lobbyStatus && lobbyTTL) {
         setShowWaitModal(true);
+        initializeSocket();
         // Очищаем флаги после использования
         localStorage.removeItem('showWaitModal');
         localStorage.removeItem('lobbyStatus');
@@ -155,7 +156,6 @@ const StartScreen = () => {
     }
 
     checkLobbyState();
-    initializeSocket();
 
     return () => {
       mounted = false;
@@ -173,6 +173,7 @@ const StartScreen = () => {
 
   const handleCreateGame = async () => {
     try {
+      await initializeSocket();
       const socket = getSocket();
       if (!socket || !isSocketConnected()) {
         throw new Error('Socket not connected');

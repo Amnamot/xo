@@ -48,11 +48,13 @@ const initTelegramApp = () => {
         viewportHeight: window.Telegram.WebApp.viewportHeight,
         viewportStableHeight: window.Telegram.WebApp.viewportStableHeight
       });
-      resolve();
+      
+      // Важно: даем небольшую задержку даже если WebApp уже инициализирован
+      setTimeout(resolve, 100);
       return;
     }
 
-    const maxAttempts = 50; // 5 секунд
+    const maxAttempts = 50;
     let attempts = 0;
 
     const checkTelegram = () => {
@@ -67,7 +69,9 @@ const initTelegramApp = () => {
           viewportHeight: window.Telegram.WebApp.viewportHeight,
           viewportStableHeight: window.Telegram.WebApp.viewportStableHeight
         });
-        resolve();
+        
+        // Важно: даем дополнительное время на полную инициализацию
+        setTimeout(resolve, 100);
         return;
       }
 
@@ -95,21 +99,31 @@ const startApp = async () => {
   console.time('⏱️ App Initialization');
   
   try {
+    // Ждем инициализации Telegram Web App
     await initTelegramApp();
+    
+    // Даем дополнительное время на полную инициализацию всех компонентов
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     console.log('🎯 Starting React initialization', {
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,
-      strictMode: process.env.NODE_ENV === 'development'
+      telegramWebApp: {
+        initialized: !!window.Telegram?.WebApp,
+        platform: window.Telegram?.WebApp?.platform,
+        version: window.Telegram?.WebApp?.version
+      }
     });
 
     const root = ReactDOM.createRoot(document.getElementById("root"));
-    const StrictMode = process.env.NODE_ENV === 'development' ? React.StrictMode : React.Fragment;
+    
+    // В production используем React.Fragment вместо StrictMode
+    const AppWrapper = process.env.NODE_ENV === 'development' ? React.StrictMode : React.Fragment;
     
     root.render(
-      <StrictMode>
+      <AppWrapper>
         <App />
-      </StrictMode>
+      </AppWrapper>
     );
 
     console.log('✅ React app rendered', {
@@ -125,4 +139,9 @@ const startApp = async () => {
   }
 };
 
-startApp();
+// Запускаем приложение только после полной загрузки DOM
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startApp);
+} else {
+  startApp();
+}

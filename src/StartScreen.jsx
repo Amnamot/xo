@@ -17,6 +17,122 @@ const StartScreen = () => {
   const socketRef = useRef(null);
   const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
 
+  const initializeSocket = async () => {
+    if (isConnecting) return;
+    
+    try {
+      setIsConnecting(true);
+      setError(null);
+
+      if (!telegramId) {
+        throw new Error('Telegram WebApp not initialized');
+      }
+
+      console.log('🚀 Initializing socket connection', {
+        telegramId,
+        timestamp: new Date().toISOString()
+      });
+
+      // Подключаем сокет
+      await connectSocket();
+      const socket = initSocket();
+      
+      if (!socket) {
+        throw new Error('Failed to initialize socket');
+      }
+
+      socketRef.current = socket;
+
+      // Отправляем состояние UI
+      socket.emit('uiState', { 
+        state: 'startScreen', 
+        telegramId,
+        details: { 
+          isReconnect: false 
+        }
+      });
+
+      // Настраиваем обработчики событий
+      socket.on('gameStart', (data) => {
+        if (!socketRef.current) return;
+        
+        console.log('✅ Received gameStart event:', {
+          data,
+          timestamp: new Date().toISOString()
+        });
+        
+        navigate(`/game/${data.session.id}`, { replace: true });
+      });
+
+      socket.on('setShowWaitModal', (data) => {
+        if (!socketRef.current) return;
+        
+        console.log('📱 Received setShowWaitModal event:', {
+          data,
+          timestamp: new Date().toISOString()
+        });
+        
+        setShowWaitModal(data.show);
+        
+        if (data.show && telegramId) {
+          socket.emit('uiState', {
+            state: 'waitModal',
+            telegramId,
+            details: {
+              timeLeft: data.ttl,
+              isReconnect: true
+            }
+          });
+        }
+      });
+
+      // Обработчики состояния подключения
+      socket.on('connect', () => {
+        if (!socketRef.current) return;
+        
+        console.log('✅ Socket connected:', {
+          id: socket.id,
+          timestamp: new Date().toISOString()
+        });
+        setIsConnecting(false);
+        setError(null);
+      });
+
+      socket.on('connect_error', (error) => {
+        if (!socketRef.current) return;
+        
+        console.error('❌ Socket connection error:', {
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
+        setError('Failed to connect to game server');
+        setIsConnecting(false);
+      });
+
+      socket.on('disconnect', () => {
+        if (!socketRef.current) return;
+        
+        console.log('🔌 Socket disconnected:', {
+          timestamp: new Date().toISOString()
+        });
+        
+        // Пробуем переподключиться
+        reconnectSocket();
+      });
+
+    } catch (error) {
+      if (!socketRef.current) return;
+      
+      console.error('❌ Socket initialization error:', {
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+      
+      setError(error.message);
+      setIsConnecting(false);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -33,119 +149,6 @@ const StartScreen = () => {
         localStorage.removeItem('showWaitModal');
         localStorage.removeItem('lobbyStatus');
         localStorage.removeItem('lobbyTTL');
-      }
-    };
-
-    const initializeSocket = async () => {
-      if (isConnecting) return;
-      
-      try {
-        setIsConnecting(true);
-        setError(null);
-
-        if (!telegramId) {
-          throw new Error('Telegram WebApp not initialized');
-        }
-
-        console.log('🚀 Initializing socket connection', {
-          telegramId,
-          timestamp: new Date().toISOString()
-        });
-
-        // Подключаем сокет
-        await connectSocket();
-        const socket = initSocket();
-        
-        if (!socket) {
-          throw new Error('Failed to initialize socket');
-        }
-
-        socketRef.current = socket;
-
-        // Отправляем состояние UI
-        socket.emit('uiState', { 
-          state: 'startScreen', 
-          telegramId,
-          details: { 
-            isReconnect: false 
-          }
-        });
-
-        // Настраиваем обработчики событий
-        socket.on('gameStart', (data) => {
-          if (!mounted) return;
-          
-          console.log('✅ Received gameStart event:', {
-            data,
-            timestamp: new Date().toISOString()
-          });
-          
-          navigate(`/game/${data.session.id}`, { replace: true });
-        });
-
-        socket.on('setShowWaitModal', (data) => {
-          if (!mounted) return;
-          
-          console.log('📱 Received setShowWaitModal event:', {
-            data,
-            timestamp: new Date().toISOString()
-          });
-          
-          setShowWaitModal(data.show);
-          
-          if (data.show && telegramId) {
-            socket.emit('uiState', {
-              state: 'waitModal',
-              telegramId,
-              details: {
-                timeLeft: data.ttl,
-                isReconnect: true
-              }
-            });
-          }
-        });
-
-        // Обработчики состояния подключения
-        socket.on('connect', () => {
-          if (!mounted) return;
-          console.log('✅ Socket connected:', {
-            id: socket.id,
-            timestamp: new Date().toISOString()
-          });
-          setIsConnecting(false);
-          setError(null);
-        });
-
-        socket.on('connect_error', (error) => {
-          if (!mounted) return;
-          console.error('❌ Socket connection error:', {
-            error: error.message,
-            timestamp: new Date().toISOString()
-          });
-          setError('Failed to connect to game server');
-          setIsConnecting(false);
-        });
-
-        socket.on('disconnect', () => {
-          if (!mounted) return;
-          console.log('🔌 Socket disconnected:', {
-            timestamp: new Date().toISOString()
-          });
-          
-          // Пробуем переподключиться
-          reconnectSocket();
-        });
-
-      } catch (error) {
-        if (!mounted) return;
-        
-        console.error('❌ Socket initialization error:', {
-          error: error.message,
-          timestamp: new Date().toISOString()
-        });
-        
-        setError(error.message);
-        setIsConnecting(false);
       }
     };
 

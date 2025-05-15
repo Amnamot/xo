@@ -254,7 +254,6 @@ const Game = () => {
     const unsubscribe = subscribeToGameEvents({
       onMoveMade: handleMoveMade,
       onTimeUpdated: handleTimeUpdate,
-      onViewportUpdated: handleViewportUpdate,
       onPlayerDisconnected: handlePlayerDisconnect,
       onPlayerReconnected: handlePlayerReconnect,
       onGameEnded: handleGameEnd
@@ -271,7 +270,6 @@ const Game = () => {
     gameSession?.id,
     handleMoveMade,
     handleTimeUpdate,
-    handleViewportUpdate,
     handlePlayerDisconnect,
     handlePlayerReconnect,
     handleGameEnd
@@ -311,10 +309,6 @@ const Game = () => {
 
   const handleTimeUpdate = useCallback((times) => {
     setPlayerTimes(times);
-  }, []);
-
-  const handleViewportUpdate = useCallback((newViewport) => {
-    setViewport(newViewport);
   }, []);
 
   const handlePlayerDisconnect = useCallback((data) => {

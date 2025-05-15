@@ -1,8 +1,6 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = 'https://igra.top';
 let socket = null;
-let isConnected = false;
 const MAX_RECONNECT_ATTEMPTS = 5;
 let reconnectAttempts = 0;
 
@@ -53,17 +51,14 @@ export const initSocket = () => {
     });
 
     socket.on('connect', () => {
-      isConnected = true;
       console.log('Socket connected:', socket.id);
     });
 
     socket.on('connect_error', (error) => {
-      isConnected = false;
       console.error('Socket connection error:', error);
     });
 
     socket.on('disconnect', () => {
-      isConnected = false;
       console.log('Socket disconnected');
     });
   }

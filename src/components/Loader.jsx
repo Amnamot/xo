@@ -20,7 +20,7 @@ const Loader = () => {
         const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
         
         // Все асинхронные операции выполняются параллельно
-        const [authResponse, socketConnection, lobbyCheck] = await Promise.all([
+        const [authResponse, _, lobbyCheck] = await Promise.all([
           // Авторизация пользователя
           initDataRaw ? fetch("https://api.igra.top/user/init", {
             method: "POST",

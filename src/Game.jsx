@@ -174,7 +174,6 @@ const calculateBoardDimensions = (cellSize) => {
 const Game = () => {
   const navigate = useNavigate();
   const { lobbyId } = useParams();
-  const mountedRef = useRef(false);
   const renderCountRef = useRef(0);
   const lastRenderTime = useRef(Date.now());
   const socketUnsubscribeRef = useRef(null);
@@ -187,8 +186,6 @@ const Game = () => {
   const [board, setBoard] = useState(createEmptyBoard);
   const [currentPlayer, setCurrentPlayer] = useState("O");
   const [gameSession, setGameSession] = useState(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [viewport, setViewport] = useState({ x: INITIAL_POSITION, y: INITIAL_POSITION });
   const [winner, setWinner] = useState(null);
   const [winLine, setWinLine] = useState(null);
   const [playerTimes, setPlayerTimes] = useState({ playerTime1: 0, playerTime2: 0 });
@@ -228,7 +225,6 @@ const Game = () => {
         setGameSession(gameData);
         setBoard(gameData.board || createEmptyBoard());
         setCurrentPlayer(gameData.currentPlayer || "O");
-        setIsConnected(true);
         setIsLoading(false);
         initializationCompleteRef.current = true;
 
@@ -271,7 +267,15 @@ const Game = () => {
         unsubscribe();
       }
     };
-  }, [gameSession?.id]);
+  }, [
+    gameSession?.id,
+    handleMoveMade,
+    handleTimeUpdate,
+    handleViewportUpdate,
+    handlePlayerDisconnect,
+    handlePlayerReconnect,
+    handleGameEnd
+  ]);
 
   // Эффект для обработки изменения размера окна
   useEffect(() => {

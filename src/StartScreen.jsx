@@ -1,6 +1,6 @@
 // src/StartScreen.jsx v15
 import WaitModal from './components/WaitModal';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
 import './StartScreen.css';
@@ -17,7 +17,7 @@ const StartScreen = () => {
   const socketRef = useRef(null);
   const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
 
-  const initializeSocket = async () => {
+  const initializeSocket = useCallback(async () => {
     if (isConnecting) return;
     
     try {
@@ -131,11 +131,9 @@ const StartScreen = () => {
       setError(error.message);
       setIsConnecting(false);
     }
-  };
+  }, [isConnecting, telegramId, navigate]);
 
   useEffect(() => {
-    let mounted = true;
-
     // Проверяем состояние лобби из localStorage
     const checkLobbyState = () => {
       const showWaitModalFlag = localStorage.getItem('showWaitModal');
@@ -161,7 +159,6 @@ const StartScreen = () => {
     checkLobbyState();
 
     return () => {
-      mounted = false;
       const socket = socketRef.current;
       if (socket) {
         console.log('👋 Cleaning up socket listeners');
@@ -172,7 +169,7 @@ const StartScreen = () => {
         socket.off('disconnect');
       }
     };
-  }, [navigate, telegramId, isConnecting]);
+  }, [navigate, telegramId, isConnecting, initializeSocket]);
 
   const handleCreateGame = async () => {
     try {

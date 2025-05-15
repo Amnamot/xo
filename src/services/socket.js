@@ -43,20 +43,31 @@ const handleDisconnect = (socket, reason) => {
 export const initSocket = () => {
   if (!socket) {
     socket = io(process.env.REACT_APP_SOCKET_URL, {
-      transports: ['websocket'],
-      upgrade: false
+      transports: ['websocket', 'polling'],
+      query: {
+        telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()
+      }
     });
 
+    // Добавляем базовые обработчики событий
     socket.on('connect', () => {
-      console.log('Socket connected:', socket.id);
+      console.log('✅ Socket connected:', {
+        id: socket.id,
+        timestamp: new Date().toISOString()
+      });
     });
 
     socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
+      console.error('❌ Socket connection error:', {
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
     });
 
     socket.on('disconnect', () => {
-      console.log('Socket disconnected');
+      console.log('🔌 Socket disconnected:', {
+        timestamp: new Date().toISOString()
+      });
     });
   }
   return socket;

@@ -211,6 +211,11 @@ const StartScreen = () => {
         });
       });
 
+      // Проверяем статус создания лобби
+      if (lobbyResponse.status !== 'created') {
+        throw new Error('Failed to create lobby: invalid status');
+      }
+
       // Отправляем состояние UI
       if (telegramId) {
         socket.emit('uiState', {

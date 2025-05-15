@@ -172,77 +172,26 @@ const Game = () => {
   const lastRenderTime = useRef(Date.now());
   const socketUnsubscribeRef = useRef(null);
   const initializationCompleteRef = useRef(false);
-  
-  console.log('🎮 Game component initialization', {
-    lobbyId,
-    timestamp: new Date().toISOString(),
-    mounted: mountedRef.current
-  });
+  const boardRef = useRef(null);
 
-  useEffect(() => {
-    mountedRef.current = true;
-    console.log('🔄 Game component mounted');
-    
-    return () => {
-      console.log('👋 Game component unmounting');
-      mountedRef.current = false;
-    };
-  }, []);
-
-  // Базовое состояние
+  // Все состояния объявляем в начале компонента
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [board, setBoard] = useState(createEmptyBoard);
   const [currentPlayer, setCurrentPlayer] = useState("O");
-  const [winLine, setWinLine] = useState(null);
-  const [scale, setScale] = useState(1);
-  const [position, setPosition] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.position || { x: 0, y: 0 };
-  });
-  const [touchStart, setTouchStart] = useState(null);
-  const [initialDistance, setInitialDistance] = useState(null);
-  const [moveStartTime, setMoveStartTime] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.moveStartTime || null;
-  });
-  const [gameStartTime, setGameStartTime] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.gameStartTime || null;
-  });
-  const [moveTimer, setMoveTimer] = useState(2400);
-  const [time, setTime] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.time || 0;
-  });
-  const [playerTime1, setPlayerTime1] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.playerTime1 || 0;
-  });
-  const [playerTime2, setPlayerTime2] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.playerTime2 || 0;
-  });
   const [gameSession, setGameSession] = useState(null);
-  const [opponentInfo, setOpponentInfo] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.opponentInfo || null;
-  });
   const [isConnected, setIsConnected] = useState(false);
-  const [reconnectAttempts, setReconnectAttempts] = useState(0);
-  const maxReconnectAttempts = 5;
-  const reconnectDelay = 2000;
-  const boardRef = useRef(null);
-  const [boardDimensions, setBoardDimensions] = useState({ width: 0, height: 0 });
-
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-  const CELL_SIZE = isMobile ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP;
+  const [viewport, setViewport] = useState({ x: INITIAL_POSITION, y: INITIAL_POSITION });
+  const [winner, setWinner] = useState(null);
+  const [winLine, setWinLine] = useState(null);
+  const [playerTimes, setPlayerTimes] = useState({ playerTime1: 0, playerTime2: 0 });
+  const [cellSize, setCellSize] = useState(window.innerWidth <= 768 ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP);
 
   // Эффект для инициализации игры
   useEffect(() => {
     let isMounted = true;
     let retryTimeout = null;
-    
+
     const initializeGame = async () => {
       try {
         console.log('🎮 Initializing game component', {
@@ -274,88 +223,10 @@ const Game = () => {
         setCurrentPlayer(gameData.currentPlayer || "O");
         setIsConnected(true);
         setIsLoading(false);
-        
-        // Подписываемся на события игры
-        const unsubscribe = await subscribeToGameEvents({
-          onOpponentJoined: (data) => {
-            if (!isMounted) return;
-            console.log('👥 Opponent joined:', data);
-            setGameSession(prev => ({ ...prev, ...data }));
-          },
-          onMoveMade: (data) => {
-            if (!isMounted) return;
-            console.log('🎯 Move made:', data);
-            setBoard(data.board);
-            setCurrentPlayer(data.nextPlayer);
-            if (data.winLine) {
-              setWinLine(data.winLine);
-            }
-          },
-          onTimeUpdated: (data) => {
-            if (!isMounted) return;
-            setGameSession(prev => ({
-              ...prev,
-              playerTimes: data.playerTimes
-            }));
-          },
-          onViewportUpdated: (data) => {
-            if (!isMounted) return;
-            setGameSession(prev => ({
-              ...prev,
-              viewport: data.viewport
-            }));
-          },
-          onPlayerStatus: (data) => {
-            if (!isMounted) return;
-            setGameSession(prev => ({
-              ...prev,
-              playerStatus: {
-                ...prev.playerStatus,
-                ...data
-              }
-            }));
-          },
-          onPlayerDisconnected: (data) => {
-            if (!isMounted) return;
-            console.log('🔌 Player disconnected:', data);
-            setGameSession(prev => ({
-              ...prev,
-              playerStatus: {
-                ...prev.playerStatus,
-                [data.playerId]: 'disconnected'
-              }
-            }));
-          },
-          onPlayerReconnected: (data) => {
-            if (!isMounted) return;
-            console.log('🔌 Player reconnected:', data);
-            setGameSession(prev => ({
-              ...prev,
-              playerStatus: {
-                ...prev.playerStatus,
-                [data.playerId]: 'connected'
-              }
-            }));
-          },
-          onGameEnded: (data) => {
-            if (!isMounted) return;
-            console.log('🏁 Game ended:', data);
-            setGameSession(prev => ({
-              ...prev,
-              status: 'ended',
-              winner: data.winner
-            }));
-            if (data.winLine) {
-              setWinLine(data.winLine);
-            }
-          }
-        });
-
-        socketUnsubscribeRef.current = unsubscribe;
         initializationCompleteRef.current = true;
 
       } catch (error) {
-        console.error('❌ Game initialization error:', error);
+        console.error('❌ Game initialization failed:', error);
         if (isMounted) {
           setError(error.message);
           setIsLoading(false);
@@ -370,470 +241,154 @@ const Game = () => {
       if (retryTimeout) {
         clearTimeout(retryTimeout);
       }
-      if (socketUnsubscribeRef.current) {
-        socketUnsubscribeRef.current();
+    };
+  }, [lobbyId]);
+
+  // Эффект для подписки на события сокета
+  useEffect(() => {
+    if (!gameSession?.id) return;
+
+    const unsubscribe = subscribeToGameEvents({
+      onMoveMade: handleMoveMade,
+      onTimeUpdated: handleTimeUpdate,
+      onViewportUpdated: handleViewportUpdate,
+      onPlayerDisconnected: handlePlayerDisconnect,
+      onPlayerReconnected: handlePlayerReconnect,
+      onGameEnded: handleGameEnd
+    });
+
+    socketUnsubscribeRef.current = unsubscribe;
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
       }
     };
-  }, [lobbyId, navigate]);
+  }, [gameSession?.id]);
 
-  // Эффект для обновления времени
+  // Эффект для обработки изменения размера окна
   useEffect(() => {
-    if (!gameSession?.playerTimes || !isConnected) return;
+    const handleResize = () => {
+      setCellSize(window.innerWidth <= 768 ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP);
+    };
 
-    const interval = setInterval(() => {
-      updatePlayerTime(gameSession.id, gameSession.playerTimes);
-    }, 1000);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
-    return () => clearInterval(interval);
-  }, [gameSession?.id, gameSession?.playerTimes, isConnected]);
+  // Обработчики событий
+  const handleMoveMade = useCallback((data) => {
+    if (!gameSession?.id || data.gameId !== gameSession.id) return;
+    
+    setBoard(prevBoard => {
+      const newBoard = [...prevBoard];
+      const { x, y } = data.position;
+      if (!newBoard[x]) newBoard[x] = [];
+      newBoard[x][y] = data.player;
+      
+      const winResult = checkWinner(newBoard, x, y, data.player);
+      if (winResult) {
+        setWinner(winResult.player);
+        setWinLine({ start: winResult.start, end: winResult.end });
+      }
+      
+      return newBoard;
+    });
+    
+    setCurrentPlayer(data.player === "X" ? "O" : "X");
+  }, [gameSession?.id]);
 
-  // Обработчик хода
-  const handleMove = async (position) => {
-    if (!gameSession || !isConnected) return;
+  const handleTimeUpdate = useCallback((times) => {
+    setPlayerTimes(times);
+  }, []);
+
+  const handleViewportUpdate = useCallback((newViewport) => {
+    setViewport(newViewport);
+  }, []);
+
+  const handlePlayerDisconnect = useCallback((data) => {
+    console.log('👋 Player disconnected:', data);
+  }, []);
+
+  const handlePlayerReconnect = useCallback((data) => {
+    console.log('🔄 Player reconnected:', data);
+  }, []);
+
+  const handleGameEnd = useCallback((data) => {
+    setWinner(data.winner);
+    navigate('/');
+  }, [navigate]);
+
+  // Обработчик клика по ячейке
+  const handleCellClick = useCallback(async (x, y) => {
+    if (!gameSession?.id || winner || board[x][y] || currentPlayer !== "X") return;
 
     try {
-      const moveTime = Date.now();
-      await makeMove(gameSession.id, position, currentPlayer, moveTime);
+      await makeMove(gameSession.id, { x, y }, currentPlayer, Date.now());
     } catch (error) {
       console.error('Failed to make move:', error);
       setError('Failed to make move. Please try again.');
     }
-  };
+  }, [gameSession?.id, winner, board, currentPlayer]);
 
-  // Обработчик изменения размера viewport
-  const handleViewportChange = useCallback((viewport) => {
-    if (!gameSession?.id || !isConnected) return;
-    updateViewport(gameSession.id, viewport);
-  }, [gameSession?.id, isConnected]);
-
-  // Показываем загрузку
   if (isLoading) {
-    return <div className="loading">Loading game...</div>;
+    return <div className="loading">Loading...</div>;
   }
 
-  // Показываем ошибку
   if (error) {
     return <div className="error">{error}</div>;
   }
 
-  // Логирование каждого рендера
-  useEffect(() => {
-    renderCountRef.current++;
-    const now = Date.now();
-    const timeSinceLastRender = now - lastRenderTime.current;
-    lastRenderTime.current = now;
-
-    console.log('🎨 Game component render', {
-      renderCount: renderCountRef.current,
-      timeSinceLastRender,
-      timestamp: new Date().toISOString(),
-      memoryUsage: window.performance?.memory ? {
-        usedJSHeapSize: Math.round(window.performance.memory.usedJSHeapSize / 1024 / 1024),
-        totalJSHeapSize: Math.round(window.performance.memory.totalJSHeapSize / 1024 / 1024)
-      } : 'not available'
-    });
-  });
-
-  // Логирование состояния игры
-  useEffect(() => {
-    console.log('🎮 Game state update', {
-      timestamp: new Date().toISOString(),
-      currentPlayer,
-      isOurTurn: currentPlayer === (gameSession?.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id ? "X" : "O"),
-      moveTimer,
-      boardState: {
-        totalCells: board.flat().length,
-        filledCells: board.flat().filter(cell => cell !== null).length,
-        visibleCells: board.length ? getVisibleCells(board).size : 0
-      },
-      gameSession: gameSession ? {
-        id: gameSession.id,
-        creatorId: gameSession.creatorId,
-        startedAt: gameSession.startedAt
-      } : null,
-      connection: {
-        isConnected,
-        reconnectAttempts
-      },
-      timing: {
-        gameTime: time,
-        playerTime1,
-        playerTime2,
-        moveStartTime: moveStartTime ? new Date(moveStartTime).toISOString() : null
-      }
-    });
-  }, [board, currentPlayer, moveTimer, gameSession, isConnected, time, playerTime1, playerTime2, moveStartTime]);
-
-  // Сохраняем состояние при изменении важных данных
-  useEffect(() => {
-    if (!mountedRef.current) return;
-
-    console.log('💾 Game state update', {
-      board: board.length,
-      currentPlayer,
-      scale,
-      position,
-      moveStartTime: moveStartTime ? new Date(moveStartTime).toISOString() : null,
-      gameStartTime: gameStartTime ? new Date(gameStartTime).toISOString() : null,
-      time,
-      playerTime1,
-      playerTime2,
-      gameSession: gameSession?.id,
-      isConnected,
-      timestamp: new Date().toISOString()
-    });
-
-    const gameState = {
-      board,
-      currentPlayer,
-      scale,
-      position,
-      moveStartTime,
-      gameStartTime,
-      time,
-      playerTime1,
-      playerTime2,
-      gameSession,
-      opponentInfo
-    };
-    saveGameState(gameState);
-  }, [
-    board,
-    currentPlayer,
-    scale,
-    position,
-    moveStartTime,
-    gameStartTime,
-    time,
-    playerTime1,
-    playerTime2,
-    gameSession,
-    opponentInfo,
-    isConnected
-  ]);
-
-  // При монтировании компонента проверяем сохраненное состояние
-  useEffect(() => {
-    const savedState = loadGameState();
-    if (savedState?.gameSession) {
-      // Переподключаемся к игровой сессии
-      const socket = initSocket();
-      socket.emit('joinGame', {
-        gameId: savedState.gameSession.id,
-        telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id
-      });
-    }
-  }, []);
-
-  // Обновляем viewport при изменении масштаба или позиции
-  useEffect(() => {
-    if (gameSession) {
-      updateViewport(gameSession.id, { scale, position });
-    }
-  }, [scale, position, gameSession]);
-
-  // Эффект для таймера хода и времени игроков
-  useEffect(() => {
-    if (!moveStartTime || !isConnected) return;
-
-    const moveInterval = setInterval(() => {
-      const elapsed = Date.now() - moveStartTime;
-      setMoveTimer(Math.max(2400 - Math.floor(elapsed / 10), 0));
-      
-      // Обновляем время только активного игрока
-      if (currentPlayer === "X") {
-        setPlayerTime1(prev => prev + 100);
-      } else {
-        setPlayerTime2(prev => prev + 100);
-      }
-    }, 100);
-
-    return () => clearInterval(moveInterval);
-  }, [moveStartTime, currentPlayer, isConnected]);
-
-  // Эффект для общего времени игры
-  useEffect(() => {
-    if (!gameStartTime || !isConnected) return;
-
-    const interval = setInterval(() => {
-      const elapsedSeconds = Math.floor((Date.now() - gameStartTime) / 1000);
-      setTime(elapsedSeconds);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [gameStartTime, isConnected]);
-
-  // Эффект для проверки окончания времени хода
-  useEffect(() => {
-    if (!moveTimer || !isOurTurn || !gameSession?.id) return;
-
-    const socket = initSocket();
-    if (!socket) return;
-
-    if (moveTimer === 0) {
-      console.log('⏰ Move time expired', {
-        gameId: gameSession.id,
-        player: currentPlayer,
-        timestamp: new Date().toISOString()
-      });
-      
-      socket.emit('timeExpired', {
-        gameId: gameSession.id,
-        player: currentPlayer
-      });
-    }
-  }, [moveTimer, isOurTurn, gameSession?.id, currentPlayer]);
-
-  // Обновляем размеры доски при изменении размера окна
-  useEffect(() => {
-    const updateBoardDimensions = () => {
-      if (boardRef.current) {
-        const cellSize = window.innerWidth < 768 ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP;
-        const dimensions = calculateBoardDimensions(cellSize);
-        setBoardDimensions(dimensions);
-      }
-    };
-
-    updateBoardDimensions();
-    window.addEventListener('resize', updateBoardDimensions);
-
-    return () => {
-      window.removeEventListener('resize', updateBoardDimensions);
-    };
-  }, []);
-
-  // Определяем, является ли текущий ход нашим
-  const isOurTurn = currentPlayer === (gameSession?.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id ? "X" : "O");
-
-  // Отслеживание производительности обработки событий
-  const logEventPerformance = (eventName, startTime) => {
-    const duration = Date.now() - startTime;
-    if (duration > 16) { // Логируем события, которые заняли больше одного кадра (16.67мс)
-      console.warn(`⚠️ Slow ${eventName} event`, {
-        duration,
-        timestamp: new Date().toISOString()
-      });
-    }
-  };
-
-  // Обновляем обработчики событий с логированием производительности
-  const handleTouchStart = (e) => {
-    const startTime = Date.now();
-    console.log('👆 Touch start event', {
-      isOurTurn,
-      touchCount: e?.touches?.length,
-      timestamp: new Date().toISOString()
-    });
-
-    if (!isOurTurn) return;
-    
-    try {
-      if (e?.touches?.length === 1) {
-        const newTouchStart = {
-          x: e.touches[0].clientX - position.x,
-          y: e.touches[0].clientY - position.y,
-        };
-        setTouchStart(newTouchStart);
-      } else if (e?.touches?.length === 2) {
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        setInitialDistance(distance);
-      }
-    } catch (error) {
-      console.error('❌ Error in handleTouchStart:', {
-        error: error.stack,
-        timestamp: new Date().toISOString()
-      });
-    } finally {
-      logEventPerformance('touchStart', startTime);
-    }
-  };
-
-  const handleTouchMove = (e) => {
-    console.log('👆 Touch move event', {
-      isOurTurn,
-      touchCount: e?.touches?.length,
-      touchStart: !!touchStart,
-      initialDistance: !!initialDistance,
-      timestamp: new Date().toISOString()
-    });
-
-    if (!isOurTurn || !e?.touches) return;
-
-    try {
-      if (e.touches.length === 1) {
-        if (!touchStart) {
-          console.warn('⚠️ Touch move without touchStart');
-          return;
-        }
-        
-        const newPosition = {
-          x: e.touches[0].clientX - touchStart.x,
-          y: e.touches[0].clientY - touchStart.y,
-        };
-        console.log('📱 Moving board', {
-          from: position,
-          to: newPosition,
-          timestamp: new Date().toISOString()
-        });
-        setPosition(newPosition);
-      } else if (e.touches.length === 2) {
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        const newDistance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (!initialDistance) {
-          console.log('📏 Setting initial distance', {
-            distance: newDistance,
-            timestamp: new Date().toISOString()
-          });
-          setInitialDistance(newDistance);
-          return;
-        }
-        
-        const zoom = newDistance / initialDistance;
-        console.log('🔍 Zooming board', {
-          currentScale: scale,
-          zoom,
-          newDistance,
-          initialDistance,
-          timestamp: new Date().toISOString()
-        });
-        setScale((prev) => Math.min(Math.max(prev * zoom, 0.5), 2));
-        setInitialDistance(newDistance);
-      }
-    } catch (error) {
-      console.error('❌ Error in handleTouchMove:', {
-        error: error.message,
-        stack: error.stack,
-        timestamp: new Date().toISOString()
-      });
-    }
-  };
-
-  const handleTouchEnd = () => {
-    console.log('👆 Touch end event', {
-      hadTouchStart: !!touchStart,
-      hadInitialDistance: !!initialDistance,
-      timestamp: new Date().toISOString()
-    });
-    setTouchStart(null);
-    setInitialDistance(null);
-  };
-
-  const visibleCells = board.length ? getVisibleCells(board) : new Set();
-
-  const handleCellClick = async (row, col) => {
-    const startTime = Date.now();
-    try {
-      if (!visibleCells.has(`${row}-${col}`) || winLine || !gameSession) return;
-      if (currentPlayer !== (gameSession?.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id ? "X" : "O")) return;
-      
-      console.log('🎯 Cell click', {
-        row,
-        col,
-        currentPlayer,
-        moveTime: Date.now() - moveStartTime,
-        timestamp: new Date().toISOString()
-      });
-      
-      const moveTime = Date.now() - moveStartTime;
-      
-      const { normalizedX, normalizedY } = normalizeCoordinates(
-        col * CELL_SIZE,
-        row * CELL_SIZE,
-        boardDimensions.width,
-        boardDimensions.height
-      );
-      
-      await makeMove(
-        gameSession.id,
-        { 
-          row,
-          col,
-          normalizedX,
-          normalizedY
-        },
-        currentPlayer,
-        moveTime
-      );
-    } catch (error) {
-      console.error('❌ Error in handleCellClick:', {
-        error: error.stack,
-        row,
-        col,
-        timestamp: new Date().toISOString()
-      });
-    } finally {
-      logEventPerformance('cellClick', startTime);
-    }
-  };
-
-  const calculateWinLineStyle = () => {
-    if (!winLine) return {};
-    const { start, end } = winLine;
-    const startX = (start[1] + 0.5) * CELL_SIZE;
-    const startY = (start[0] + 0.5) * CELL_SIZE;
-    const deltaX = (end[1] - start[1]) * CELL_SIZE;
-    const deltaY = (end[0] - start[0]) * CELL_SIZE;
-    const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-
-    return {
-      top: `${startY}px`,
-      left: `${startX}px`,
-      width: `${length}px`,
-      transform: `translateY(-50%) rotate(${angle}deg)`
-    };
-  };
-
   return (
-    <div
-      className="game-container"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      style={{ 
-        cursor: isOurTurn ? 'default' : 'not-allowed',
-        pointerEvents: isOurTurn ? 'auto' : 'none' // Полностью блокируем взаимодействие
-      }}
-    >
-      <GameHeader 
-        currentPlayer={currentPlayer} 
-        moveTimer={moveTimer} 
-        time={time}
-        playerTime1={playerTime1}
-        playerTime2={playerTime2}
-        opponentAvatar={opponentInfo?.avatar}
-        isConnected={isConnected}
+    <div className="game-container">
+      <GameHeader
+        currentPlayer={currentPlayer}
+        playerTimes={playerTimes}
+        winner={winner}
       />
-
-      <div
+      <div 
+        className="board-container"
         ref={boardRef}
-        className="board-grid"
         style={{
-          gridTemplateColumns: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)`,
-          gridTemplateRows: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)`,
-          width: boardDimensions.width,
-          height: boardDimensions.height,
-          opacity: isOurTurn ? 1 : 0.7 // Визуально показываем, что поле неактивно
+          width: BOARD_SIZE * cellSize,
+          height: BOARD_SIZE * cellSize
         }}
       >
-        {board.map((row, i) =>
-          row.map((cell, j) => (
+        {/* Рендер игрового поля */}
+        {board.map((row, x) => 
+          row.map((cell, y) => (
             <div
-              key={`${i}-${j}`}
-              className={`cell ${visibleCells.has(`${i}-${j}`) ? "cell-available" : "cell-blocked"}`}
-              onClick={() => handleCellClick(i, j)}
-              style={{ width: CELL_SIZE, height: CELL_SIZE }}
+              key={`${x}-${y}`}
+              className="cell"
+              style={{
+                width: cellSize,
+                height: cellSize,
+                left: x * cellSize,
+                top: y * cellSize
+              }}
+              onClick={() => handleCellClick(x, y)}
             >
               {cell && <Shape type={cell} />}
             </div>
           ))
         )}
+        {/* Рендер линии победы */}
         {winLine && (
-          <div className="win-line" style={calculateWinLineStyle()} />
+          <div
+            className="win-line"
+            style={{
+              left: winLine.start[0] * cellSize + cellSize / 2,
+              top: winLine.start[1] * cellSize + cellSize / 2,
+              width: Math.sqrt(
+                Math.pow((winLine.end[0] - winLine.start[0]) * cellSize, 2) +
+                Math.pow((winLine.end[1] - winLine.start[1]) * cellSize, 2)
+              ),
+              transform: `rotate(${Math.atan2(
+                (winLine.end[1] - winLine.start[1]) * cellSize,
+                (winLine.end[0] - winLine.start[0]) * cellSize
+              )}rad)`
+            }}
+          />
         )}
       </div>
     </div>

@@ -6,6 +6,9 @@ let reconnectTimer = null;
 const MAX_RECONNECT_ATTEMPTS = 5;
 let reconnectAttempts = 0;
 
+// Singleton для хранения инстанса сокета
+let socketInstance = null;
+
 // Объявляем все обработчики событий до их использования
 const handleConnect = (socket) => {
   console.log('✅ Connected to WebSocket server', {
@@ -41,39 +44,76 @@ const handleDisconnect = (socket, reason) => {
   }
 };
 
+// Функция инициализации сокета
 export const initSocket = () => {
-  if (socket) return socket;
-  
-  const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
-  if (!telegramId) {
-    console.error('❌ Critical: Telegram WebApp not initialized when it should be');
-    return null;
+  if (socketInstance) {
+    return socketInstance;
   }
 
-  console.log('🔌 Creating new socket connection', {
-    telegramId,
-    timestamp: new Date().toISOString()
-  });
+  try {
+    const socket = io(process.env.REACT_APP_WS_URL || 'ws://localhost:3001', {
+      transports: ['websocket'],
+      upgrade: false,
+      query: {
+        telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()
+      }
+    });
 
-  socket = io(SOCKET_URL, {
-    autoConnect: false,
-    transports: ['websocket', 'polling'],
-    path: '/socket.io/',
-    reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
-    reconnectionDelay: 1000,
-    reconnectionDelayMax: 5000,
-    timeout: 20000,
-    forceNew: true,
-    withCredentials: true,
-    query: { telegramId }
-  });
+    // Обработчики состояния подключения
+    socket.on('connect', () => {
+      console.log('✅ Socket connected:', {
+        id: socket.id,
+        timestamp: new Date().toISOString()
+      });
+    });
 
-  socket.on('connect', () => handleConnect(socket));
-  socket.on('connect_error', handleConnectError);
-  socket.on('disconnect', (reason) => handleDisconnect(socket, reason));
+    socket.on('disconnect', () => {
+      console.log('❌ Socket disconnected:', {
+        timestamp: new Date().toISOString()
+      });
+    });
 
-  socket.connect();
-  return socket;
+    socket.on('connect_error', (error) => {
+      console.error('🔴 Socket connection error:', {
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    socketInstance = socket;
+    return socket;
+  } catch (error) {
+    console.error('🔴 Failed to initialize socket:', {
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+    return null;
+  }
+};
+
+// Функция для получения текущего инстанса сокета
+export const getSocket = () => socketInstance;
+
+// Функция для проверки состояния подключения
+export const isSocketConnected = () => {
+  return socketInstance?.connected || false;
+};
+
+// Функция для переподключения сокета
+export const reconnectSocket = () => {
+  if (socketInstance) {
+    socketInstance.connect();
+  } else {
+    initSocket();
+  }
+};
+
+// Функция для отключения сокета
+export const disconnectSocket = () => {
+  if (socketInstance) {
+    socketInstance.disconnect();
+    socketInstance = null;
+  }
 };
 
 // Объявляем обработчики событий для joinLobby

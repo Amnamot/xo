@@ -7,27 +7,12 @@ let reconnectTimer = null;
 const MAX_RECONNECT_ATTEMPTS = 5;
 let reconnectAttempts = 0;
 
-// Функция для ожидания инициализации Telegram Web App
-const waitForTelegramWebApp = () => {
-  return new Promise((resolve) => {
-    const check = () => {
-      if (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
-        resolve(window.Telegram.WebApp.initDataUnsafe.user.id.toString());
-      } else {
-        setTimeout(check, 100);
-      }
-    };
-    check();
-  });
-};
-
 export const initSocket = () => {
   if (socket) return socket;
   
-  // Возвращаем null вместо выброса исключения
   const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
   if (!telegramId) {
-    console.warn('⚠️ Telegram WebApp not initialized yet, socket initialization deferred');
+    console.error('❌ Critical: Telegram WebApp not initialized when it should be');
     return null;
   }
 
@@ -87,33 +72,90 @@ export const initSocket = () => {
   return socket;
 };
 
-// Новая функция для безопасной инициализации сокета
-export const waitForSocket = async () => {
-  try {
-    const telegramId = await waitForTelegramWebApp();
-    console.log('✅ Telegram WebApp initialized', {
-      telegramId,
-      timestamp: new Date().toISOString()
-    });
-    
-    let currentSocket = initSocket();
-    if (!currentSocket) {
-      console.log('🔄 Socket not initialized, retrying...');
-      currentSocket = initSocket();
-    }
-    
-    if (!currentSocket) {
-      throw new Error('Failed to initialize socket after Telegram WebApp was ready');
-    }
-    
-    return currentSocket;
-  } catch (error) {
-    console.error('❌ Error in waitForSocket:', {
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-    throw error;
+// Функция для подписки на события игры
+export const subscribeToGameEvents = (handlers) => {
+  const currentSocket = initSocket();
+  if (!currentSocket) {
+    console.error('❌ Failed to initialize socket for event subscription');
+    return () => {};
   }
+
+  const {
+    onGameStart,
+    onOpponentJoined,
+    onMoveMade,
+    onTimeUpdated,
+    onViewportUpdated,
+    onPlayerStatus,
+    onPlayerDisconnected,
+    onPlayerReconnected,
+    onGameEnded
+  } = handlers;
+
+  if (onGameStart) currentSocket.on('gameStart', onGameStart);
+  if (onOpponentJoined) currentSocket.on('opponentJoined', onOpponentJoined);
+  if (onMoveMade) currentSocket.on('moveMade', onMoveMade);
+  if (onTimeUpdated) currentSocket.on('timeUpdated', onTimeUpdated);
+  if (onViewportUpdated) currentSocket.on('viewportUpdated', onViewportUpdated);
+  if (onPlayerStatus) currentSocket.on('playerStatus', onPlayerStatus);
+  if (onPlayerDisconnected) currentSocket.on('playerDisconnected', onPlayerDisconnected);
+  if (onPlayerReconnected) currentSocket.on('playerReconnected', onPlayerReconnected);
+  if (onGameEnded) currentSocket.on('gameEnded', onGameEnded);
+
+  return () => {
+    if (!currentSocket) return;
+    
+    currentSocket.off('gameStart', onGameStart);
+    currentSocket.off('opponentJoined', onOpponentJoined);
+    currentSocket.off('moveMade', onMoveMade);
+    currentSocket.off('timeUpdated', onTimeUpdated);
+    currentSocket.off('viewportUpdated', onViewportUpdated);
+    currentSocket.off('playerStatus', onPlayerStatus);
+    currentSocket.off('playerDisconnected', onPlayerDisconnected);
+    currentSocket.off('playerReconnected', onPlayerReconnected);
+    currentSocket.off('gameEnded', onGameEnded);
+  };
+};
+
+// Функции-хелперы для работы с сокетами
+export const connectSocket = () => {
+  const currentSocket = initSocket();
+  if (!currentSocket) {
+    return Promise.reject(new Error('Failed to initialize socket'));
+  }
+
+  return new Promise((resolve, reject) => {
+    if (currentSocket.connected) {
+      resolve();
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('WebSocket connection timeout'));
+    }, 5000);
+
+    const handleConnect = () => {
+      cleanup();
+      resolve();
+    };
+
+    const cleanup = () => {
+      clearTimeout(timeout);
+      currentSocket.off('connect', handleConnect);
+    };
+
+    currentSocket.once('connect', handleConnect);
+    reconnectAttempts = 0;
+    currentSocket.connect();
+  });
+};
+
+export const disconnectSocket = () => {
+  if (socket?.connected) {
+    socket.disconnect();
+  }
+  reconnectAttempts = 0;
 };
 
 // Функции для игровых событий
@@ -198,82 +240,4 @@ export const createInviteWS = (telegramId) => {
       }
     });
   });
-};
-
-// Функция для подписки на события игры
-export const subscribeToGameEvents = async (handlers) => {
-  const currentSocket = await waitForSocket();
-  const {
-    onGameStart,
-    onOpponentJoined,
-    onMoveMade,
-    onTimeUpdated,
-    onViewportUpdated,
-    onPlayerStatus,
-    onPlayerDisconnected,
-    onPlayerReconnected,
-    onGameEnded
-  } = handlers;
-
-  if (onGameStart) currentSocket.on('gameStart', onGameStart);
-  if (onOpponentJoined) currentSocket.on('opponentJoined', onOpponentJoined);
-  if (onMoveMade) currentSocket.on('moveMade', onMoveMade);
-  if (onTimeUpdated) currentSocket.on('timeUpdated', onTimeUpdated);
-  if (onViewportUpdated) currentSocket.on('viewportUpdated', onViewportUpdated);
-  if (onPlayerStatus) currentSocket.on('playerStatus', onPlayerStatus);
-  if (onPlayerDisconnected) currentSocket.on('playerDisconnected', onPlayerDisconnected);
-  if (onPlayerReconnected) currentSocket.on('playerReconnected', onPlayerReconnected);
-  if (onGameEnded) currentSocket.on('gameEnded', onGameEnded);
-
-  // Возвращаем функцию для отписки от событий
-  return () => {
-    if (!currentSocket) return;
-    
-    currentSocket.off('gameStart', onGameStart);
-    currentSocket.off('opponentJoined', onOpponentJoined);
-    currentSocket.off('moveMade', onMoveMade);
-    currentSocket.off('timeUpdated', onTimeUpdated);
-    currentSocket.off('viewportUpdated', onViewportUpdated);
-    currentSocket.off('playerStatus', onPlayerStatus);
-    currentSocket.off('playerDisconnected', onPlayerDisconnected);
-    currentSocket.off('playerReconnected', onPlayerReconnected);
-    currentSocket.off('gameEnded', onGameEnded);
-  };
-};
-
-// Функции-хелперы для работы с сокетами
-export const connectSocket = () => {
-  const currentSocket = initSocket();
-  return new Promise((resolve, reject) => {
-    if (currentSocket.connected) {
-      resolve();
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error('WebSocket connection timeout'));
-    }, 5000);
-
-    const handleConnect = () => {
-      cleanup();
-      resolve();
-    };
-
-    const cleanup = () => {
-      clearTimeout(timeout);
-      currentSocket.off('connect', handleConnect);
-    };
-
-    currentSocket.once('connect', handleConnect);
-    reconnectAttempts = 0;
-    currentSocket.connect();
-  });
-};
-
-export const disconnectSocket = () => {
-  if (socket?.connected) {
-    socket.disconnect();
-  }
-  reconnectAttempts = 0;
 }; 

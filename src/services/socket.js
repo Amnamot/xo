@@ -114,6 +114,9 @@ export const disconnectSocket = () => {
     socketInstance.disconnect();
     socketInstance = null;
   }
+  if (socket?.connected) {
+    socket.disconnect();
+  }
   reconnectAttempts = 0;
 };
 

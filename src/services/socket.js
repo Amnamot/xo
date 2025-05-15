@@ -4,9 +4,6 @@ let socket = null;
 const MAX_RECONNECT_ATTEMPTS = 5;
 let reconnectAttempts = 0;
 
-// Singleton для хранения инстанса сокета
-let socketInstance = null;
-
 // Объявляем все обработчики событий до их использования
 const handleConnect = (socket) => {
   console.log('✅ Connected to WebSocket server', {
@@ -66,17 +63,17 @@ export const initSocket = () => {
 };
 
 // Функция для получения текущего инстанса сокета
-export const getSocket = () => socketInstance;
+export const getSocket = () => socket;
 
 // Функция для проверки состояния подключения
 export const isSocketConnected = () => {
-  return socketInstance?.connected || false;
+  return socket?.connected || false;
 };
 
 // Функция для переподключения сокета
 export const reconnectSocket = () => {
-  if (socketInstance) {
-    socketInstance.connect();
+  if (socket) {
+    socket.connect();
   } else {
     initSocket();
   }
@@ -84,12 +81,9 @@ export const reconnectSocket = () => {
 
 // Функция для отключения сокета
 export const disconnectSocket = () => {
-  if (socketInstance) {
-    socketInstance.disconnect();
-    socketInstance = null;
-  }
   if (socket?.connected) {
     socket.disconnect();
+    socket = null;
   }
   reconnectAttempts = 0;
 };

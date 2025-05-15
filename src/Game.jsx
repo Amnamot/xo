@@ -592,21 +592,34 @@ const Game = () => {
   };
 
   const handleTouchMove = (e) => {
-    if (!isOurTurn) return; // Блокируем взаимодействие если не наш ход
-    if (e.touches.length === 1 && touchStart) {
-      setPosition({
-        x: e.touches[0].clientX - touchStart.x,
-        y: e.touches[0].clientY - touchStart.y,
-      });
-    } else if (e.touches.length === 2) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      const newDistance = Math.sqrt(dx * dx + dy * dy);
-      if (initialDistance) {
+    if (!isOurTurn || !e?.touches) return; // Проверяем наличие события и прав на ход
+
+    try {
+      if (e.touches.length === 1) {
+        // Проверяем наличие начальной точки касания
+        if (!touchStart) return;
+        
+        setPosition({
+          x: e.touches[0].clientX - touchStart.x,
+          y: e.touches[0].clientY - touchStart.y,
+        });
+      } else if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const newDistance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Проверяем наличие начального расстояния
+        if (!initialDistance) {
+          setInitialDistance(newDistance);
+          return;
+        }
+        
         const zoom = newDistance / initialDistance;
         setScale((prev) => Math.min(Math.max(prev * zoom, 0.5), 2));
         setInitialDistance(newDistance);
       }
+    } catch (error) {
+      console.error('Error in handleTouchMove:', error);
     }
   };
 

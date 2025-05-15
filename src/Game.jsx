@@ -165,12 +165,23 @@ const calculateBoardDimensions = (cellSize) => {
 const Game = () => {
   const navigate = useNavigate();
   const { lobbyId } = useParams();
+  const mountedRef = useRef(false);
   
-  // Добавляем логирование инициализации состояний
   console.log('🎮 Game component initialization', {
     lobbyId,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    mounted: mountedRef.current
   });
+
+  useEffect(() => {
+    mountedRef.current = true;
+    console.log('🔄 Game component mounted');
+    
+    return () => {
+      console.log('👋 Game component unmounting');
+      mountedRef.current = false;
+    };
+  }, []);
 
   const [board, setBoard] = useState(() => {
     const savedState = loadGameState();
@@ -291,6 +302,11 @@ const Game = () => {
 
   // Обновляем эффект с подключением к WebSocket
   useEffect(() => {
+    if (!mountedRef.current) {
+      console.log('⏭️ Skipping socket initialization - component not mounted');
+      return;
+    }
+
     const socket = initSocket();
     console.log('🔌 Socket initialization', {
       socketId: socket?.id,
@@ -534,6 +550,10 @@ const Game = () => {
     });
 
     return () => {
+      if (!mountedRef.current) {
+        console.log('⏭️ Skipping socket cleanup - component not mounted');
+        return;
+      }
       console.log('🔌 Cleaning up socket connections', {
         socketId: socket?.id,
         timestamp: new Date().toISOString()

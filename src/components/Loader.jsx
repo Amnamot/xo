@@ -234,7 +234,7 @@ const Loader = () => {
       <div className="loader-bar">
         <div className="loader-progress" style={{ width: `${progress}%` }}></div>
       </div>
-      <div className="loader-version">Created with symbiotic intelligence.</div>
+      <div className="loader-version">Created with symbiotic intelligence</div>
     </div>
   );
 };

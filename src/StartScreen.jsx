@@ -228,8 +228,8 @@ const StartScreen = () => {
       // Создаем инвайт и показываем модальное окно Telegram
       try {
         const inviteResponse = await createInviteWS(telegramId);
-        if (inviteResponse?.lobbyId) {
-          window.Telegram?.WebApp?.switchInlineQuery(inviteResponse.lobbyId);
+        if (inviteResponse?.messageId) {
+          window.Telegram?.WebApp?.shareMessage(inviteResponse.messageId);
         } else {
           console.error('Invalid invite response:', inviteResponse);
           setError('Failed to create invite link. Please try again.');

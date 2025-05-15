@@ -184,19 +184,43 @@ export const joinLobby = (lobbyId, telegramId) => {
       return;
     }
     
-    // Устанавливаем слушатель для события начала игры
-    currentSocket.once('gameStart', (data) => {
-      console.log('✅ Game started:', data);
+    let gameStartHandler;
+    let joinResponseHandler;
+    let timeoutId;
+
+    const cleanup = () => {
+      clearTimeout(timeoutId);
+      if (gameStartHandler) {
+        currentSocket.off('gameStart', gameStartHandler);
+      }
+    };
+
+    // Устанавливаем таймаут
+    timeoutId = setTimeout(() => {
+      cleanup();
+      reject(new Error('Join lobby timeout'));
+    }, 10000);
+
+    // Обработчик начала игры
+    gameStartHandler = (data) => {
+      cleanup();
+      console.log('✅ Game started:', {
+        data,
+        timestamp: new Date().toISOString()
+      });
       resolve(data);
-    });
+    };
+
+    // Подписываемся на событие начала игры
+    currentSocket.once('gameStart', gameStartHandler);
 
     // Отправляем запрос на присоединение к лобби
     currentSocket.emit('joinLobby', { lobbyId, telegramId }, (response) => {
       if (response?.status === 'error') {
+        cleanup();
         reject(response);
-      } else {
-        resolve(response);
       }
+      // Не резолвим промис здесь, ждем gameStart
     });
   });
 };

@@ -169,6 +169,7 @@ const Game = () => {
   const mountedRef = useRef(false);
   const renderCountRef = useRef(0);
   const lastRenderTime = useRef(Date.now());
+  const initializationCompleteRef = useRef(false);
   
   console.log('🎮 Game component initialization', {
     lobbyId,
@@ -186,19 +187,11 @@ const Game = () => {
     };
   }, []);
 
-  const [board, setBoard] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.board || createEmptyBoard();
-  });
-  const [currentPlayer, setCurrentPlayer] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.currentPlayer || "O";
-  });
+  // Инициализация базового состояния
+  const [board, setBoard] = useState(createEmptyBoard);
+  const [currentPlayer, setCurrentPlayer] = useState("O");
   const [winLine, setWinLine] = useState(null);
-  const [scale, setScale] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.scale || 1;
-  });
+  const [scale, setScale] = useState(1);
   const [position, setPosition] = useState(() => {
     const savedState = loadGameState();
     return savedState?.position || { x: 0, y: 0 };
@@ -226,10 +219,7 @@ const Game = () => {
     const savedState = loadGameState();
     return savedState?.playerTime2 || 0;
   });
-  const [gameSession, setGameSession] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.gameSession || null;
-  });
+  const [gameSession, setGameSession] = useState(null);
   const [opponentInfo, setOpponentInfo] = useState(() => {
     const savedState = loadGameState();
     return savedState?.opponentInfo || null;
@@ -243,6 +233,18 @@ const Game = () => {
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const CELL_SIZE = isMobile ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP;
+
+  // Загрузка сохраненного состояния
+  useEffect(() => {
+    const savedState = loadGameState();
+    if (savedState && isValidGameState(savedState)) {
+      setBoard(savedState.board);
+      setCurrentPlayer(savedState.currentPlayer);
+      setScale(savedState.scale);
+      setGameSession(savedState.gameSession);
+    }
+    initializationCompleteRef.current = true;
+  }, []);
 
   // Логирование каждого рендера
   useEffect(() => {
@@ -353,12 +355,9 @@ const Game = () => {
     }
   }, []);
 
-  // Обновляем эффект с подключением к WebSocket
+  // Подписка на события сокета только после инициализации
   useEffect(() => {
-    if (!mountedRef.current) {
-      console.log('⏭️ Skipping socket initialization - component not mounted');
-      return;
-    }
+    if (!mountedRef.current || !initializationCompleteRef.current) return;
 
     const socket = initSocket();
     if (!socket) {
@@ -369,7 +368,8 @@ const Game = () => {
     console.log('🔌 Socket initialization', {
       socketId: socket.id,
       connected: socket.connected,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      initComplete: initializationCompleteRef.current
     });
 
     const connect = () => {
@@ -457,8 +457,7 @@ const Game = () => {
     // Подписываемся на события игры
     const unsubscribe = subscribeToGameEvents({
       onGameStart: (data) => {
-        if (!mountedRef.current) return;
-
+        if (!mountedRef.current || !initializationCompleteRef.current) return;
         if (!data?.session) {
           console.error('Invalid game start data received');
           return;
@@ -631,7 +630,7 @@ const Game = () => {
       }
       if (unsubscribe) unsubscribe();
     };
-  }, [navigate, time, reconnectAttempts, gameSession, boardDimensions]);
+  }, [initializationCompleteRef.current]);
 
   // Обновляем viewport при изменении масштаба или позиции
   useEffect(() => {

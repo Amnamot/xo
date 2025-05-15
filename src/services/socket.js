@@ -114,6 +114,7 @@ export const disconnectSocket = () => {
     socketInstance.disconnect();
     socketInstance = null;
   }
+  reconnectAttempts = 0;
 };
 
 // Объявляем обработчики событий для joinLobby
@@ -313,11 +314,4 @@ export const connectSocket = () => {
     reconnectAttempts = 0;
     currentSocket.connect();
   });
-};
-
-export const disconnectSocket = () => {
-  if (socket?.connected) {
-    socket.disconnect();
-  }
-  reconnectAttempts = 0;
 }; 

@@ -265,35 +265,14 @@ export const createInviteWS = (telegramId) => {
 };
 
 // Функции-хелперы для работы с сокетами
-export const connectSocket = () => {
-  const currentSocket = initSocket();
-  if (!currentSocket) {
-    return Promise.reject(new Error('Failed to initialize socket'));
-  }
-
-  return new Promise((resolve, reject) => {
-    if (currentSocket.connected) {
-      resolve();
-      return;
+export const connectSocket = async () => {
+  const socket = io(process.env.REACT_APP_SOCKET_URL, {
+    transports: ['websocket'],
+    query: {
+      telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()
     }
-
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error('WebSocket connection timeout'));
-    }, 5000);
-
-    const handleConnect = () => {
-      cleanup();
-      resolve();
-    };
-
-    const cleanup = () => {
-      clearTimeout(timeout);
-      currentSocket.off('connect', handleConnect);
-    };
-
-    currentSocket.once('connect', handleConnect);
-    reconnectAttempts = 0;
-    currentSocket.connect();
   });
+  
+  socketInstance = socket;
+  return socket;
 }; 

@@ -183,6 +183,10 @@ const StartScreen = () => {
 
   const handleCreateGame = async () => {
     try {
+      if (!telegramId) {
+        throw new Error('Telegram ID is not available');
+      }
+
       await initializeSocket();
       const socket = getSocket();
       if (!socket || !isSocketConnected()) {
@@ -191,9 +195,11 @@ const StartScreen = () => {
 
       setShowWaitModal(true);
       
+      console.log('Creating lobby with telegramId:', telegramId);
+      
       // Создаем лобби и ждем ответ
       const lobbyResponse = await new Promise((resolve, reject) => {
-        socket.emit('createLobby', { telegramId }, (response) => {
+        socket.emit('createLobby', { telegramId: telegramId.toString() }, (response) => {
           if (response?.status === 'error') {
             reject(new Error(response.message));
           } else {

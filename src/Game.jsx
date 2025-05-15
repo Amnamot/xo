@@ -268,11 +268,11 @@ const Game = () => {
 
   // Обновляем эффект с подключением к WebSocket
   useEffect(() => {
+    // Инициализируем сокет до определения функции connect
     const socket = initSocket();
     const savedState = loadGameState();
     
     if (savedState?.gameSession) {
-      // Переподключаемся к игровой сессии
       socket.emit('joinGame', {
         gameId: savedState.gameSession.id,
         telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id
@@ -280,6 +280,8 @@ const Game = () => {
     }
 
     const connect = () => {
+      if (!socket) return; // Проверка на существование сокета
+      
       connectSocket();
 
       socket.on('connect', () => {
@@ -287,6 +289,7 @@ const Game = () => {
         setIsConnected(true);
         setReconnectAttempts(0);
         
+        // Проверяем существование gameSession перед использованием
         if (gameSession?.id) {
           socket.emit('requestGameState', {
             gameId: gameSession.id,
@@ -296,7 +299,7 @@ const Game = () => {
       });
 
       socket.on('gameState', (data) => {
-        if (!isValidGameState(data)) {
+        if (!data || !isValidGameState(data)) {
           console.error('Received invalid game state from server');
           return;
         }
@@ -315,11 +318,13 @@ const Game = () => {
         console.error('Connection error:', error);
         setIsConnected(false);
         
-        if (reconnectAttempts < maxReconnectAttempts) {
+        // Проверяем reconnectAttempts перед использованием
+        const currentAttempts = reconnectAttempts || 0;
+        if (currentAttempts < maxReconnectAttempts) {
           setTimeout(() => {
-            setReconnectAttempts(prev => prev + 1);
+            setReconnectAttempts(prev => (prev || 0) + 1);
             connect();
-          }, reconnectDelay * (reconnectAttempts + 1));
+          }, reconnectDelay * (currentAttempts + 1));
         } else {
           alert('Не удалось подключиться к серверу. Пожалуйста, обновите страницу.');
         }
@@ -336,13 +341,18 @@ const Game = () => {
     // Подписываемся на события игры
     const unsubscribe = subscribeToGameEvents({
       onGameStart: (data) => {
+        if (!data?.session) {
+          console.error('Invalid game start data received');
+          return;
+        }
+
         const gameState = {
           session: data.session,
           startTime: Date.now(),
           board: data.session.board || createEmptyBoard(),
           currentPlayer: data.session.currentTurn,
-          playerTime1: data.session.playerTime1,
-          playerTime2: data.session.playerTime2
+          playerTime1: data.session.playerTime1 || 0,
+          playerTime2: data.session.playerTime2 || 0
         };
         
         setGameSession(gameState.session);
@@ -357,14 +367,24 @@ const Game = () => {
       },
 
       onOpponentJoined: (data) => {
+        if (!data?.opponentId) {
+          console.error('Invalid opponent data received');
+          return;
+        }
+
         setOpponentInfo({
           id: data.opponentId,
-          name: data.opponentName,
+          name: data.opponentName || 'Opponent',
           avatar: data.opponentAvatar
         });
       },
 
       onMoveMade: (data) => {
+        if (!data?.position || !data?.gameState) {
+          console.error('Invalid move data received');
+          return;
+        }
+
         const { position, player, gameState } = data;
         const { 
           currentTurn, 
@@ -375,10 +395,22 @@ const Game = () => {
           gameStartTime
         } = gameState;
 
+        // Проверяем наличие всех необходимых данных
+        if (!currentTurn || !serverTime || !moveStartTime) {
+          console.error('Missing required game state data');
+          return;
+        }
+
         let row = position.row;
         let col = position.col;
 
         if (position.normalizedX !== undefined && position.normalizedY !== undefined) {
+          // Проверяем наличие размеров доски
+          if (!boardDimensions?.width || !boardDimensions?.height) {
+            console.error('Board dimensions not initialized');
+            return;
+          }
+
           const denormalized = denormalizeCoordinates(
             position.normalizedX,
             position.normalizedY,
@@ -391,27 +423,32 @@ const Game = () => {
         }
 
         setBoard(prevBoard => {
+          if (!prevBoard) return createEmptyBoard();
           const newBoard = prevBoard.map(row => [...row]);
-          newBoard[row][col] = player;
+          if (newBoard[row] && typeof col !== 'undefined') {
+            newBoard[row][col] = player;
+          }
           return newBoard;
         });
 
         const timeOffset = Date.now() - serverTime;
         setCurrentPlayer(currentTurn);
-        setPlayerTime1(playerTime1);
-        setPlayerTime2(playerTime2);
+        setPlayerTime1(playerTime1 || 0);
+        setPlayerTime2(playerTime2 || 0);
         setMoveStartTime(moveStartTime + timeOffset);
         
-        if (gameStartTime !== gameSession?.startedAt) {
+        if (gameStartTime && (!gameSession?.startedAt || gameStartTime !== gameSession.startedAt)) {
           setGameStartTime(gameStartTime + timeOffset);
         }
 
         setMoveTimer(2400);
 
-        socket.emit('moveReceived', { 
-          gameId: gameSession.id, 
-          moveId: data.moveId 
-        });
+        if (socket && gameSession?.id) {
+          socket.emit('moveReceived', { 
+            gameId: gameSession.id, 
+            moveId: data.moveId 
+          });
+        }
       },
 
       onTimeUpdated: (data) => {

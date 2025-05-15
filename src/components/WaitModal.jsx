@@ -5,10 +5,11 @@ import { initSocket } from '../services/socket';
 
 const LOBBY_LIFETIME = 180; // время жизни лобби в секундах
 
-const WaitModal = ({ onCancel }) => {
+const WaitModal = ({ onCancel, isOpen }) => {
   const [secondsLeft, setSecondsLeft] = useState(LOBBY_LIFETIME);
   const [startTime, setStartTime] = useState(Date.now());
   const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
+  const [waitMessage, setWaitMessage] = useState('Waiting for opponent...');
 
   useEffect(() => {
     const socket = initSocket();
@@ -49,6 +50,23 @@ const WaitModal = ({ onCancel }) => {
     };
   }, [onCancel, startTime, telegramId]);
 
+  useEffect(() => {
+    if (isOpen) {
+      const status = localStorage.getItem('lobbyStatus');
+      const ttl = parseInt(localStorage.getItem('lobbyTTL')) || 30;
+      
+      let message = 'Waiting for opponent...';
+      if (status === 'pending') {
+        message = 'Reconnecting to lobby...';
+      } else if (status === 'wait') {
+        message = 'Opponent is waiting...';
+      }
+      
+      setWaitMessage(message);
+      startTimer(ttl);
+    }
+  }, [isOpen]);
+
   const formatTime = (totalSeconds) => {
     const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
     const seconds = String(totalSeconds % 60).padStart(2, '0');
@@ -57,7 +75,7 @@ const WaitModal = ({ onCancel }) => {
 
   return (
     <div className="waitFrame">
-      <div className="waitText">We are waiting for\nthe zero to join</div>
+      <div className="waitText">{waitMessage}</div>
       <div className="waitTimer">{formatTime(secondsLeft)}</div>
       <button className="waitButton" onClick={onCancel}>Cancel</button>
     </div>

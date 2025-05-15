@@ -20,6 +20,21 @@ const StartScreen = () => {
   useEffect(() => {
     let mounted = true;
 
+    // Проверяем состояние лобби из localStorage
+    const checkLobbyState = () => {
+      const showWaitModalFlag = localStorage.getItem('showWaitModal');
+      const lobbyStatus = localStorage.getItem('lobbyStatus');
+      const lobbyTTL = localStorage.getItem('lobbyTTL');
+
+      if (showWaitModalFlag === 'true' && lobbyStatus && lobbyTTL) {
+        setShowWaitModal(true);
+        // Очищаем флаги после использования
+        localStorage.removeItem('showWaitModal');
+        localStorage.removeItem('lobbyStatus');
+        localStorage.removeItem('lobbyTTL');
+      }
+    };
+
     const initializeSocket = async () => {
       if (isConnecting) return;
       
@@ -121,6 +136,7 @@ const StartScreen = () => {
       }
     };
 
+    checkLobbyState();
     initializeSocket();
 
     return () => {

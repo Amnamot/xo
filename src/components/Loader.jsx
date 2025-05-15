@@ -88,9 +88,13 @@ const Loader = () => {
           // Если есть start_param, переходим в игру
           navigate(`/game/${startParam}`, { replace: true });
         } else if (lobbyCheck?.lobbyId) {
-          // Если есть активное лобби
-          localStorage.setItem('showWaitModal', 'true');
-          localStorage.setItem('lobbyTTL', lobbyCheck.ttl.toString());
+          // Если есть активное лобби, проверяем его состояние
+          if (lobbyCheck.status === 'pending' || lobbyCheck.status === 'wait') {
+            // Для состояний ожидания переподключения
+            localStorage.setItem('showWaitModal', 'true');
+            localStorage.setItem('lobbyTTL', lobbyCheck.ttl.toString());
+            localStorage.setItem('lobbyStatus', lobbyCheck.status);
+          }
           navigate("/start", { replace: true });
         } else {
           // Обычный переход на старт

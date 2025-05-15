@@ -243,6 +243,8 @@ const Game = () => {
 
   // Сохраняем состояние при изменении важных данных
   useEffect(() => {
+    if (!mountedRef.current) return;
+
     console.log('💾 Game state update', {
       board: board.length,
       currentPlayer,

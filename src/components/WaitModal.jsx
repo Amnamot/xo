@@ -45,6 +45,10 @@ const WaitModal = ({ onCancel, isOpen }) => {
       // Если таймер дошел до нуля, отменяем лобби
       if (remaining === 0) {
         clearInterval(timer);
+        console.log('⏰ Lobby timeout, cancelling...', {
+          telegramId,
+          timestamp: new Date().toISOString()
+        });
         onCancel();
       }
     }, 1000);

@@ -4,7 +4,14 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
 import './StartScreen.css';
-import { initSocket, getSocket, isSocketConnected, reconnectSocket, connectSocket } from './services/socket';
+import { 
+  initSocket, 
+  getSocket, 
+  isSocketConnected, 
+  reconnectSocket, 
+  connectSocket,
+  createInviteWS 
+} from './services/socket';
 
 const StartScreen = () => {
   const [user, setUser] = useState(null);
@@ -120,6 +127,17 @@ const StartScreen = () => {
         reconnectSocket();
       });
 
+      socket.on('lobbyDeleted', (data) => {
+        if (!socketRef.current) return;
+        
+        console.log('🗑️ Received lobbyDeleted event:', {
+          data,
+          timestamp: new Date().toISOString()
+        });
+        
+        setShowWaitModal(false);
+      });
+
     } catch (error) {
       if (!socketRef.current) return;
       
@@ -167,6 +185,7 @@ const StartScreen = () => {
         socket.off('connect');
         socket.off('connect_error');
         socket.off('disconnect');
+        socket.off('lobbyDeleted');
       }
     };
   }, [navigate, telegramId, isConnecting, initializeSocket]);
@@ -180,8 +199,19 @@ const StartScreen = () => {
       }
 
       setShowWaitModal(true);
-      socket.emit('createLobby', { telegramId });
       
+      // Создаем лобби и ждем ответ
+      const lobbyResponse = await new Promise((resolve, reject) => {
+        socket.emit('createLobby', { telegramId }, (response) => {
+          if (response?.status === 'error') {
+            reject(new Error(response.message));
+          } else {
+            resolve(response);
+          }
+        });
+      });
+
+      // Отправляем состояние UI
       if (telegramId) {
         socket.emit('uiState', {
           state: 'waitModal',
@@ -189,10 +219,51 @@ const StartScreen = () => {
           details: { isCreate: true }
         });
       }
+
+      // Создаем инвайт и показываем модальное окно Telegram
+      try {
+        const inviteResponse = await createInviteWS(telegramId);
+        if (inviteResponse?.messageId) {
+          window.Telegram?.WebApp?.switchInlineQuery(inviteResponse.messageId);
+        }
+      } catch (inviteError) {
+        console.error('Failed to create invite:', inviteError);
+        // Не прерываем основной процесс из-за ошибки создания инвайта
+      }
+
     } catch (error) {
       console.error('Failed to create game:', error);
       setError('Failed to create game. Please try again.');
       setShowWaitModal(false);
+    }
+  };
+
+  const handleCancelLobby = async () => {
+    try {
+      const socket = getSocket();
+      if (!socket || !isSocketConnected()) {
+        throw new Error('Socket not connected');
+      }
+
+      console.log('🔄 Cancelling lobby...', {
+        telegramId,
+        timestamp: new Date().toISOString()
+      });
+
+      // Отправляем запрос на отмену лобби
+      socket.emit('cancelLobby', { telegramId }, (response) => {
+        if (response?.status === 'error') {
+          console.error('Failed to cancel lobby:', response.message);
+          setError('Failed to cancel lobby. Please try again.');
+        } else {
+          console.log('✅ Lobby cancelled successfully');
+          setShowWaitModal(false);
+        }
+      });
+
+    } catch (error) {
+      console.error('Failed to cancel lobby:', error);
+      setError('Failed to cancel lobby. Please try again.');
     }
   };
 
@@ -240,7 +311,7 @@ const StartScreen = () => {
 
       {showWaitModal && (
         <WaitModal
-          onClose={() => setShowWaitModal(false)}
+          onCancel={handleCancelLobby}
           isVisible={showWaitModal}
         />
       )}

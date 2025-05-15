@@ -11,7 +11,8 @@ import {
   makeMove, 
   updatePlayerTime, 
   updateViewport,
-  subscribeToGameEvents 
+  subscribeToGameEvents,
+  waitForSocket 
 } from "./services/socket";
 
 const BOARD_SIZE = 100;
@@ -413,164 +414,176 @@ const Game = () => {
         connect();
 
         // Подписываемся на события игры
-        const unsubscribe = subscribeToGameEvents({
-          onGameStart: (data) => {
-            if (!mountedRef.current) return;
+        let unsubscribe = null;
+        const setupSubscriptions = async () => {
+          try {
+            unsubscribe = await subscribeToGameEvents({
+              onGameStart: (data) => {
+                if (!mountedRef.current) return;
 
-            if (!data?.session) {
-              console.error('Invalid game start data received');
-              return;
-            }
-
-            const gameState = {
-              session: data.session,
-              startTime: Date.now(),
-              board: data.session.board || createEmptyBoard(),
-              currentPlayer: data.session.currentTurn,
-              playerTime1: data.session.playerTime1 || 0,
-              playerTime2: data.session.playerTime2 || 0
-            };
-            
-            setGameSession(gameState.session);
-            setGameStartTime(gameState.startTime);
-            setMoveStartTime(gameState.startTime);
-            setPlayerTime1(gameState.playerTime1);
-            setPlayerTime2(gameState.playerTime2);
-            setBoard(gameState.board);
-            setCurrentPlayer(gameState.currentPlayer);
-            
-            saveGameState(gameState);
-          },
-
-          onOpponentJoined: (data) => {
-            if (!data?.opponentId) {
-              console.error('Invalid opponent data received');
-              return;
-            }
-
-            setOpponentInfo({
-              id: data.opponentId,
-              name: data.opponentName || 'Opponent',
-              avatar: data.opponentAvatar
-            });
-          },
-
-          onMoveMade: (data) => {
-            if (!data?.position || !data?.gameState) {
-              console.error('Invalid move data received');
-              return;
-            }
-
-            const { position, player, gameState } = data;
-            const { 
-              currentTurn, 
-              playerTime1, 
-              playerTime2, 
-              serverTime,
-              moveStartTime,
-              gameStartTime
-            } = gameState;
-
-            // Проверяем наличие всех необходимых данных
-            if (!currentTurn || !serverTime || !moveStartTime) {
-              console.error('Missing required game state data');
-              return;
-            }
-
-            let row = position.row;
-            let col = position.col;
-
-            if (position.normalizedX !== undefined && position.normalizedY !== undefined) {
-              // Проверяем наличие размеров доски
-              if (!boardDimensions?.width || !boardDimensions?.height) {
-                console.error('Board dimensions not initialized');
-                return;
-              }
-
-              const denormalized = denormalizeCoordinates(
-                position.normalizedX,
-                position.normalizedY,
-                boardDimensions.width,
-                boardDimensions.height
-              );
-              
-              row = Math.floor(denormalized.y / CELL_SIZE);
-              col = Math.floor(denormalized.x / CELL_SIZE);
-            }
-
-            setBoard(prevBoard => {
-              if (!prevBoard) return createEmptyBoard();
-              const newBoard = prevBoard.map(row => [...row]);
-              if (newBoard[row] && typeof col !== 'undefined') {
-                newBoard[row][col] = player;
-              }
-              return newBoard;
-            });
-
-            const timeOffset = Date.now() - serverTime;
-            setCurrentPlayer(currentTurn);
-            setPlayerTime1(playerTime1 || 0);
-            setPlayerTime2(playerTime2 || 0);
-            setMoveStartTime(moveStartTime + timeOffset);
-            
-            if (gameStartTime && (!gameSession?.startedAt || gameStartTime !== gameSession.startedAt)) {
-              setGameStartTime(gameStartTime + timeOffset);
-            }
-
-            setMoveTimer(2400);
-
-            if (socket && gameSession?.id) {
-              socket.emit('moveReceived', { 
-                gameId: gameSession.id, 
-                moveId: data.moveId 
-              });
-            }
-          },
-
-          onTimeUpdated: (data) => {
-            setPlayerTime1(data.playerTime1);
-            setPlayerTime2(data.playerTime2);
-          },
-
-          onViewportUpdated: (data) => {
-            if (data.telegramId !== socket.telegramId) {
-              setScale(data.viewport.scale);
-              setPosition(data.viewport.position);
-            }
-          },
-
-          onPlayerDisconnected: (data) => {
-            console.log(`Player ${data.telegramId} disconnected`);
-            // Показываем уведомление об отключении оппонента
-            if (opponentInfo?.id === data.telegramId) {
-              alert('Оппонент отключился. Ожидаем переподключения...');
-            }
-          },
-
-          onPlayerReconnected: (data) => {
-            console.log(`Player ${data.telegramId} reconnected`);
-            if (opponentInfo?.id === data.telegramId) {
-              alert('Оппонент вернулся в игру');
-            }
-          },
-
-          onGameEnded: (data) => {
-            const { winner, reason } = data;
-            setWinLine(data.finalBoard ? checkWinner(data.finalBoard, 0, 0, winner) : null);
-            
-            localStorage.removeItem('gameState');
-            
-            setTimeout(() => {
-              navigate(winner === socket.telegramId ? "/end" : "/lost", {
-                replace: true,
-                state: { 
-                  time,
-                  statistics: data.statistics
+                if (!data?.session) {
+                  console.error('Invalid game start data received');
+                  return;
                 }
-              });
-            }, 1500);
+
+                const gameState = {
+                  session: data.session,
+                  startTime: Date.now(),
+                  board: data.session.board || createEmptyBoard(),
+                  currentPlayer: data.session.currentTurn,
+                  playerTime1: data.session.playerTime1 || 0,
+                  playerTime2: data.session.playerTime2 || 0
+                };
+                
+                setGameSession(gameState.session);
+                setGameStartTime(gameState.startTime);
+                setMoveStartTime(gameState.startTime);
+                setPlayerTime1(gameState.playerTime1);
+                setPlayerTime2(gameState.playerTime2);
+                setBoard(gameState.board);
+                setCurrentPlayer(gameState.currentPlayer);
+                
+                saveGameState(gameState);
+              },
+
+              onOpponentJoined: (data) => {
+                if (!data?.opponentId) {
+                  console.error('Invalid opponent data received');
+                  return;
+                }
+
+                setOpponentInfo({
+                  id: data.opponentId,
+                  name: data.opponentName || 'Opponent',
+                  avatar: data.opponentAvatar
+                });
+              },
+
+              onMoveMade: (data) => {
+                if (!data?.position || !data?.gameState) {
+                  console.error('Invalid move data received');
+                  return;
+                }
+
+                const { position, player, gameState } = data;
+                const { 
+                  currentTurn, 
+                  playerTime1, 
+                  playerTime2, 
+                  serverTime,
+                  moveStartTime,
+                  gameStartTime
+                } = gameState;
+
+                // Проверяем наличие всех необходимых данных
+                if (!currentTurn || !serverTime || !moveStartTime) {
+                  console.error('Missing required game state data');
+                  return;
+                }
+
+                let row = position.row;
+                let col = position.col;
+
+                if (position.normalizedX !== undefined && position.normalizedY !== undefined) {
+                  // Проверяем наличие размеров доски
+                  if (!boardDimensions?.width || !boardDimensions?.height) {
+                    console.error('Board dimensions not initialized');
+                    return;
+                  }
+
+                  const denormalized = denormalizeCoordinates(
+                    position.normalizedX,
+                    position.normalizedY,
+                    boardDimensions.width,
+                    boardDimensions.height
+                  );
+                  
+                  row = Math.floor(denormalized.y / CELL_SIZE);
+                  col = Math.floor(denormalized.x / CELL_SIZE);
+                }
+
+                setBoard(prevBoard => {
+                  if (!prevBoard) return createEmptyBoard();
+                  const newBoard = prevBoard.map(row => [...row]);
+                  if (newBoard[row] && typeof col !== 'undefined') {
+                    newBoard[row][col] = player;
+                  }
+                  return newBoard;
+                });
+
+                const timeOffset = Date.now() - serverTime;
+                setCurrentPlayer(currentTurn);
+                setPlayerTime1(playerTime1 || 0);
+                setPlayerTime2(playerTime2 || 0);
+                setMoveStartTime(moveStartTime + timeOffset);
+                
+                if (gameStartTime && (!gameSession?.startedAt || gameStartTime !== gameSession.startedAt)) {
+                  setGameStartTime(gameStartTime + timeOffset);
+                }
+
+                setMoveTimer(2400);
+
+                if (socket && gameSession?.id) {
+                  socket.emit('moveReceived', { 
+                    gameId: gameSession.id, 
+                    moveId: data.moveId 
+                  });
+                }
+              },
+
+              onTimeUpdated: (data) => {
+                setPlayerTime1(data.playerTime1);
+                setPlayerTime2(data.playerTime2);
+              },
+
+              onViewportUpdated: (data) => {
+                if (data.telegramId !== socket.telegramId) {
+                  setScale(data.viewport.scale);
+                  setPosition(data.viewport.position);
+                }
+              },
+
+              onPlayerDisconnected: (data) => {
+                console.log(`Player ${data.telegramId} disconnected`);
+                // Показываем уведомление об отключении оппонента
+                if (opponentInfo?.id === data.telegramId) {
+                  alert('Оппонент отключился. Ожидаем переподключения...');
+                }
+              },
+
+              onPlayerReconnected: (data) => {
+                console.log(`Player ${data.telegramId} reconnected`);
+                if (opponentInfo?.id === data.telegramId) {
+                  alert('Оппонент вернулся в игру');
+                }
+              },
+
+              onGameEnded: (data) => {
+                const { winner, reason } = data;
+                setWinLine(data.finalBoard ? checkWinner(data.finalBoard, 0, 0, winner) : null);
+                
+                localStorage.removeItem('gameState');
+                
+                setTimeout(() => {
+                  navigate(winner === socket.telegramId ? "/end" : "/lost", {
+                    replace: true,
+                    state: { 
+                      time,
+                      statistics: data.statistics
+                    }
+                  });
+                }, 1500);
+              }
+            });
+          } catch (error) {
+            console.error('❌ Error setting up game event subscriptions:', {
+              error: error.message,
+              timestamp: new Date().toISOString()
+            });
           }
-        });
+        };
+
+        setupSubscriptions();
 
         return () => {
           if (unsubscribe) unsubscribe();

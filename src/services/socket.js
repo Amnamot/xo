@@ -201,8 +201,8 @@ export const createInviteWS = (telegramId) => {
 };
 
 // Функция для подписки на события игры
-export const subscribeToGameEvents = (handlers) => {
-  const currentSocket = initSocket();
+export const subscribeToGameEvents = async (handlers) => {
+  const currentSocket = await waitForSocket();
   const {
     onGameStart,
     onOpponentJoined,
@@ -227,6 +227,8 @@ export const subscribeToGameEvents = (handlers) => {
 
   // Возвращаем функцию для отписки от событий
   return () => {
+    if (!currentSocket) return;
+    
     currentSocket.off('gameStart', onGameStart);
     currentSocket.off('opponentJoined', onOpponentJoined);
     currentSocket.off('moveMade', onMoveMade);

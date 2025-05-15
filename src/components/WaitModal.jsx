@@ -11,6 +11,11 @@ const WaitModal = ({ onCancel, isOpen }) => {
   const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
   const [waitMessage, setWaitMessage] = useState('Waiting for opponent...');
 
+  const startTimer = (ttl) => {
+    setSecondsLeft(ttl);
+    setStartTime(Date.now());
+  };
+
   useEffect(() => {
     const socket = initSocket();
 

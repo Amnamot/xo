@@ -50,15 +50,6 @@ const StartScreen = () => {
 
       socketRef.current = socket;
 
-      // Отправляем состояние UI
-      socket.emit('uiState', { 
-        state: 'startScreen', 
-        telegramId,
-        details: { 
-          isReconnect: false 
-        }
-      });
-
       // Настраиваем обработчики событий
       socket.on('gameStart', (data) => {
         if (!socketRef.current) return;
@@ -216,15 +207,6 @@ const StartScreen = () => {
         throw new Error('Failed to create lobby: invalid status');
       }
 
-      // Отправляем состояние UI
-      if (telegramId) {
-        socket.emit('uiState', {
-          state: 'waitModal',
-          telegramId,
-          details: { isCreate: true }
-        });
-      }
-
       // Создаем инвайт и показываем модальное окно Telegram
       try {
         const inviteResponse = await createInviteWS(telegramId);
@@ -237,6 +219,15 @@ const StartScreen = () => {
       } catch (inviteError) {
         console.error('Failed to create invite:', inviteError);
         setError('Failed to create invite. Please try again.');
+      }
+
+      // Отправляем состояние UI
+      if (telegramId) {
+        socket.emit('uiState', {
+          state: 'waitModal',
+          telegramId,
+          details: { isCreate: true }
+        });
       }
 
     } catch (error) {

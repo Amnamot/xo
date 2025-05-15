@@ -1,13 +1,13 @@
-// src/StartScreen.jsx v14
+// src/StartScreen.jsx v15
 import WaitModal from './components/WaitModal';
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
 import './StartScreen.css';
-import { initSocket, getSocket, isSocketConnected, reconnectSocket } from './services/socket';
+import { initSocket, getSocket, isSocketConnected, reconnectSocket, connectSocket } from './services/socket';
 
 const StartScreen = () => {
-  const [user] = useState(null);
+  const [user, setUser] = useState(null);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
   const [showWaitModal, setShowWaitModal] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -51,12 +51,24 @@ const StartScreen = () => {
           timestamp: new Date().toISOString()
         });
 
+        // Подключаем сокет
+        await connectSocket();
         const socket = initSocket();
+        
         if (!socket) {
           throw new Error('Failed to initialize socket');
         }
 
         socketRef.current = socket;
+
+        // Отправляем состояние UI
+        socket.emit('uiState', { 
+          state: 'startScreen', 
+          telegramId,
+          details: { 
+            isReconnect: false 
+          }
+        });
 
         // Настраиваем обработчики событий
         socket.on('gameStart', (data) => {
@@ -135,6 +147,12 @@ const StartScreen = () => {
         setIsConnecting(false);
       }
     };
+
+    // Загружаем данные пользователя
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
 
     checkLobbyState();
     initializeSocket();

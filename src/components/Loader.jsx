@@ -1,8 +1,7 @@
-// src/components/Loader.jsx v5.1
+// src/components/Loader.jsx v5.2
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Loader.css';
-import { initSocket, connectSocket } from '../services/socket';
 
 const Loader = () => {
   const navigate = useNavigate();
@@ -20,7 +19,7 @@ const Loader = () => {
         const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
         
         // Все асинхронные операции выполняются параллельно
-        const [authResponse, _, lobbyCheck] = await Promise.all([
+        const [authResponse, lobbyCheck] = await Promise.all([
           // Авторизация пользователя
           initDataRaw ? fetch("https://api.igra.top/user/init", {
             method: "POST",
@@ -28,20 +27,8 @@ const Loader = () => {
             body: JSON.stringify({ initData: initDataRaw })
           }) : Promise.resolve(null),
           
-          // Подключение сокета
-          connectSocket(),
-
-          // Проверка лобби через Promise
-          new Promise((resolve) => {
-            const socket = initSocket();
-            if (telegramId) {
-              socket.emit('checkActiveLobby', { telegramId }, (response) => {
-                resolve(response);
-              });
-            } else {
-              resolve(null);
-            }
-          })
+          // Проверка лобби через HTTP
+          telegramId ? fetch(`https://api.igra.top/lobby/check/${telegramId}`) : Promise.resolve(null)
         ]);
 
         // Обработка результатов авторизации
@@ -67,13 +54,15 @@ const Loader = () => {
           localStorage.setItem('user', JSON.stringify(mockUser));
         }
 
-        // Логируем состояние UI
-        const socket = initSocket();
-        socket.emit('uiState', { 
-          state: 'loader', 
-          telegramId: telegramId || 'unknown',
-          details: { progress: 100 }
-        });
+        // Обработка результатов проверки лобби
+        if (lobbyCheck) {
+          const lobbyData = await lobbyCheck.json();
+          if (lobbyData?.lobbyId) {
+            localStorage.setItem('showWaitModal', 'true');
+            localStorage.setItem('lobbyTTL', lobbyData.ttl.toString());
+            localStorage.setItem('lobbyStatus', lobbyData.status);
+          }
+        }
 
         // Ждем минимум 2 секунды
         const elapsedTime = Date.now() - startTime;
@@ -87,15 +76,6 @@ const Loader = () => {
         if (startParam) {
           // Если есть start_param, переходим в игру
           navigate(`/game/${startParam}`, { replace: true });
-        } else if (lobbyCheck?.lobbyId) {
-          // Если есть активное лобби, проверяем его состояние
-          if (lobbyCheck.status === 'pending' || lobbyCheck.status === 'wait') {
-            // Для состояний ожидания переподключения
-            localStorage.setItem('showWaitModal', 'true');
-            localStorage.setItem('lobbyTTL', lobbyCheck.ttl.toString());
-            localStorage.setItem('lobbyStatus', lobbyCheck.status);
-          }
-          navigate("/start", { replace: true });
         } else {
           // Обычный переход на старт
           navigate("/start", { replace: true });

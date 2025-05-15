@@ -7,7 +7,7 @@ import './StartScreen.css';
 import { initSocket, getSocket, isSocketConnected, reconnectSocket } from './services/socket';
 
 const StartScreen = () => {
-  const [user, setUser] = useState(null);
+  const [user] = useState(null);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
   const [showWaitModal, setShowWaitModal] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -151,7 +151,7 @@ const StartScreen = () => {
         socket.off('disconnect');
       }
     };
-  }, [navigate, telegramId]);
+  }, [navigate, telegramId, isConnecting]);
 
   const handleCreateGame = async () => {
     try {

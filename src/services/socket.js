@@ -2,7 +2,7 @@ import { io } from 'socket.io-client';
 
 const SOCKET_URL = 'https://igra.top';
 let socket = null;
-let reconnectTimer = null;
+let isConnected = false;
 const MAX_RECONNECT_ATTEMPTS = 5;
 let reconnectAttempts = 0;
 
@@ -44,51 +44,30 @@ const handleDisconnect = (socket, reason) => {
   }
 };
 
-// Функция инициализации сокета
+// Инициализация сокета
 export const initSocket = () => {
-  if (socketInstance) {
-    return socketInstance;
-  }
-
-  try {
-    const socket = io(process.env.REACT_APP_WS_URL || 'ws://localhost:3001', {
+  if (!socket) {
+    socket = io(process.env.REACT_APP_SOCKET_URL, {
       transports: ['websocket'],
-      upgrade: false,
-      query: {
-        telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()
-      }
+      upgrade: false
     });
 
-    // Обработчики состояния подключения
     socket.on('connect', () => {
-      console.log('✅ Socket connected:', {
-        id: socket.id,
-        timestamp: new Date().toISOString()
-      });
-    });
-
-    socket.on('disconnect', () => {
-      console.log('❌ Socket disconnected:', {
-        timestamp: new Date().toISOString()
-      });
+      isConnected = true;
+      console.log('Socket connected:', socket.id);
     });
 
     socket.on('connect_error', (error) => {
-      console.error('🔴 Socket connection error:', {
-        error: error.message,
-        timestamp: new Date().toISOString()
-      });
+      isConnected = false;
+      console.error('Socket connection error:', error);
     });
 
-    socketInstance = socket;
-    return socket;
-  } catch (error) {
-    console.error('🔴 Failed to initialize socket:', {
-      error: error.message,
-      timestamp: new Date().toISOString()
+    socket.on('disconnect', () => {
+      isConnected = false;
+      console.log('Socket disconnected');
     });
-    return null;
   }
+  return socket;
 };
 
 // Функция для получения текущего инстанса сокета

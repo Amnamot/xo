@@ -56,6 +56,8 @@ const checkWinner = (board, row, col, player) => {
   return null;
 };
 
+// Функции для работы с состоянием игры
+// eslint-disable-next-line no-unused-vars
 const getVisibleCells = (board) => {
   const visibleCells = new Set();
   for (let row = 0; row < BOARD_SIZE; row++) {
@@ -76,7 +78,7 @@ const getVisibleCells = (board) => {
   return visibleCells;
 };
 
-// Функции для работы с localStorage
+// eslint-disable-next-line no-unused-vars
 const saveGameState = (state) => {
   try {
     localStorage.setItem('gameState', JSON.stringify(state));
@@ -85,6 +87,7 @@ const saveGameState = (state) => {
   }
 };
 
+// eslint-disable-next-line no-unused-vars
 const isValidGameState = (state) => {
   if (!state || typeof state !== 'object') return false;
 
@@ -127,6 +130,7 @@ const isValidGameState = (state) => {
   return true;
 };
 
+// eslint-disable-next-line no-unused-vars
 const loadGameState = () => {
   try {
     const savedState = localStorage.getItem('gameState');
@@ -141,6 +145,7 @@ const loadGameState = () => {
 };
 
 // Функции нормализации координат
+// eslint-disable-next-line no-unused-vars
 const normalizeCoordinates = (x, y, boardWidth, boardHeight) => {
   // Преобразуем координаты в проценты от размера поля
   return {
@@ -149,6 +154,7 @@ const normalizeCoordinates = (x, y, boardWidth, boardHeight) => {
   };
 };
 
+// eslint-disable-next-line no-unused-vars
 const denormalizeCoordinates = (normalizedX, normalizedY, boardWidth, boardHeight) => {
   // Преобразуем нормализованные координаты обратно в пиксели
   return {
@@ -157,6 +163,7 @@ const denormalizeCoordinates = (normalizedX, normalizedY, boardWidth, boardHeigh
   };
 };
 
+// eslint-disable-next-line no-unused-vars
 const calculateBoardDimensions = (cellSize) => {
   return {
     width: BOARD_SIZE * cellSize,

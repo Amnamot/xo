@@ -12,7 +12,8 @@ import {
   updatePlayerTime, 
   updateViewport,
   subscribeToGameEvents,
-  waitForSocket 
+  waitForSocket,
+  joinLobby 
 } from "./services/socket";
 
 const BOARD_SIZE = 100;
@@ -240,6 +241,7 @@ const Game = () => {
   // Эффект для инициализации игры
   useEffect(() => {
     let isMounted = true;
+    let retryTimeout = null;
     
     const initializeGame = async () => {
       try {
@@ -365,11 +367,14 @@ const Game = () => {
 
     return () => {
       isMounted = false;
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+      }
       if (socketUnsubscribeRef.current) {
         socketUnsubscribeRef.current();
       }
     };
-  }, [lobbyId]);
+  }, [lobbyId, navigate]);
 
   // Эффект для обновления времени
   useEffect(() => {
@@ -529,7 +534,7 @@ const Game = () => {
 
   // Эффект для таймера хода и времени игроков
   useEffect(() => {
-    if (moveStartTime === null || !isConnected) return;
+    if (!moveStartTime || !isConnected) return;
 
     const moveInterval = setInterval(() => {
       const elapsed = Date.now() - moveStartTime;
@@ -548,7 +553,7 @@ const Game = () => {
 
   // Эффект для общего времени игры
   useEffect(() => {
-    if (gameStartTime === null || !isConnected) return;
+    if (!gameStartTime || !isConnected) return;
 
     const interval = setInterval(() => {
       const elapsedSeconds = Math.floor((Date.now() - gameStartTime) / 1000);

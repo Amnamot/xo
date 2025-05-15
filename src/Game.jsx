@@ -309,247 +309,287 @@ const Game = () => {
       return;
     }
 
-    const socket = initSocket();
-    console.log('🔌 Socket initialization', {
-      socketId: socket?.id,
-      connected: socket?.connected,
-      timestamp: new Date().toISOString()
-    });
+    let socket = null;
+    let isInitialized = false;
+    
+    const initializeSocket = async () => {
+      try {
+        socket = await waitForSocket();
+        if (!socket || !mountedRef.current) {
+          console.log('⚠️ Socket initialization aborted - component unmounted or socket null');
+          return;
+        }
 
-    const connect = () => {
-      if (!socket) {
-        console.warn('⚠️ Socket not initialized in connect()');
-        return;
-      }
-      
-      connectSocket();
-
-      socket.on('connect', () => {
-        console.log('✅ Socket connected', {
+        isInitialized = true;
+        console.log('🔌 Socket initialization complete', {
           socketId: socket.id,
+          connected: socket.connected,
           timestamp: new Date().toISOString()
         });
-        setIsConnected(true);
-        setReconnectAttempts(0);
-        
-        if (gameSession?.id) {
-          console.log('🔄 Requesting game state', {
-            gameId: gameSession.id,
-            timestamp: new Date().toISOString()
-          });
-          socket.emit('requestGameState', {
-            gameId: gameSession.id,
-            telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id
-          });
-        }
-      });
 
-      socket.on('gameState', (data) => {
-        console.log('📥 Received game state', {
-          valid: isValidGameState(data),
-          data: {
-            currentPlayer: data?.currentPlayer,
-            gameSessionId: data?.gameSession?.id,
-            boardSize: data?.board?.length
-          },
-          timestamp: new Date().toISOString()
-        });
-        if (!data || !isValidGameState(data)) {
-          console.error('Received invalid game state from server');
-          return;
-        }
-
-        setBoard(data.board);
-        setCurrentPlayer(data.currentPlayer);
-        setPlayerTime1(data.playerTime1);
-        setPlayerTime2(data.playerTime2);
-        setGameSession(data.gameSession);
-        setMoveStartTime(Date.now());
-        
-        saveGameState(data);
-      });
-
-      socket.on('connect_error', (error) => {
-        console.error('Connection error:', error);
-        setIsConnected(false);
-        
-        // Проверяем reconnectAttempts перед использованием
-        const currentAttempts = reconnectAttempts || 0;
-        if (currentAttempts < maxReconnectAttempts) {
-          setTimeout(() => {
-            setReconnectAttempts(prev => (prev || 0) + 1);
-            connect();
-          }, reconnectDelay * (currentAttempts + 1));
-        } else {
-          alert('Не удалось подключиться к серверу. Пожалуйста, обновите страницу.');
-        }
-      });
-
-      socket.on('disconnect', () => {
-        console.log('Disconnected from game server');
-        setIsConnected(false);
-      });
-    };
-
-    connect();
-
-    // Подписываемся на события игры
-    const unsubscribe = subscribeToGameEvents({
-      onGameStart: (data) => {
-        if (!data?.session) {
-          console.error('Invalid game start data received');
-          return;
-        }
-
-        const gameState = {
-          session: data.session,
-          startTime: Date.now(),
-          board: data.session.board || createEmptyBoard(),
-          currentPlayer: data.session.currentTurn,
-          playerTime1: data.session.playerTime1 || 0,
-          playerTime2: data.session.playerTime2 || 0
-        };
-        
-        setGameSession(gameState.session);
-        setGameStartTime(gameState.startTime);
-        setMoveStartTime(gameState.startTime);
-        setPlayerTime1(gameState.playerTime1);
-        setPlayerTime2(gameState.playerTime2);
-        setBoard(gameState.board);
-        setCurrentPlayer(gameState.currentPlayer);
-        
-        saveGameState(gameState);
-      },
-
-      onOpponentJoined: (data) => {
-        if (!data?.opponentId) {
-          console.error('Invalid opponent data received');
-          return;
-        }
-
-        setOpponentInfo({
-          id: data.opponentId,
-          name: data.opponentName || 'Opponent',
-          avatar: data.opponentAvatar
-        });
-      },
-
-      onMoveMade: (data) => {
-        if (!data?.position || !data?.gameState) {
-          console.error('Invalid move data received');
-          return;
-        }
-
-        const { position, player, gameState } = data;
-        const { 
-          currentTurn, 
-          playerTime1, 
-          playerTime2, 
-          serverTime,
-          moveStartTime,
-          gameStartTime
-        } = gameState;
-
-        // Проверяем наличие всех необходимых данных
-        if (!currentTurn || !serverTime || !moveStartTime) {
-          console.error('Missing required game state data');
-          return;
-        }
-
-        let row = position.row;
-        let col = position.col;
-
-        if (position.normalizedX !== undefined && position.normalizedY !== undefined) {
-          // Проверяем наличие размеров доски
-          if (!boardDimensions?.width || !boardDimensions?.height) {
-            console.error('Board dimensions not initialized');
+        const connect = () => {
+          if (!socket) {
+            console.warn('⚠️ Socket not initialized in connect()');
             return;
           }
-
-          const denormalized = denormalizeCoordinates(
-            position.normalizedX,
-            position.normalizedY,
-            boardDimensions.width,
-            boardDimensions.height
-          );
           
-          row = Math.floor(denormalized.y / CELL_SIZE);
-          col = Math.floor(denormalized.x / CELL_SIZE);
-        }
+          connectSocket();
 
-        setBoard(prevBoard => {
-          if (!prevBoard) return createEmptyBoard();
-          const newBoard = prevBoard.map(row => [...row]);
-          if (newBoard[row] && typeof col !== 'undefined') {
-            newBoard[row][col] = player;
-          }
-          return newBoard;
-        });
-
-        const timeOffset = Date.now() - serverTime;
-        setCurrentPlayer(currentTurn);
-        setPlayerTime1(playerTime1 || 0);
-        setPlayerTime2(playerTime2 || 0);
-        setMoveStartTime(moveStartTime + timeOffset);
-        
-        if (gameStartTime && (!gameSession?.startedAt || gameStartTime !== gameSession.startedAt)) {
-          setGameStartTime(gameStartTime + timeOffset);
-        }
-
-        setMoveTimer(2400);
-
-        if (socket && gameSession?.id) {
-          socket.emit('moveReceived', { 
-            gameId: gameSession.id, 
-            moveId: data.moveId 
-          });
-        }
-      },
-
-      onTimeUpdated: (data) => {
-        setPlayerTime1(data.playerTime1);
-        setPlayerTime2(data.playerTime2);
-      },
-
-      onViewportUpdated: (data) => {
-        if (data.telegramId !== socket.telegramId) {
-          setScale(data.viewport.scale);
-          setPosition(data.viewport.position);
-        }
-      },
-
-      onPlayerDisconnected: (data) => {
-        console.log(`Player ${data.telegramId} disconnected`);
-        // Показываем уведомление об отключении оппонента
-        if (opponentInfo?.id === data.telegramId) {
-          alert('Оппонент отключился. Ожидаем переподключения...');
-        }
-      },
-
-      onPlayerReconnected: (data) => {
-        console.log(`Player ${data.telegramId} reconnected`);
-        if (opponentInfo?.id === data.telegramId) {
-          alert('Оппонент вернулся в игру');
-        }
-      },
-
-      onGameEnded: (data) => {
-        const { winner, reason } = data;
-        setWinLine(data.finalBoard ? checkWinner(data.finalBoard, 0, 0, winner) : null);
-        
-        localStorage.removeItem('gameState');
-        
-        setTimeout(() => {
-          navigate(winner === socket.telegramId ? "/end" : "/lost", {
-            replace: true,
-            state: { 
-              time,
-              statistics: data.statistics
+          socket.on('connect', () => {
+            console.log('✅ Socket connected', {
+              socketId: socket.id,
+              timestamp: new Date().toISOString()
+            });
+            setIsConnected(true);
+            setReconnectAttempts(0);
+            
+            if (gameSession?.id) {
+              console.log('🔄 Requesting game state', {
+                gameId: gameSession.id,
+                timestamp: new Date().toISOString()
+              });
+              socket.emit('requestGameState', {
+                gameId: gameSession.id,
+                telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id
+              });
             }
           });
-        }, 1500);
+
+          socket.on('gameState', (data) => {
+            if (!mountedRef.current) return;
+
+            console.log('📥 Received game state', {
+              valid: isValidGameState(data),
+              data: {
+                currentPlayer: data?.currentPlayer,
+                gameSessionId: data?.gameSession?.id,
+                boardSize: data?.board?.length
+              },
+              timestamp: new Date().toISOString()
+            });
+            
+            if (!data || !isValidGameState(data)) {
+              console.error('Received invalid game state from server');
+              return;
+            }
+
+            setBoard(data.board);
+            setCurrentPlayer(data.currentPlayer);
+            setPlayerTime1(data.playerTime1);
+            setPlayerTime2(data.playerTime2);
+            setGameSession(data.gameSession);
+            setMoveStartTime(Date.now());
+            
+            saveGameState(data);
+          });
+
+          socket.on('connect_error', (error) => {
+            if (!mountedRef.current) return;
+
+            console.error('Connection error:', error);
+            setIsConnected(false);
+            
+            const currentAttempts = reconnectAttempts || 0;
+            if (currentAttempts < maxReconnectAttempts) {
+              setTimeout(() => {
+                if (mountedRef.current) {
+                  setReconnectAttempts(prev => (prev || 0) + 1);
+                  connect();
+                }
+              }, reconnectDelay * (currentAttempts + 1));
+            } else {
+              alert('Не удалось подключиться к серверу. Пожалуйста, обновите страницу.');
+            }
+          });
+
+          socket.on('disconnect', () => {
+            if (!mountedRef.current) return;
+            
+            console.log('Disconnected from game server');
+            setIsConnected(false);
+          });
+        };
+
+        connect();
+
+        // Подписываемся на события игры
+        const unsubscribe = subscribeToGameEvents({
+          onGameStart: (data) => {
+            if (!mountedRef.current) return;
+
+            if (!data?.session) {
+              console.error('Invalid game start data received');
+              return;
+            }
+
+            const gameState = {
+              session: data.session,
+              startTime: Date.now(),
+              board: data.session.board || createEmptyBoard(),
+              currentPlayer: data.session.currentTurn,
+              playerTime1: data.session.playerTime1 || 0,
+              playerTime2: data.session.playerTime2 || 0
+            };
+            
+            setGameSession(gameState.session);
+            setGameStartTime(gameState.startTime);
+            setMoveStartTime(gameState.startTime);
+            setPlayerTime1(gameState.playerTime1);
+            setPlayerTime2(gameState.playerTime2);
+            setBoard(gameState.board);
+            setCurrentPlayer(gameState.currentPlayer);
+            
+            saveGameState(gameState);
+          },
+
+          onOpponentJoined: (data) => {
+            if (!data?.opponentId) {
+              console.error('Invalid opponent data received');
+              return;
+            }
+
+            setOpponentInfo({
+              id: data.opponentId,
+              name: data.opponentName || 'Opponent',
+              avatar: data.opponentAvatar
+            });
+          },
+
+          onMoveMade: (data) => {
+            if (!data?.position || !data?.gameState) {
+              console.error('Invalid move data received');
+              return;
+            }
+
+            const { position, player, gameState } = data;
+            const { 
+              currentTurn, 
+              playerTime1, 
+              playerTime2, 
+              serverTime,
+              moveStartTime,
+              gameStartTime
+            } = gameState;
+
+            // Проверяем наличие всех необходимых данных
+            if (!currentTurn || !serverTime || !moveStartTime) {
+              console.error('Missing required game state data');
+              return;
+            }
+
+            let row = position.row;
+            let col = position.col;
+
+            if (position.normalizedX !== undefined && position.normalizedY !== undefined) {
+              // Проверяем наличие размеров доски
+              if (!boardDimensions?.width || !boardDimensions?.height) {
+                console.error('Board dimensions not initialized');
+                return;
+              }
+
+              const denormalized = denormalizeCoordinates(
+                position.normalizedX,
+                position.normalizedY,
+                boardDimensions.width,
+                boardDimensions.height
+              );
+              
+              row = Math.floor(denormalized.y / CELL_SIZE);
+              col = Math.floor(denormalized.x / CELL_SIZE);
+            }
+
+            setBoard(prevBoard => {
+              if (!prevBoard) return createEmptyBoard();
+              const newBoard = prevBoard.map(row => [...row]);
+              if (newBoard[row] && typeof col !== 'undefined') {
+                newBoard[row][col] = player;
+              }
+              return newBoard;
+            });
+
+            const timeOffset = Date.now() - serverTime;
+            setCurrentPlayer(currentTurn);
+            setPlayerTime1(playerTime1 || 0);
+            setPlayerTime2(playerTime2 || 0);
+            setMoveStartTime(moveStartTime + timeOffset);
+            
+            if (gameStartTime && (!gameSession?.startedAt || gameStartTime !== gameSession.startedAt)) {
+              setGameStartTime(gameStartTime + timeOffset);
+            }
+
+            setMoveTimer(2400);
+
+            if (socket && gameSession?.id) {
+              socket.emit('moveReceived', { 
+                gameId: gameSession.id, 
+                moveId: data.moveId 
+              });
+            }
+          },
+
+          onTimeUpdated: (data) => {
+            setPlayerTime1(data.playerTime1);
+            setPlayerTime2(data.playerTime2);
+          },
+
+          onViewportUpdated: (data) => {
+            if (data.telegramId !== socket.telegramId) {
+              setScale(data.viewport.scale);
+              setPosition(data.viewport.position);
+            }
+          },
+
+          onPlayerDisconnected: (data) => {
+            console.log(`Player ${data.telegramId} disconnected`);
+            // Показываем уведомление об отключении оппонента
+            if (opponentInfo?.id === data.telegramId) {
+              alert('Оппонент отключился. Ожидаем переподключения...');
+            }
+          },
+
+          onPlayerReconnected: (data) => {
+            console.log(`Player ${data.telegramId} reconnected`);
+            if (opponentInfo?.id === data.telegramId) {
+              alert('Оппонент вернулся в игру');
+            }
+          },
+
+          onGameEnded: (data) => {
+            const { winner, reason } = data;
+            setWinLine(data.finalBoard ? checkWinner(data.finalBoard, 0, 0, winner) : null);
+            
+            localStorage.removeItem('gameState');
+            
+            setTimeout(() => {
+              navigate(winner === socket.telegramId ? "/end" : "/lost", {
+                replace: true,
+                state: { 
+                  time,
+                  statistics: data.statistics
+                }
+              });
+            }, 1500);
+          }
+        });
+
+        return () => {
+          if (unsubscribe) unsubscribe();
+          if (socket) {
+            socket.off('gameState');
+            socket.off('connect');
+            socket.off('connect_error');
+            socket.off('disconnect');
+          }
+        };
+      } catch (error) {
+        console.error('❌ Socket initialization error:', {
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
       }
-    });
+    };
+
+    initializeSocket();
 
     return () => {
       if (!mountedRef.current) {
@@ -558,13 +598,15 @@ const Game = () => {
       }
       console.log('🔌 Cleaning up socket connections', {
         socketId: socket?.id,
+        isInitialized,
         timestamp: new Date().toISOString()
       });
-      socket.off('gameState');
-      unsubscribe();
-      socket.off('connect');
-      socket.off('connect_error');
-      socket.off('disconnect');
+      if (socket && isInitialized) {
+        socket.off('gameState');
+        socket.off('connect');
+        socket.off('connect_error');
+        socket.off('disconnect');
+      }
     };
   }, [navigate, time, reconnectAttempts, gameSession, boardDimensions]);
 
@@ -608,15 +650,42 @@ const Game = () => {
 
   // Эффект для проверки окончания времени хода
   useEffect(() => {
-    const socket = initSocket();
+    if (!moveTimer || !isOurTurn || !gameSession?.id) return;
+
+    let timeoutId = null;
     
-    if (moveTimer === 0 && isOurTurn) {
-      // Отправляем событие об окончании времени
-      socket.emit('timeExpired', {
-        gameId: gameSession?.id,
-        player: currentPlayer
-      });
+    const checkTimeExpired = async () => {
+      try {
+        const socket = await waitForSocket();
+        if (!socket || !mountedRef.current) return;
+
+        if (moveTimer === 0) {
+          console.log('⏰ Move time expired', {
+            gameId: gameSession.id,
+            player: currentPlayer,
+            timestamp: new Date().toISOString()
+          });
+          
+          socket.emit('timeExpired', {
+            gameId: gameSession.id,
+            player: currentPlayer
+          });
+        }
+      } catch (error) {
+        console.error('❌ Error checking time expired:', {
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
+      }
+    };
+
+    if (moveTimer === 0) {
+      timeoutId = setTimeout(checkTimeExpired, 0);
     }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [moveTimer, isOurTurn, gameSession?.id, currentPlayer]);
 
   // Обновляем размеры доски при изменении размера окна

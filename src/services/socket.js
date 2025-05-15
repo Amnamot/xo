@@ -7,13 +7,34 @@ let reconnectTimer = null;
 const MAX_RECONNECT_ATTEMPTS = 5;
 let reconnectAttempts = 0;
 
+// Функция для ожидания инициализации Telegram Web App
+const waitForTelegramWebApp = () => {
+  return new Promise((resolve) => {
+    const check = () => {
+      if (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
+        resolve(window.Telegram.WebApp.initDataUnsafe.user.id.toString());
+      } else {
+        setTimeout(check, 100);
+      }
+    };
+    check();
+  });
+};
+
 export const initSocket = () => {
   if (socket) return socket;
   
+  // Возвращаем null вместо выброса исключения
   const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
   if (!telegramId) {
-    throw new Error('Telegram user ID not found');
+    console.warn('⚠️ Telegram WebApp not initialized yet, socket initialization deferred');
+    return null;
   }
+
+  console.log('🔌 Creating new socket connection', {
+    telegramId,
+    timestamp: new Date().toISOString()
+  });
 
   socket = io(SOCKET_URL, {
     autoConnect: false,
@@ -30,16 +51,25 @@ export const initSocket = () => {
 
   // Обработка ошибок
   socket.on('connect_error', (error) => {
-    console.error('WebSocket connection error:', error);
+    console.error('❌ WebSocket connection error:', {
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
   });
 
   socket.on('connect', () => {
-    console.log('Connected to WebSocket server');
+    console.log('✅ Connected to WebSocket server', {
+      socketId: socket.id,
+      timestamp: new Date().toISOString()
+    });
     reconnectAttempts = 0;
   });
 
   socket.on('disconnect', (reason) => {
-    console.log('Disconnected from WebSocket server:', reason);
+    console.log('🔌 Disconnected from WebSocket server:', {
+      reason,
+      timestamp: new Date().toISOString()
+    });
     
     if (reason === 'io server disconnect' || reason === 'io client disconnect') {
       return;
@@ -48,13 +78,42 @@ export const initSocket = () => {
     if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
       reconnectAttempts++;
       setTimeout(() => {
-        console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+        console.log(`🔄 Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
         socket.connect();
       }, 1000 * reconnectAttempts);
     }
   });
 
   return socket;
+};
+
+// Новая функция для безопасной инициализации сокета
+export const waitForSocket = async () => {
+  try {
+    const telegramId = await waitForTelegramWebApp();
+    console.log('✅ Telegram WebApp initialized', {
+      telegramId,
+      timestamp: new Date().toISOString()
+    });
+    
+    let currentSocket = initSocket();
+    if (!currentSocket) {
+      console.log('🔄 Socket not initialized, retrying...');
+      currentSocket = initSocket();
+    }
+    
+    if (!currentSocket) {
+      throw new Error('Failed to initialize socket after Telegram WebApp was ready');
+    }
+    
+    return currentSocket;
+  } catch (error) {
+    console.error('❌ Error in waitForSocket:', {
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+    throw error;
+  }
 };
 
 // Функции для игровых событий

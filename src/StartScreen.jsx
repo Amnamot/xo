@@ -223,12 +223,15 @@ const StartScreen = () => {
       // Создаем инвайт и показываем модальное окно Telegram
       try {
         const inviteResponse = await createInviteWS(telegramId);
-        if (inviteResponse?.messageId) {
-          window.Telegram?.WebApp?.switchInlineQuery(inviteResponse.messageId);
+        if (inviteResponse?.lobbyId) {
+          window.Telegram?.WebApp?.switchInlineQuery(inviteResponse.lobbyId);
+        } else {
+          console.error('Invalid invite response:', inviteResponse);
+          setError('Failed to create invite link. Please try again.');
         }
       } catch (inviteError) {
         console.error('Failed to create invite:', inviteError);
-        // Не прерываем основной процесс из-за ошибки создания инвайта
+        setError('Failed to create invite. Please try again.');
       }
 
     } catch (error) {

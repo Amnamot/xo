@@ -1,5 +1,5 @@
 // src/services/socket.js 
-// v1
+// v2
 import { io } from 'socket.io-client';
 
 let socket = null;
@@ -7,6 +7,7 @@ let socketInstance = null;
 const MAX_RECONNECT_ATTEMPTS = 5;
 let reconnectAttempts = 0;
 let connectionPromise = null;
+let isInitializing = false;
 
 // Объявляем все обработчики событий до их использования
 const handleConnect = (socket) => {
@@ -43,24 +44,82 @@ const handleDisconnect = (socket, reason) => {
   }
 };
 
-// Инициализация сокета
-export const initSocket = () => {
-  if (!socket) {
-    socket = io(process.env.REACT_APP_SOCKET_URL, {
-      transports: ['websocket', 'polling'],
-      query: {
-        telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()
-      }
-    });
+// Функция для ожидания подключения сокета
+const waitForConnection = (socket, timeout = 5000) => {
+  return new Promise((resolve, reject) => {
+    if (socket.connected) {
+      resolve(socket);
+      return;
+    }
 
-    // Добавляем базовые обработчики событий
-    socket.on('connect', () => handleConnect(socket));
-    socket.on('connect_error', handleConnectError);
-    socket.on('disconnect', (reason) => handleDisconnect(socket, reason));
-    
-    socketInstance = socket; // Синхронизируем socketInstance с socket
+    const timeoutId = setTimeout(() => {
+      cleanup();
+      reject(new Error('Socket connection timeout'));
+    }, timeout);
+
+    const connectHandler = () => {
+      cleanup();
+      resolve(socket);
+    };
+
+    const errorHandler = (error) => {
+      cleanup();
+      reject(error);
+    };
+
+    const cleanup = () => {
+      clearTimeout(timeoutId);
+      socket.off('connect', connectHandler);
+      socket.off('connect_error', errorHandler);
+    };
+
+    socket.once('connect', connectHandler);
+    socket.once('connect_error', errorHandler);
+  });
+};
+
+// Инициализация сокета с гарантированным подключением
+export const initSocket = async () => {
+  if (isInitializing) {
+    console.log('🔄 Socket initialization already in progress, waiting...');
+    await new Promise(resolve => setTimeout(resolve, 100));
+    return initSocket();
   }
-  return socket;
+
+  if (socket?.connected) {
+    return socket;
+  }
+
+  try {
+    isInitializing = true;
+
+    if (!socket) {
+      socket = io(process.env.REACT_APP_SOCKET_URL, {
+        transports: ['websocket', 'polling'],
+        query: {
+          telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()
+        }
+      });
+
+      // Добавляем базовые обработчики событий
+      socket.on('connect', () => handleConnect(socket));
+      socket.on('connect_error', handleConnectError);
+      socket.on('disconnect', (reason) => handleDisconnect(socket, reason));
+      
+      socketInstance = socket; // Синхронизируем socketInstance с socket
+    }
+
+    // Ждем подключения
+    await waitForConnection(socket);
+    console.log('✅ Socket successfully initialized and connected');
+    
+    return socket;
+  } catch (error) {
+    console.error('❌ Failed to initialize socket:', error);
+    throw error;
+  } finally {
+    isInitializing = false;
+  }
 };
 
 // Функция для получения текущего инстанса сокета
@@ -146,17 +205,47 @@ const ensureConnection = async () => {
 
 // Обновляем все методы для использования ensureConnection
 export const createLobby = async (telegramId) => {
-  const currentSocket = await ensureConnection();
-  
-  return new Promise((resolve, reject) => {
-    currentSocket.emit('createLobby', { telegramId }, (response) => {
-      if (response?.error) {
-        reject(new Error(response.error));
-      } else {
-        resolve(response);
-      }
-    });
+  console.log('🎮 Creating lobby for:', {
+    telegramId,
+    timestamp: new Date().toISOString()
   });
+
+  try {
+    const currentSocket = await initSocket();
+    
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new Error('Create lobby timeout'));
+      }, 10000);
+
+      currentSocket.emit('createLobby', { telegramId }, (response) => {
+        clearTimeout(timeoutId);
+        
+        if (response?.error) {
+          console.error('❌ Failed to create lobby:', {
+            error: response.error,
+            telegramId,
+            timestamp: new Date().toISOString()
+          });
+          reject(new Error(response.error));
+        } else {
+          console.log('✅ Lobby created successfully:', {
+            response,
+            telegramId,
+            timestamp: new Date().toISOString()
+          });
+          resolve(response);
+        }
+      });
+    });
+  } catch (error) {
+    console.error('❌ Error in createLobby:', {
+      error: error.message,
+      telegramId,
+      timestamp: new Date().toISOString()
+    });
+    throw error;
+  }
 };
 
 export const joinLobby = async (lobbyId, telegramId) => {

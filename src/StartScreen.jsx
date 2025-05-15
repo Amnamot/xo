@@ -1,4 +1,4 @@
-// src/StartScreen.jsx v15
+// src/StartScreen.jsx v16
 import WaitModal from './components/WaitModal';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -8,9 +8,9 @@ import {
   initSocket, 
   getSocket, 
   isSocketConnected, 
-  reconnectSocket, 
-  connectSocket,
-  createInviteWS 
+  reconnectSocket,
+  createInviteWS,
+  createLobby
 } from './services/socket';
 
 const StartScreen = () => {
@@ -40,14 +40,8 @@ const StartScreen = () => {
         timestamp: new Date().toISOString()
       });
 
-      // Подключаем сокет
-      await connectSocket();
-      const socket = initSocket();
-      
-      if (!socket) {
-        throw new Error('Failed to initialize socket');
-      }
-
+      // Инициализируем сокет с гарантированным подключением
+      const socket = await initSocket();
       socketRef.current = socket;
 
       // Настраиваем обработчики событий
@@ -84,7 +78,6 @@ const StartScreen = () => {
         }
       });
 
-      // Обработчики состояния подключения
       socket.on('connect', () => {
         if (!socketRef.current) return;
         
@@ -128,6 +121,9 @@ const StartScreen = () => {
         
         setShowWaitModal(false);
       });
+
+      setIsConnecting(false);
+      setError(null);
 
     } catch (error) {
       if (!socketRef.current) return;
@@ -187,26 +183,15 @@ const StartScreen = () => {
         throw new Error('Telegram ID is not available');
       }
 
+      // Инициализируем сокет и ждем подключения
       await initializeSocket();
-      const socket = getSocket();
-      if (!socket || !isSocketConnected()) {
-        throw new Error('Socket not connected');
-      }
-
+      
       setShowWaitModal(true);
       
       console.log('Creating lobby with telegramId:', telegramId);
       
-      // Создаем лобби и ждем ответ
-      const lobbyResponse = await new Promise((resolve, reject) => {
-        socket.emit('createLobby', { telegramId: telegramId.toString() }, (response) => {
-          if (response?.status === 'error') {
-            reject(new Error(response.message));
-          } else {
-            resolve(response);
-          }
-        });
-      });
+      // Создаем лобби используя новую функцию из socket.js
+      const lobbyResponse = await createLobby(telegramId);
 
       // Проверяем статус создания лобби
       if (lobbyResponse.status !== 'created') {
@@ -228,7 +213,8 @@ const StartScreen = () => {
       }
 
       // Отправляем состояние UI
-      if (telegramId) {
+      const socket = getSocket();
+      if (socket && telegramId) {
         socket.emit('uiState', {
           state: 'waitModal',
           telegramId,

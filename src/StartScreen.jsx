@@ -7,7 +7,7 @@ import './StartScreen.css';
 import { 
   initSocket, 
   getSocket, 
-  isSocketConnected, 
+  isSocketConnected,
   reconnectSocket,
   createInviteWS,
   createLobby
@@ -179,53 +179,69 @@ const StartScreen = () => {
 
   const handleCreateGame = async () => {
     try {
+      // Проверка начальных условий
       if (!telegramId) {
         throw new Error('Telegram ID is not available');
       }
 
-      // Инициализируем сокет и ждем подключения
+      // Шаг 1: Инициализация сокета
       await initializeSocket();
+      console.log('🔌 Socket initialized and connected');
       
-      setShowWaitModal(true);
-      
-      console.log('Creating lobby with telegramId:', telegramId);
-      
-      // Создаем лобби используя новую функцию из socket.js
-      const lobbyResponse = await createLobby(telegramId);
+      // Дополнительная проверка после инициализации
+      if (!isSocketConnected()) {
+        throw new Error('Socket connection failed');
+      }
 
-      // Проверяем статус создания лобби
+      // Шаг 2: Создание лобби
+      console.log('Creating lobby with telegramId:', telegramId);
+      const lobbyResponse = await createLobby(telegramId);
+      
+      // Проверка результата создания лобби
       if (lobbyResponse.status !== 'created') {
         throw new Error('Failed to create lobby: invalid status');
       }
+      console.log('✅ Lobby created:', lobbyResponse.lobbyId);
 
-      // Создаем инвайт и показываем модальное окно Telegram
-      try {
-        const inviteResponse = await createInviteWS(telegramId);
-        if (inviteResponse?.messageId) {
-          window.Telegram?.WebApp?.shareMessage(inviteResponse.messageId);
-        } else {
-          console.error('Invalid invite response:', inviteResponse);
-          setError('Failed to create invite link. Please try again.');
-        }
-      } catch (inviteError) {
-        console.error('Failed to create invite:', inviteError);
-        setError('Failed to create invite. Please try again.');
-      }
-
-      // Отправляем состояние UI
+      // Шаг 3: Показ WaitModal
+      setShowWaitModal(true);
+      
+      // Отправка состояния UI и проверка
       const socket = getSocket();
-      if (socket && telegramId) {
-        socket.emit('uiState', {
-          state: 'waitModal',
-          telegramId,
-          details: { isCreate: true }
-        });
+      if (!socket) {
+        throw new Error('Socket not available for UI state update');
       }
+      
+      socket.emit('uiState', {
+        state: 'waitModal',
+        telegramId,
+        details: { isCreate: true }
+      });
+      console.log('✅ WaitModal shown and UI state updated');
+
+      // Шаг 4: Создание и показ инвайта
+      const inviteResponse = await createInviteWS(telegramId);
+      
+      // Проверка результата создания инвайта
+      if (!inviteResponse?.messageId) {
+        throw new Error('Invalid invite response');
+      }
+      
+      // Показ модального окна Telegram
+      window.Telegram?.WebApp?.shareMessage(inviteResponse.messageId);
+      console.log('✅ Invite created and shared');
 
     } catch (error) {
-      console.error('Failed to create game:', error);
-      setError('Failed to create game. Please try again.');
+      // Обработка ошибок с указанием на каком шаге произошла ошибка
+      console.error('❌ Game creation failed:', {
+        error: error.message,
+        step: error.step || 'unknown',
+        timestamp: new Date().toISOString()
+      });
+      
+      // Откат изменений в случае ошибки
       setShowWaitModal(false);
+      setError('Failed to create game. Please try again.');
     }
   };
 

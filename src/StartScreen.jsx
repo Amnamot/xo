@@ -86,29 +86,39 @@ const StartScreen = () => {
         console.log('🎮 [StartGame] Setting up game event handlers');
         
         socket.on('gameStart', (data) => {
-          console.log('✨ [Game Events] Received gameStart event:', {
-            socketDetails: {
+          console.log('🎮 [Game Start] Received event:', {
+            socketState: {
               id: socket.id,
               connected: socket.connected,
-              transport: socket.io?.engine?.transport?.name || 'unknown',
-              rooms: Array.from(socket.rooms || []),
+              transport: socket.io?.engine?.transport?.name,
               readyState: socket.io?.engine?.readyState,
-              handshake: socket.handshake?.query || {},
-              reconnecting: socket.io?.engine?.reconnecting || false
+              rooms: Array.from(socket.rooms || []),
+              reconnecting: socket.io?.engine?.reconnecting
             },
-            gameDetails: {
-              sessionId: data.session.id,
+            gameData: {
               creator: data.creator,
               opponent: data.opponent,
-              currentUser: telegramId,
               isCreator: telegramId === data.creator,
-              currentTurn: data.session.currentTurn
+              sessionId: data.session.id
             },
-            navigationDetails: {
-              targetPath: `/game/${data.session.id}`,
-              currentPath: window.location.pathname,
+            timestamp: new Date().toISOString()
+          });
+          
+          // Добавляем обработчик для отслеживания состояния подключения
+          socket.on('connect', () => {
+            console.log('🔌 [Socket] Reconnected:', {
+              id: socket.id,
+              rooms: Array.from(socket.rooms || []),
               timestamp: new Date().toISOString()
-            }
+            });
+          });
+
+          socket.on('disconnect', (reason) => {
+            console.log('❌ [Socket] Disconnected:', {
+              reason,
+              lastSocketId: socket.id,
+              timestamp: new Date().toISOString()
+            });
           });
           
           // Проверяем состояние подключения
@@ -146,25 +156,6 @@ const StartScreen = () => {
           });
           
           navigate(`/game/${data.session.id}`, { replace: true });
-        });
-
-        socket.on('connect', () => {
-          console.log('🔌 [Socket Events] Socket connected:', {
-            socketId: socket.id,
-            transport: socket.io?.engine?.transport?.name,
-            upgrades: socket.io?.engine?.upgrades || [],
-            timestamp: new Date().toISOString()
-          });
-        });
-
-        socket.on('disconnect', (reason) => {
-          console.log('🔌 [Socket Events] Socket disconnected:', {
-            reason,
-            socketId: socket.id,
-            wasConnected: socket.connected,
-            lastError: socket.io?.engine?.transport?.lastError,
-            timestamp: new Date().toISOString()
-          });
         });
 
         socket.on('setShowWaitModal', (data) => {

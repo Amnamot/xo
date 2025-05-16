@@ -15,75 +15,107 @@ const checkNetworkConnection = () => {
 };
 
 export const initSocket = () => {
-  if (socket) return socket;
+  console.log('🔍 [Socket Service] Initializing socket...', {
+    existingSocket: socket ? 'exists' : 'null',
+    timestamp: new Date().toISOString()
+  });
+
+  if (socket) {
+    console.log('♻️ [Socket Service] Reusing existing socket:', {
+      socketId: socket.id,
+      connected: socket.connected,
+      timestamp: new Date().toISOString()
+    });
+    return socket;
+  }
   
   const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
   if (!telegramId) {
+    console.error('❌ [Socket Service] Telegram ID not found');
     throw new Error('Telegram user ID not found');
   }
 
-  socket = io(SOCKET_URL, {
-    autoConnect: false,
-    transports: ['websocket', 'polling'],
-    path: '/socket.io/',
-    reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
-    reconnectionDelay: RECONNECTION_DELAY,
-    reconnectionDelayMax: RECONNECTION_DELAY * 5,
-    timeout: CONNECTION_TIMEOUT,
-    forceNew: true,
-    withCredentials: true,
-    query: { telegramId }
-  });
-
-  // Обработка ошибок
-  socket.on('connect_error', (error) => {
-    console.error('WebSocket connection error:', {
-      error: error.message,
-      online: checkNetworkConnection(),
-      attempts: reconnectAttempts,
+  try {
+    console.log('🔄 [Socket Service] Creating new socket...', {
+      telegramId,
       timestamp: new Date().toISOString()
     });
-  });
 
-  socket.on('connect', () => {
-    console.log('Connected to WebSocket server', {
+    socket = io(SOCKET_URL, {
+      autoConnect: false,
+      transports: ['websocket', 'polling'],
+      path: '/socket.io/',
+      reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
+      reconnectionDelay: RECONNECTION_DELAY,
+      reconnectionDelayMax: RECONNECTION_DELAY * 5,
+      timeout: CONNECTION_TIMEOUT,
+      forceNew: true,
+      withCredentials: true,
+      query: { telegramId }
+    });
+
+    console.log('✅ [Socket Service] Socket instance created:', {
       socketId: socket.id,
       timestamp: new Date().toISOString()
     });
-    reconnectAttempts = 0;
-  });
 
-  socket.on('disconnect', (reason) => {
-    console.log('Disconnected from WebSocket server:', {
-      reason,
-      online: checkNetworkConnection(),
-      timestamp: new Date().toISOString()
-    });
-    
-    if (reason === 'io server disconnect' || reason === 'io client disconnect') {
-      return;
-    }
-
-    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS && checkNetworkConnection()) {
-      reconnectAttempts++;
-      setTimeout(() => {
-        console.log('Attempting to reconnect:', {
-          attempt: reconnectAttempts,
-          maxAttempts: MAX_RECONNECT_ATTEMPTS,
-          timestamp: new Date().toISOString()
-        });
-        socket.connect();
-      }, RECONNECTION_DELAY * reconnectAttempts);
-    } else {
-      console.error('Max reconnection attempts reached or no network connection', {
+    // Обработка ошибок
+    socket.on('connect_error', (error) => {
+      console.error('❌ [Socket Service] Connection error:', {
+        error: error.message,
+        online: checkNetworkConnection(),
         attempts: reconnectAttempts,
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    socket.on('connect', () => {
+      console.log('🌟 [Socket Service] Connected:', {
+        socketId: socket.id,
+        timestamp: new Date().toISOString()
+      });
+      reconnectAttempts = 0;
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('⚠️ [Socket Service] Disconnected:', {
+        reason,
         online: checkNetworkConnection(),
         timestamp: new Date().toISOString()
       });
-    }
-  });
+      
+      if (reason === 'io server disconnect' || reason === 'io client disconnect') {
+        return;
+      }
 
-  return socket;
+      if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS && checkNetworkConnection()) {
+        reconnectAttempts++;
+        setTimeout(() => {
+          console.log('🔄 [Socket Service] Reconnecting:', {
+            attempt: reconnectAttempts,
+            maxAttempts: MAX_RECONNECT_ATTEMPTS,
+            timestamp: new Date().toISOString()
+          });
+          socket.connect();
+        }, RECONNECTION_DELAY * reconnectAttempts);
+      } else {
+        console.error('❌ [Socket Service] Max reconnection attempts reached:', {
+          attempts: reconnectAttempts,
+          online: checkNetworkConnection(),
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    return socket;
+  } catch (error) {
+    console.error('❌ [Socket Service] Failed to initialize socket:', {
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
+    throw error;
+  }
 };
 
 // Функции для игровых событий
@@ -205,34 +237,54 @@ export const subscribeToGameEvents = (handlers) => {
 
 // Функции-хелперы для работы с сокетами
 export const connectSocket = () => {
+  console.log('🔄 [Socket Connect] Starting connection process...');
+  
   const currentSocket = initSocket();
+  console.log('📡 [Socket Connect] Got socket instance:', {
+    socketId: currentSocket.id,
+    connected: currentSocket.connected,
+    timestamp: new Date().toISOString()
+  });
+
   return new Promise((resolve, reject) => {
     if (currentSocket.connected) {
+      console.log('✅ [Socket Connect] Already connected');
       resolve();
       return;
     }
 
     if (!checkNetworkConnection()) {
+      console.error('❌ [Socket Connect] No network connection');
       reject(new Error('No network connection'));
       return;
     }
 
     const timeout = setTimeout(() => {
       cleanup();
+      console.error('⏰ [Socket Connect] Connection timeout');
       reject(new Error('WebSocket connection timeout'));
     }, CONNECTION_TIMEOUT);
 
     const handleConnect = () => {
+      console.log('🌟 [Socket Connect] Connection successful:', {
+        socketId: currentSocket.id,
+        timestamp: new Date().toISOString()
+      });
       cleanup();
       resolve();
     };
 
     const handleError = (error) => {
+      console.error('❌ [Socket Connect] Connection error:', {
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
       cleanup();
       reject(error);
     };
 
     const cleanup = () => {
+      console.log('🧹 [Socket Connect] Cleaning up listeners');
       clearTimeout(timeout);
       currentSocket.off('connect', handleConnect);
       currentSocket.off('connect_error', handleError);
@@ -242,8 +294,14 @@ export const connectSocket = () => {
     currentSocket.once('connect_error', handleError);
 
     try {
+      console.log('📡 [Socket Connect] Initiating connection...');
       currentSocket.connect();
     } catch (error) {
+      console.error('💥 [Socket Connect] Failed to initiate connection:', {
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
       cleanup();
       reject(error);
     }

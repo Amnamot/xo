@@ -91,7 +91,7 @@ const WaitModal = ({ onCancel }) => {
   return (
     <div className="waitFrame">
       <div className="waitText">
-        We are waiting for<br />the zero to join<br />
+        We are waiting for<br />the zero to join 1<br />
         {creatorMarker && <span className="creatorMarker">{creatorMarker}</span>}
       </div>
       <div className="waitTimer">{formatTime(secondsLeft)}</div>

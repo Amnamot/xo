@@ -210,72 +210,48 @@ export const subscribeToGameEvents = (handlers) => {
 };
 
 // Функции-хелперы для работы с сокетами
-export const connectSocket = (socket, lobbyId) => {
+export const connectSocket = () => {
+  const currentSocket = initSocket();
   return new Promise((resolve, reject) => {
-    if (!socket) {
-      reject(new Error('Socket instance is required'));
+    if (currentSocket.connected) {
+      resolve();
       return;
     }
 
-    if (!lobbyId) {
-      reject(new Error('Lobby ID is required'));
-      return;
-    }
-
-    const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
-    if (!telegramId) {
-      reject(new Error('Telegram user ID not found'));
+    if (!checkNetworkConnection()) {
+      reject(new Error('No network connection'));
       return;
     }
 
     const timeout = setTimeout(() => {
       cleanup();
-      reject(new Error('Connection timeout'));
+      reject(new Error('WebSocket connection timeout'));
     }, CONNECTION_TIMEOUT);
 
     const handleConnect = () => {
-      console.log('✅ Socket connected successfully', {
-        socketId: socket.id,
-        lobbyId,
-        timestamp: new Date().toISOString()
-      });
-      
-      socket.emit('joinGame', {
-        gameId: lobbyId,
-        telegramId
-      }, (response) => {
-        if (response?.error) {
-          cleanup();
-          reject(new Error(response.error));
-        } else {
-          cleanup();
-          resolve(response);
-        }
-      });
+      cleanup();
+      resolve();
     };
 
     const handleError = (error) => {
-      console.error('🚨 Socket connection error:', {
-        error: error.message,
-        lobbyId,
-        timestamp: new Date().toISOString()
-      });
       cleanup();
       reject(error);
     };
 
     const cleanup = () => {
       clearTimeout(timeout);
-      socket.off('connect', handleConnect);
-      socket.off('connect_error', handleError);
+      currentSocket.off('connect', handleConnect);
+      currentSocket.off('connect_error', handleError);
     };
 
-    if (socket.connected) {
-      handleConnect();
-    } else {
-      socket.once('connect', handleConnect);
-      socket.once('connect_error', handleError);
-      socket.connect();
+    currentSocket.once('connect', handleConnect);
+    currentSocket.once('connect_error', handleError);
+
+    try {
+      currentSocket.connect();
+    } catch (error) {
+      cleanup();
+      reject(error);
     }
   });
 };

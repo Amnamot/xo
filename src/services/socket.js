@@ -86,46 +86,113 @@ export const initSocket = () => {
   return socket;
 };
 
+// Функция для установки слушателей игровых событий
+const setupGameListeners = (socket) => {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('Game start timeout'));
+    }, CONNECTION_TIMEOUT);
+
+    const handleGameStart = (data) => {
+      console.log('✅ Game started:', {
+        data,
+        timestamp: new Date().toISOString()
+      });
+      cleanup();
+      resolve(data);
+    };
+
+    const cleanup = () => {
+      clearTimeout(timeout);
+      socket.off('gameStart', handleGameStart);
+    };
+
+    socket.once('gameStart', handleGameStart);
+  });
+};
+
 // Функции для игровых событий
 export const createLobby = (telegramId) => {
   const currentSocket = initSocket();
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     if (!currentSocket.connected) {
       reject(new Error('WebSocket is not connected'));
       return;
     }
-    currentSocket.emit('createLobby', { telegramId }, (response) => {
-      if (response?.error) {
-        reject(new Error(response.error));
-      } else {
-        resolve(response);
-      }
-    });
+
+    try {
+      // Устанавливаем слушатель до создания лобби
+      const gameStartPromise = setupGameListeners(currentSocket);
+      
+      // Создаем лобби
+      const lobbyResponse = await new Promise((resolveCreate, rejectCreate) => {
+        currentSocket.emit('createLobby', { telegramId }, (response) => {
+          if (response?.error) {
+            rejectCreate(new Error(response.error));
+          } else {
+            resolveCreate(response);
+          }
+        });
+      });
+
+      // Ждем любое из событий
+      const result = await Promise.race([
+        gameStartPromise,
+        Promise.resolve(lobbyResponse)
+      ]);
+
+      resolve(result);
+    } catch (error) {
+      console.error('Failed to create lobby:', {
+        error: error.message,
+        telegramId,
+        timestamp: new Date().toISOString()
+      });
+      reject(error);
+    }
   });
 };
 
 export const joinLobby = (lobbyId, telegramId) => {
   const currentSocket = initSocket();
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     if (!currentSocket.connected) {
       reject(new Error('WebSocket is not connected'));
       return;
     }
-    
-    // Устанавливаем слушатель для события начала игры
-    currentSocket.once('gameStart', (data) => {
-      console.log('✅ Game started:', data);
-      resolve(data);
-    });
 
-    // Отправляем запрос на присоединение к лобби
-    currentSocket.emit('joinLobby', { lobbyId, telegramId }, (response) => {
-      if (response?.status === 'error') {
-        reject(response);
-      } else {
-        resolve(response);
-      }
-    });
+    try {
+      // Устанавливаем слушатель до присоединения
+      const gameStartPromise = setupGameListeners(currentSocket);
+
+      // Присоединяемся к лобби
+      const joinResponse = await new Promise((resolveJoin, rejectJoin) => {
+        currentSocket.emit('joinLobby', { lobbyId, telegramId }, (response) => {
+          if (response?.status === 'error') {
+            rejectJoin(response);
+          } else {
+            resolveJoin(response);
+          }
+        });
+      });
+
+      // Ждем любое из событий
+      const result = await Promise.race([
+        gameStartPromise,
+        Promise.resolve(joinResponse)
+      ]);
+
+      resolve(result);
+    } catch (error) {
+      console.error('Failed to join lobby:', {
+        error: error.message,
+        lobbyId,
+        telegramId,
+        timestamp: new Date().toISOString()
+      });
+      reject(error);
+    }
   });
 };
 

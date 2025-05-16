@@ -57,7 +57,7 @@ const WaitModal = ({ onCancel }) => {
 
   return (
     <div className="waitFrame">
-      <div className="waitText">We are waiting for<br />the zero to join</div>
+      <div className="waitText">We are waiting for<br />the zero to join<br />1</div>
       <div className="waitTimer">{formatTime(secondsLeft)}</div>
       <button className="waitButton" onClick={onCancel}>Cancel</button>
     </div>

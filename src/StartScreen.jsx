@@ -86,25 +86,58 @@ const StartScreen = () => {
         console.log('🎮 [StartGame] Setting up game event handlers');
         
         socket.on('gameStart', (data) => {
-          console.log('✨ [StartGame] Received gameStart event:', {
-            socketId: socket.id,
-            sessionId: data.session.id,
-            creator: data.creator,
-            opponent: data.opponent,
-            currentUser: telegramId,
-            isCreator: telegramId === data.creator,
-            connected: socket.connected,
-            rooms: Array.from(socket.rooms || []),
+          console.log('✨ [Game Events] Received gameStart event:', {
+            socketDetails: {
+              id: socket.id,
+              connected: socket.connected,
+              transport: socket.io?.engine?.transport?.name || 'unknown',
+              rooms: Array.from(socket.rooms || []),
+            },
+            gameDetails: {
+              sessionId: data.session.id,
+              creator: data.creator,
+              opponent: data.opponent,
+              currentUser: telegramId,
+              isCreator: telegramId === data.creator,
+            },
+            connectionState: {
+              readyState: socket.io?.engine?.readyState,
+              wasConnected: socket.connected,
+              reconnecting: socket.io?.engine?.reconnecting || false,
+            },
             timestamp: new Date().toISOString()
           });
           
-          // Проверяем, что мы все еще подключены
+          // Проверяем состояние подключения
           if (!socket.connected) {
-            console.warn('⚠️ [StartGame] Socket disconnected before navigation');
+            console.warn('⚠️ [Game Events] Socket disconnected before navigation:', {
+              socketId: socket.id,
+              lastError: socket.io?.engine?.transport?.lastError,
+              timestamp: new Date().toISOString()
+            });
             socket.connect();
           }
           
           navigate(`/game/${data.session.id}`, { replace: true });
+        });
+
+        socket.on('connect', () => {
+          console.log('🔌 [Socket Events] Socket connected:', {
+            socketId: socket.id,
+            transport: socket.io?.engine?.transport?.name,
+            upgrades: socket.io?.engine?.upgrades || [],
+            timestamp: new Date().toISOString()
+          });
+        });
+
+        socket.on('disconnect', (reason) => {
+          console.log('🔌 [Socket Events] Socket disconnected:', {
+            reason,
+            socketId: socket.id,
+            wasConnected: socket.connected,
+            lastError: socket.io?.engine?.transport?.lastError,
+            timestamp: new Date().toISOString()
+          });
         });
 
         socket.on('setShowWaitModal', (data) => {

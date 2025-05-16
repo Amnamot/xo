@@ -186,18 +186,17 @@ const Game = () => {
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const CELL_SIZE = isMobile ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP;
 
-  // При монтировании компонента проверяем сохраненное состояние
+  // При монтировании компонента проверяем наличие gameSession в URL
   useEffect(() => {
-    const savedState = loadGameState();
-    if (savedState?.gameSession) {
+    if (lobbyId) {
       // Переподключаемся к игровой сессии
       const socket = initSocket();
       socket.emit('joinGame', {
-        gameId: savedState.gameSession.id,
+        gameId: lobbyId,
         telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id
       });
     }
-  }, []);
+  }, [lobbyId]);
 
   // Обновляем эффект с подключением к WebSocket
   useEffect(() => {

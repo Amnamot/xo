@@ -63,7 +63,8 @@ const StartScreen = () => {
       socketRef.current = socket;
       console.log('✅ WebSocket connected successfully');
 
-      // Устанавливаем обработчики событий
+      // Устанавливаем обработчики событий ПЕРЕД созданием лобби
+      console.log('🎮 Setting up game event handlers');
       socket.on('gameStart', (data) => {
         console.log('✅ Received gameStart event:', data);
         navigate(`/game/${data.session.id}`, { replace: true });
@@ -103,7 +104,7 @@ const StartScreen = () => {
         });
       });
 
-      // Создаем лобби
+      // Создаем лобби ПОСЛЕ установки всех обработчиков
       console.log('🎲 Creating lobby...');
       const lobbyResponse = await createLobby(telegramId);
       console.log('✅ Lobby created:', lobbyResponse);

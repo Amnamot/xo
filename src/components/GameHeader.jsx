@@ -66,7 +66,6 @@ const GameHeader = ({
         <div className="gamer1">
           <img className="avagamer1" src={leftPlayerAvatar} alt="Player X" />
           <div className="namegamer1">{leftPlayerName}</div>
-          <div className="player-symbol">X</div>
           <div className="player-timer" style={{ color: currentPlayer === "X" ? "#6800D7" : "#000" }}>
             {formatPlayerTime(playerTime1)}
           </div>
@@ -82,7 +81,6 @@ const GameHeader = ({
         <div className="gamer2">
           <img className="avagamer2" src={rightPlayerAvatar} alt="Player O" />
           <div className="namegamer2">{rightPlayerName}</div>
-          <div className="player-symbol">O</div>
           <div className="player-timer" style={{ color: currentPlayer === "O" ? "#E10303" : "#000" }}>
             {formatPlayerTime(playerTime2)}
           </div>

@@ -106,15 +106,20 @@ const Loader = () => {
     }
   }, [progress, authorized, navigate]);
 
-  return (
-    <div className="loader-container">
-      <div className="loader-content">
-        <img src="/media/3tICO.svg" alt="Logo" className="loader-logo" />
-        <div className="progress-bar">
-          <div className="progress" style={{ width: `${progress}%` }} />
-        </div>
-        {error && <div className="error-message">{error}</div>}
+  if (error) {
+    return (
+      <div className="loader">
+        <div className="loader-error">{error}</div>
       </div>
+    );
+  }
+
+  return (
+    <div className="loader">
+      <div className="loader-bar">
+        <div className="loader-progress" style={{ width: `${progress}%` }}></div>
+      </div>
+      <div className="loader-version">Created with symbiotic intelligence</div>
     </div>
   );
 };

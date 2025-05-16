@@ -1,11 +1,18 @@
 import { io } from 'socket.io-client';
 
 const SOCKET_URL = 'https://igra.top';
+const CONNECTION_TIMEOUT = 10000; // Увеличиваем таймаут до 10 секунд
+const RECONNECTION_DELAY = 2000;
 
 let socket = null;
 let reconnectTimer = null;
 const MAX_RECONNECT_ATTEMPTS = 5;
 let reconnectAttempts = 0;
+
+// Проверка состояния сети
+const checkNetworkConnection = () => {
+  return navigator.onLine;
+};
 
 export const initSocket = () => {
   if (socket) return socket;
@@ -20,9 +27,9 @@ export const initSocket = () => {
     transports: ['websocket', 'polling'],
     path: '/socket.io/',
     reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
-    reconnectionDelay: 1000,
-    reconnectionDelayMax: 5000,
-    timeout: 20000,
+    reconnectionDelay: RECONNECTION_DELAY,
+    reconnectionDelayMax: RECONNECTION_DELAY * 5,
+    timeout: CONNECTION_TIMEOUT,
     forceNew: true,
     withCredentials: true,
     query: { telegramId }
@@ -30,27 +37,49 @@ export const initSocket = () => {
 
   // Обработка ошибок
   socket.on('connect_error', (error) => {
-    console.error('WebSocket connection error:', error);
+    console.error('WebSocket connection error:', {
+      error: error.message,
+      online: checkNetworkConnection(),
+      attempts: reconnectAttempts,
+      timestamp: new Date().toISOString()
+    });
   });
 
   socket.on('connect', () => {
-    console.log('Connected to WebSocket server');
+    console.log('Connected to WebSocket server', {
+      socketId: socket.id,
+      timestamp: new Date().toISOString()
+    });
     reconnectAttempts = 0;
   });
 
   socket.on('disconnect', (reason) => {
-    console.log('Disconnected from WebSocket server:', reason);
+    console.log('Disconnected from WebSocket server:', {
+      reason,
+      online: checkNetworkConnection(),
+      timestamp: new Date().toISOString()
+    });
     
     if (reason === 'io server disconnect' || reason === 'io client disconnect') {
       return;
     }
 
-    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS && checkNetworkConnection()) {
       reconnectAttempts++;
       setTimeout(() => {
-        console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+        console.log('Attempting to reconnect:', {
+          attempt: reconnectAttempts,
+          maxAttempts: MAX_RECONNECT_ATTEMPTS,
+          timestamp: new Date().toISOString()
+        });
         socket.connect();
-      }, 1000 * reconnectAttempts);
+      }, RECONNECTION_DELAY * reconnectAttempts);
+    } else {
+      console.error('Max reconnection attempts reached or no network connection', {
+        attempts: reconnectAttempts,
+        online: checkNetworkConnection(),
+        timestamp: new Date().toISOString()
+      });
     }
   });
 
@@ -189,24 +218,41 @@ export const connectSocket = () => {
       return;
     }
 
+    if (!checkNetworkConnection()) {
+      reject(new Error('No network connection'));
+      return;
+    }
+
     const timeout = setTimeout(() => {
       cleanup();
       reject(new Error('WebSocket connection timeout'));
-    }, 5000);
+    }, CONNECTION_TIMEOUT);
 
     const handleConnect = () => {
       cleanup();
       resolve();
     };
 
+    const handleError = (error) => {
+      cleanup();
+      reject(error);
+    };
+
     const cleanup = () => {
       clearTimeout(timeout);
       currentSocket.off('connect', handleConnect);
+      currentSocket.off('connect_error', handleError);
     };
 
     currentSocket.once('connect', handleConnect);
-    reconnectAttempts = 0;
-    currentSocket.connect();
+    currentSocket.once('connect_error', handleError);
+
+    try {
+      currentSocket.connect();
+    } catch (error) {
+      cleanup();
+      reject(error);
+    }
   });
 };
 

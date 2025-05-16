@@ -610,6 +610,7 @@ const Game = () => {
   const isOurTurn = currentPlayer === (gameSession?.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id ? "X" : "O");
 
   useEffect(() => {
+    const socket = initSocket();
     if (moveTimer === 0 && isOurTurn) {
       socket.emit('timeExpired', {
         gameId: gameSession?.id,

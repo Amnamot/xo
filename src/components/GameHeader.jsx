@@ -6,10 +6,11 @@ const GameHeader = ({
   currentPlayer, 
   moveTimer, 
   time, 
-  opponentAvatar,
+  opponentInfo,
   playerTime1 = 0,
   playerTime2 = 0,
-  isConnected = true
+  isConnected = true,
+  isCreator = false
 }) => {
   const [timerColor, setTimerColor] = useState("#6800D7");
 
@@ -39,10 +40,16 @@ const GameHeader = ({
     return `${seconds} : ${tenths}`;
   };
 
-  // ✅ Берём данные текущего игрока из Telegram initData
+  // Данные текущего игрока из Telegram
   const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-  const userAvatar = tgUser?.photo_url || "/media/JohnAva.png";
-  const userName = tgUser?.first_name || "You";
+  const currentUserAvatar = tgUser?.photo_url || "/media/JohnAva.png";
+  const currentUserName = tgUser?.first_name || "You";
+
+  // Определяем, какой игрок где (создатель всегда слева)
+  const leftPlayerAvatar = isCreator ? currentUserAvatar : (opponentInfo?.avatar || "/media/buddha.svg");
+  const leftPlayerName = isCreator ? currentUserName : (opponentInfo?.name || "Opponent");
+  const rightPlayerAvatar = isCreator ? (opponentInfo?.avatar || "/media/buddha.svg") : currentUserAvatar;
+  const rightPlayerName = isCreator ? (opponentInfo?.name || "Opponent") : currentUserName;
 
   return (
     <>
@@ -57,8 +64,9 @@ const GameHeader = ({
 
       <div className="gameplayers">
         <div className="gamer1">
-          <img className="avagamer1" src={userAvatar} alt="Player 1" />
-          <div className="namegamer1">{userName}</div>
+          <img className="avagamer1" src={leftPlayerAvatar} alt="Player X" />
+          <div className="namegamer1">{leftPlayerName}</div>
+          <div className="player-symbol">X</div>
           <div className="player-timer" style={{ color: currentPlayer === "X" ? "#6800D7" : "#000" }}>
             {formatPlayerTime(playerTime1)}
           </div>
@@ -72,8 +80,9 @@ const GameHeader = ({
         </div>
 
         <div className="gamer2">
-          <img className="avagamer2" src={opponentAvatar || "/media/buddha.svg"} alt="Player 2" />
-          <div className="namegamer2">Opponent</div>
+          <img className="avagamer2" src={rightPlayerAvatar} alt="Player O" />
+          <div className="namegamer2">{rightPlayerName}</div>
+          <div className="player-symbol">O</div>
           <div className="player-timer" style={{ color: currentPlayer === "O" ? "#E10303" : "#000" }}>
             {formatPlayerTime(playerTime2)}
           </div>

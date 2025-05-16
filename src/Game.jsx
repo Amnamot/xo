@@ -180,283 +180,120 @@ const Game = () => {
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const maxReconnectAttempts = 5;
   const reconnectDelay = 2000;
+  const socketRef = useRef(null);
   const boardRef = useRef(null);
   const [boardDimensions, setBoardDimensions] = useState({ width: 0, height: 0 });
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const CELL_SIZE = isMobile ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP;
 
-  // При монтировании компонента проверяем наличие gameSession в URL
   useEffect(() => {
-    if (lobbyId) {
-      // Переподключаемся к игровой сессии
-      const socket = initSocket();
-      socket.emit('joinGame', {
-        gameId: lobbyId,
-        telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id
-      });
-    }
-  }, [lobbyId]);
-
-  // Обновляем эффект с подключением к WebSocket
-  useEffect(() => {
-    if (!mountedRef.current) {
-      console.log('⏭️ Skipping socket initialization - component not mounted');
+    if (!mountedRef.current || !lobbyId) {
+      console.log('⏭️ Skipping socket initialization - component not mounted or no lobbyId');
       return;
     }
 
-    const socket = initSocket();
-    console.log('🔌 Socket initialization', {
-      socketId: socket?.id,
-      connected: socket?.connected,
-      timestamp: new Date().toISOString()
-    });
-
-    const connect = () => {
-      if (!socket) {
-        console.warn('⚠️ Socket not initialized in connect()');
-        return;
-      }
-      
-      connectSocket();
-
-      socket.on('connect', () => {
-        console.log('✅ Socket connected', {
-          socketId: socket.id,
-          timestamp: new Date().toISOString()
-        });
-        setIsConnected(true);
-        setReconnectAttempts(0);
-        
-        if (gameSession?.id) {
-          console.log('🔄 Requesting game state', {
-            gameId: gameSession.id,
-            timestamp: new Date().toISOString()
-          });
-          socket.emit('requestGameState', {
-            gameId: gameSession.id,
-            telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id
-          });
-        }
-      });
-
-      socket.on('gameState', (data) => {
-        console.log('📥 Received game state', {
-          valid: isValidGameState(data),
-          data: {
-            currentPlayer: data?.currentPlayer,
-            gameSessionId: data?.gameSession?.id,
-            boardSize: data?.board?.length
-          },
-          timestamp: new Date().toISOString()
-        });
-        if (!data || !isValidGameState(data)) {
-          console.error('Received invalid game state from server');
+    const initializeSocket = async () => {
+      try {
+        if (socketRef.current?.connected) {
+          console.log('🔌 Socket already connected, skipping initialization');
           return;
         }
 
-        setBoard(data.board);
-        setCurrentPlayer(data.currentPlayer);
-        setPlayerTime1(data.playerTime1);
-        setPlayerTime2(data.playerTime2);
-        setGameSession(data.gameSession);
-        setMoveStartTime(Date.now());
-      });
-
-      socket.on('connect_error', (error) => {
-        console.error('Connection error:', error);
-        setIsConnected(false);
+        console.log('🔌 Initializing socket connection');
+        socketRef.current = initSocket();
         
-        // Проверяем reconnectAttempts перед использованием
-        const currentAttempts = reconnectAttempts || 0;
-        if (currentAttempts < maxReconnectAttempts) {
-          setTimeout(() => {
-            setReconnectAttempts(prev => (prev || 0) + 1);
-            connect();
-          }, reconnectDelay * (currentAttempts + 1));
-        } else {
-          alert('Не удалось подключиться к серверу. Пожалуйста, обновите страницу.');
-        }
-      });
+        const socket = socketRef.current;
+        
+        socket.on('connect', () => {
+          console.log('✅ Socket connected successfully');
+          setIsConnected(true);
+          setReconnectAttempts(0);
+        });
 
-      socket.on('disconnect', () => {
-        console.log('Disconnected from game server');
-        setIsConnected(false);
-      });
+        socket.on('disconnect', () => {
+          console.log('❌ Socket disconnected');
+          setIsConnected(false);
+          handleReconnect();
+        });
+
+        socket.on('error', (error) => {
+          console.error('🚨 Socket error:', error);
+          handleReconnect();
+        });
+
+        // Подписываемся на игровые события
+        subscribeToGameEvents(socket, {
+          onGameState: (gameState) => {
+            if (!isValidGameState(gameState)) {
+              console.error('Received invalid game state:', gameState);
+              return;
+            }
+            
+            setBoard(gameState.board);
+            setCurrentPlayer(gameState.currentPlayer);
+            setScale(gameState.scale);
+            setPosition(gameState.position);
+            setTime(gameState.time);
+            setPlayerTime1(gameState.playerTime1);
+            setPlayerTime2(gameState.playerTime2);
+            
+            if (gameState.gameSession) {
+              setGameSession(gameState.gameSession);
+              // Если мы не создатель, устанавливаем информацию о создателе
+              if (gameState.gameSession.creatorId !== window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
+                setOpponentInfo({
+                  id: gameState.gameSession.creatorId,
+                  name: gameState.gameSession.creatorName,
+                  avatar: gameState.gameSession.creatorAvatar
+                });
+              }
+            }
+          },
+          onOpponentJoined: (opponent) => {
+            console.log('👥 Opponent joined:', opponent);
+            setOpponentInfo(opponent);
+          },
+          onOpponentLeft: () => {
+            console.log('👋 Opponent left');
+            setOpponentInfo(null);
+          },
+          onError: (error) => {
+            console.error('🎮 Game error:', error);
+          }
+        });
+
+        await connectSocket(socket, lobbyId);
+      } catch (error) {
+        console.error('🚨 Error during socket initialization:', error);
+        handleReconnect();
+      }
     };
 
-    connect();
-
-    // Подписываемся на события игры
-    const unsubscribe = subscribeToGameEvents({
-      onGameStart: (data) => {
-        if (!data?.session) {
-          console.error('Invalid game start data received');
-          return;
-        }
-
-        const gameState = {
-          session: data.session,
-          startTime: Date.now(),
-          board: data.session.board || createEmptyBoard(),
-          currentPlayer: data.session.currentTurn,
-          playerTime1: data.session.playerTime1 || 0,
-          playerTime2: data.session.playerTime2 || 0
-        };
-        
-        setGameSession(gameState.session);
-        setGameStartTime(gameState.startTime);
-        setMoveStartTime(gameState.startTime);
-        setPlayerTime1(gameState.playerTime1);
-        setPlayerTime2(gameState.playerTime2);
-        setBoard(gameState.board);
-        setCurrentPlayer(gameState.currentPlayer);
-      },
-
-      onOpponentJoined: (data) => {
-        if (!data?.opponentId) {
-          console.error('Invalid opponent data received');
-          return;
-        }
-
-        setOpponentInfo({
-          id: data.opponentId,
-          name: data.opponentName || 'Opponent',
-          avatar: data.opponentAvatar
-        });
-      },
-
-      onMoveMade: (data) => {
-        if (!data?.position || !data?.gameState) {
-          console.error('Invalid move data received');
-          return;
-        }
-
-        const { position, player, gameState } = data;
-        const { 
-          currentTurn, 
-          playerTime1, 
-          playerTime2, 
-          serverTime,
-          moveStartTime,
-          gameStartTime
-        } = gameState;
-
-        // Проверяем наличие всех необходимых данных
-        if (!currentTurn || !serverTime || !moveStartTime) {
-          console.error('Missing required game state data');
-          return;
-        }
-
-        let row = position.row;
-        let col = position.col;
-
-        if (position.normalizedX !== undefined && position.normalizedY !== undefined) {
-          // Проверяем наличие размеров доски
-          if (!boardDimensions?.width || !boardDimensions?.height) {
-            console.error('Board dimensions not initialized');
-            return;
-          }
-
-          const denormalized = denormalizeCoordinates(
-            position.normalizedX,
-            position.normalizedY,
-            boardDimensions.width,
-            boardDimensions.height
-          );
-          
-          row = Math.floor(denormalized.y / CELL_SIZE);
-          col = Math.floor(denormalized.x / CELL_SIZE);
-        }
-
-        setBoard(prevBoard => {
-          if (!prevBoard) return createEmptyBoard();
-          const newBoard = prevBoard.map(row => [...row]);
-          if (newBoard[row] && typeof col !== 'undefined') {
-            newBoard[row][col] = player;
-          }
-          return newBoard;
-        });
-
-        const timeOffset = Date.now() - serverTime;
-        setCurrentPlayer(currentTurn);
-        setPlayerTime1(playerTime1 || 0);
-        setPlayerTime2(playerTime2 || 0);
-        setMoveStartTime(moveStartTime + timeOffset);
-        
-        if (gameStartTime && (!gameSession?.startedAt || gameStartTime !== gameSession.startedAt)) {
-          setGameStartTime(gameStartTime + timeOffset);
-        }
-
-        setMoveTimer(2400);
-
-        if (socket && gameSession?.id) {
-          socket.emit('moveReceived', { 
-            gameId: gameSession.id, 
-            moveId: data.moveId 
-          });
-        }
-      },
-
-      onTimeUpdated: (data) => {
-        setPlayerTime1(data.playerTime1);
-        setPlayerTime2(data.playerTime2);
-      },
-
-      onViewportUpdated: (data) => {
-        if (data.telegramId !== socket.telegramId) {
-          setScale(data.viewport.scale);
-          setPosition(data.viewport.position);
-        }
-      },
-
-      onPlayerDisconnected: (data) => {
-        console.log(`Player ${data.telegramId} disconnected`);
-        // Показываем уведомление об отключении оппонента
-        if (opponentInfo?.id === data.telegramId) {
-          alert('Оппонент отключился. Ожидаем переподключения...');
-        }
-      },
-
-      onPlayerReconnected: (data) => {
-        console.log(`Player ${data.telegramId} reconnected`);
-        if (opponentInfo?.id === data.telegramId) {
-          alert('Оппонент вернулся в игру');
-        }
-      },
-
-      onGameEnded: (data) => {
-        const { winner, reason } = data;
-        setWinLine(data.finalBoard ? checkWinner(data.finalBoard, 0, 0, winner) : null);
-        
-        setTimeout(() => {
-          navigate(winner === socket.telegramId ? "/end" : "/lost", {
-            replace: true,
-            state: { 
-              time,
-              statistics: data.statistics
-            }
-          });
-        }, 1500);
+    const handleReconnect = () => {
+      if (reconnectAttempts >= maxReconnectAttempts) {
+        console.log('❌ Max reconnection attempts reached');
+        navigate('/');
+        return;
       }
-    });
+
+      setTimeout(() => {
+        console.log(`🔄 Attempting to reconnect (${reconnectAttempts + 1}/${maxReconnectAttempts})`);
+        setReconnectAttempts(prev => prev + 1);
+        initializeSocket();
+      }, reconnectDelay);
+    };
+
+    initializeSocket();
 
     return () => {
-      if (!mountedRef.current) {
-        console.log('⏭️ Skipping socket cleanup - component not mounted');
-        return;
+      console.log('🔌 Cleaning up socket connection');
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
       }
-      console.log('🔌 Cleaning up socket connections', {
-        socketId: socket?.id,
-        timestamp: new Date().toISOString()
-      });
-      socket.off('gameState');
-      unsubscribe();
-      socket.off('connect');
-      socket.off('connect_error');
-      socket.off('disconnect');
     };
-  }, [navigate, time, reconnectAttempts, gameSession, boardDimensions]);
+  }, [lobbyId, navigate, reconnectAttempts]);
 
   // Обновляем viewport при изменении масштаба или позиции
   useEffect(() => {
@@ -698,8 +535,9 @@ const Game = () => {
         time={time}
         playerTime1={playerTime1}
         playerTime2={playerTime2}
-        opponentAvatar={opponentInfo?.avatar}
+        opponentInfo={opponentInfo}
         isConnected={isConnected}
+        isCreator={gameSession?.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id}
       />
 
       <div

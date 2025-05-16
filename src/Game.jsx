@@ -606,12 +606,11 @@ const Game = () => {
     return () => clearInterval(interval);
   }, [gameStartTime, isConnected]);
 
-  // Эффект для проверки окончания времени хода
+  // Определяем, является ли текущий ход нашим
+  const isOurTurn = currentPlayer === (gameSession?.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id ? "X" : "O");
+
   useEffect(() => {
-    const socket = initSocket();
-    
     if (moveTimer === 0 && isOurTurn) {
-      // Отправляем событие об окончании времени
       socket.emit('timeExpired', {
         gameId: gameSession?.id,
         player: currentPlayer
@@ -636,9 +635,6 @@ const Game = () => {
       window.removeEventListener('resize', updateBoardDimensions);
     };
   }, []);
-
-  // Определяем, является ли текущий ход нашим
-  const isOurTurn = currentPlayer === (gameSession?.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id ? "X" : "O");
 
   const handleTouchStart = (e) => {
     console.log('👆 Touch start event', {

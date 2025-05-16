@@ -14,7 +14,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "build:dev": "cross-env GENERATE_SOURCEMAP=true ./node_modules/.bin/craco build",
+    "build:dev": "GENERATE_SOURCEMAP=true NODE_ENV=development BABEL_ENV=development node ./node_modules/@craco/craco/dist/bin/craco.js build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

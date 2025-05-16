@@ -1,10 +1,24 @@
 module.exports = {
   webpack: {
-    configure: {
-      optimization: {
+    configure: (webpackConfig) => {
+      // Отключаем все оптимизации
+      webpackConfig.optimization = {
+        ...webpackConfig.optimization,
         minimize: false,
-        minimizer: []
-      }
+        minimizer: [],
+        splitChunks: false,
+        runtimeChunk: false,
+        flagIncludedChunks: false,
+        concatenateModules: false
+      };
+      
+      // Устанавливаем режим development
+      webpackConfig.mode = 'development';
+      
+      // Отключаем минификацию в Terser
+      webpackConfig.optimization.minimizer = [];
+      
+      return webpackConfig;
     }
   }
 }; 

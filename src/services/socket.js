@@ -17,6 +17,8 @@ const checkNetworkConnection = () => {
 export const initSocket = () => {
   console.log('🔍 [Socket Service] Initializing socket...', {
     existingSocket: socket ? 'exists' : 'null',
+    existingSocketId: socket?.id,
+    existingSocketConnected: socket?.connected,
     timestamp: new Date().toISOString()
   });
 
@@ -24,6 +26,7 @@ export const initSocket = () => {
     console.log('♻️ [Socket Service] Reusing existing socket:', {
       socketId: socket.id,
       connected: socket.connected,
+      readyState: socket.connected ? 'connected' : 'disconnected',
       timestamp: new Date().toISOString()
     });
     return socket;
@@ -41,6 +44,9 @@ export const initSocket = () => {
       timestamp: new Date().toISOString()
     });
 
+    // Проверяем URL
+    console.log('🌐 [Socket Service] Using URL:', SOCKET_URL);
+
     socket = io(SOCKET_URL, {
       autoConnect: false,
       transports: ['websocket', 'polling'],
@@ -54,8 +60,15 @@ export const initSocket = () => {
       query: { telegramId }
     });
 
+    // Проверяем создание сокета
+    if (!socket) {
+      throw new Error('Failed to create socket instance');
+    }
+
     console.log('✅ [Socket Service] Socket instance created:', {
       socketId: socket.id,
+      connected: socket.connected,
+      readyState: socket.connected ? 'connected' : 'disconnected',
       timestamp: new Date().toISOString()
     });
 

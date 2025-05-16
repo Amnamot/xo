@@ -50,157 +50,155 @@ const StartScreen = () => {
   }, []);
 
   const handleStartGame = async () => {
+    console.log('🎮 [StartGame] Button clicked');
+    
     try {
       // Проверяем наличие telegramId
       if (!telegramId) {
+        console.error('❌ [StartGame] Missing Telegram ID');
         throw new Error("Missing Telegram ID");
       }
 
+      console.log('👤 [StartGame] Using Telegram ID:', telegramId);
+
+      // Проверяем текущее состояние сокета
+      console.log('🔍 [StartGame] Current socket state:', {
+        exists: socketRef.current ? 'yes' : 'no',
+        connected: socketRef.current?.connected ? 'yes' : 'no',
+        id: socketRef.current?.id
+      });
+
       // Инициализируем соединение
-      console.log('🔄 [Socket Init] Starting socket initialization...', {
-        existingSocket: socketRef.current ? 'exists' : 'null',
-        existingConnection: socketRef.current?.connected ? 'connected' : 'disconnected'
-      });
-
-      await connectSocket();
-      const socket = initSocket();
-      console.log('🔍 [Socket Init] Socket instance created:', {
-        socketId: socket.id,
-        connected: socket.connected,
-        disconnected: socket.disconnected
-      });
-
-      socketRef.current = socket;
-      console.log('✅ [Socket Init] Socket reference updated');
-
-      // Отслеживаем состояние подключения
-      socket.on('connect', () => {
-        console.log('🌟 [Socket Event] Socket connected:', {
-          socketId: socket.id,
-          timestamp: new Date().toISOString()
-        });
-      });
-
-      socket.on('disconnect', (reason) => {
-        console.log('⚠️ [Socket Event] Socket disconnected:', {
-          socketId: socket.id,
-          reason,
-          timestamp: new Date().toISOString()
-        });
-      });
-
-      socket.on('error', (error) => {
-        console.error('❌ [Socket Event] Socket error:', {
-          socketId: socket.id,
-          error,
-          timestamp: new Date().toISOString()
-        });
-      });
-
-      // Устанавливаем обработчики событий
-      console.log('🎮 [Game Events] Setting up game event handlers');
+      console.log('🔄 [StartGame] Connecting to WebSocket...');
       
-      socket.on('gameStart', (data) => {
-        console.log('✨ [Game Events] Received gameStart event:', {
-          socketId: socket.id,
-          data,
-          timestamp: new Date().toISOString(),
-          connected: socket.connected
-        });
-        navigate(`/game/${data.session.id}`, { replace: true });
-      });
-
-      socket.on('setShowWaitModal', (data) => {
-        console.log('📱 [Game Events] Received setShowWaitModal event:', {
-          socketId: socket.id,
-          data,
-          timestamp: new Date().toISOString(),
-          connected: socket.connected
-        });
-        if (data.show) {
-          setShowWaitModal(true);
-          if (telegramId) {
-            socket.emit('uiState', { 
-              state: 'waitModal', 
-              telegramId,
-              details: { 
-                timeLeft: data.ttl,
-                isReconnect: true 
-              }
-            });
-          }
-        } else {
-          setShowWaitModal(false);
-        }
-      });
-
-      // Создаем Promise для ожидания готовности лобби
-      console.log('⏳ [Lobby] Setting up lobby ready listener');
-      const lobbyReadyPromise = new Promise((resolve, reject) => {
-        let timeoutId = setTimeout(() => {
-          console.error('❌ [Lobby] Lobby creation timeout');
-          reject(new Error('Lobby creation timeout'));
-        }, 5000);
+      try {
+        await connectSocket();
+        const socket = initSocket();
+        socketRef.current = socket;
         
-        socket.once('lobbyReady', (data) => {
-          clearTimeout(timeoutId);
-          console.log('✅ [Lobby] Received lobbyReady event:', {
+        console.log('✅ [StartGame] Socket initialized:', {
+          id: socket.id,
+          connected: socket.connected,
+          readyState: socket.readyState
+        });
+
+        // Устанавливаем обработчики событий
+        console.log('🎮 [StartGame] Setting up game event handlers');
+        
+        socket.on('gameStart', (data) => {
+          console.log('✨ [StartGame] Received gameStart event:', {
+            socketId: socket.id,
+            sessionId: data.session.id,
+            timestamp: new Date().toISOString()
+          });
+          navigate(`/game/${data.session.id}`, { replace: true });
+        });
+
+        socket.on('setShowWaitModal', (data) => {
+          console.log('📱 [Game Events] Received setShowWaitModal event:', {
             socketId: socket.id,
             data,
             timestamp: new Date().toISOString(),
             connected: socket.connected
           });
-          resolve(data);
-        });
-      });
-
-      // Создаем лобби
-      console.log('🎲 [Lobby] Creating lobby...', {
-        socketId: socket.id,
-        telegramId,
-        timestamp: new Date().toISOString()
-      });
-      
-      const lobbyResponse = await createLobby(telegramId);
-      console.log('✅ [Lobby] Lobby created:', {
-        socketId: socket.id,
-        response: lobbyResponse,
-        timestamp: new Date().toISOString(),
-        connected: socket.connected
-      });
-
-      // Ожидаем подтверждения готовности лобби
-      console.log('⏳ Waiting for lobby ready confirmation...');
-      await lobbyReadyPromise;
-
-      // Показываем модальное окно ожидания
-      setShowWaitModal(true);
-      console.log('👁️ Showing wait modal');
-
-      // Отправляем состояние UI
-      if (telegramId) {
-        socket.emit('uiState', { 
-          state: 'waitModal', 
-          telegramId,
-          details: { 
-            timeLeft: lobbyResponse.ttl,
-            isReconnect: false 
+          if (data.show) {
+            setShowWaitModal(true);
+            if (telegramId) {
+              socket.emit('uiState', { 
+                state: 'waitModal', 
+                telegramId,
+                details: { 
+                  timeLeft: data.ttl,
+                  isReconnect: true 
+                }
+              });
+            }
+          } else {
+            setShowWaitModal(false);
           }
         });
+
+        // Создаем Promise для ожидания готовности лобби
+        console.log('⏳ [Lobby] Setting up lobby ready listener');
+        const lobbyReadyPromise = new Promise((resolve, reject) => {
+          let timeoutId = setTimeout(() => {
+            console.error('❌ [Lobby] Lobby creation timeout');
+            reject(new Error('Lobby creation timeout'));
+          }, 5000);
+          
+          socket.once('lobbyReady', (data) => {
+            clearTimeout(timeoutId);
+            console.log('✅ [Lobby] Received lobbyReady event:', {
+              socketId: socket.id,
+              data,
+              timestamp: new Date().toISOString(),
+              connected: socket.connected
+            });
+            resolve(data);
+          });
+        });
+
+        // Создаем лобби
+        console.log('🎲 [Lobby] Creating lobby...', {
+          socketId: socket.id,
+          telegramId,
+          timestamp: new Date().toISOString()
+        });
+        
+        const lobbyResponse = await createLobby(telegramId);
+        console.log('✅ [Lobby] Lobby created:', {
+          socketId: socket.id,
+          response: lobbyResponse,
+          timestamp: new Date().toISOString(),
+          connected: socket.connected
+        });
+
+        // Ожидаем подтверждения готовности лобби
+        console.log('⏳ Waiting for lobby ready confirmation...');
+        await lobbyReadyPromise;
+
+        // Показываем модальное окно ожидания
+        setShowWaitModal(true);
+        console.log('👁️ Showing wait modal');
+
+        // Отправляем состояние UI
+        if (telegramId) {
+          socket.emit('uiState', { 
+            state: 'waitModal', 
+            telegramId,
+            details: { 
+              timeLeft: lobbyResponse.ttl,
+              isReconnect: false 
+            }
+          });
+        }
+
+        // Создаем инвайт
+        console.log('📤 Creating invite...');
+        const inviteData = await createInviteWS(telegramId);
+        console.log('📬 Invite created:', inviteData);
+
+        // Отправляем через Telegram
+        if (window.Telegram?.WebApp?.shareMessage) {
+          console.log('📱 Sharing message via Telegram...');
+          await window.Telegram.WebApp.shareMessage(inviteData.messageId);
+          console.log('📨 Message shared successfully');
+        }
+
+      } catch (error) {
+        console.error('Failed to start game:', error);
+        
+        setShowWaitModal(false);
+        
+        // Отключаем сокет при ошибке
+        if (socketRef.current?.connected) {
+          console.log('🔌 Disconnecting socket due to error');
+          socketRef.current.disconnect();
+        }
+        
+        // Показываем ошибку пользователю
+        alert(error.message || 'Failed to start game. Please try again.');
       }
-
-      // Создаем инвайт
-      console.log('📤 Creating invite...');
-      const inviteData = await createInviteWS(telegramId);
-      console.log('📬 Invite created:', inviteData);
-
-      // Отправляем через Telegram
-      if (window.Telegram?.WebApp?.shareMessage) {
-        console.log('📱 Sharing message via Telegram...');
-        await window.Telegram.WebApp.shareMessage(inviteData.messageId);
-        console.log('📨 Message shared successfully');
-      }
-
     } catch (error) {
       console.error('Failed to start game:', error);
       

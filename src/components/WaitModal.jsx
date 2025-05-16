@@ -25,8 +25,16 @@ const WaitModal = ({ onCancel }) => {
 
     // Слушаем событие setShowWaitModal для получения маркера
     socket.on('setShowWaitModal', (data) => {
+      console.log('📢 [WaitModal] Received setShowWaitModal event:', {
+        data,
+        hasMarker: !!data.creatorMarker,
+        marker: data.creatorMarker,
+        timestamp: new Date().toISOString()
+      });
+      
       if (data.creatorMarker) {
         setCreatorMarker(data.creatorMarker);
+        console.log('👑 [WaitModal] Setting creator marker:', data.creatorMarker);
       }
     });
 
@@ -67,8 +75,8 @@ const WaitModal = ({ onCancel }) => {
   return (
     <div className="waitFrame">
       <div className="waitText">
-        We are waiting for<br />the zero to join<br />
-        {creatorMarker && <span className="creatorMarker">{creatorMarker}</span>}
+        We are waiting for<br />
+        {creatorMarker && <span className="creatorMarker">{creatorMarker}</span>} the zero to join
       </div>
       <div className="waitTimer">{formatTime(secondsLeft)}</div>
       <button className="waitButton" onClick={onCancel}>Cancel</button>

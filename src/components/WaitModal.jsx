@@ -8,6 +8,7 @@ const LOBBY_LIFETIME = 180; // время жизни лобби в секунд�
 const WaitModal = ({ onCancel }) => {
   const [secondsLeft, setSecondsLeft] = useState(LOBBY_LIFETIME);
   const [startTime, setStartTime] = useState(Date.now());
+  const [creatorMarker, setCreatorMarker] = useState('');
   const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
 
   useEffect(() => {
@@ -21,6 +22,13 @@ const WaitModal = ({ onCancel }) => {
         details: { timeLeft: LOBBY_LIFETIME }
       });
     }
+
+    // Слушаем событие setShowWaitModal для получения маркера
+    socket.on('setShowWaitModal', (data) => {
+      if (data.creatorMarker) {
+        setCreatorMarker(data.creatorMarker);
+      }
+    });
 
     // Слушаем событие uiState для восстановления таймера
     socket.on('uiState', (data) => {
@@ -46,6 +54,7 @@ const WaitModal = ({ onCancel }) => {
     return () => {
       clearInterval(timer);
       socket.off('uiState');
+      socket.off('setShowWaitModal');
     };
   }, [onCancel, startTime, telegramId]);
 
@@ -57,7 +66,10 @@ const WaitModal = ({ onCancel }) => {
 
   return (
     <div className="waitFrame">
-      <div className="waitText">We are waiting for<br />the zero to join<br />1</div>
+      <div className="waitText">
+        We are waiting for<br />the zero to join<br />
+        {creatorMarker && <span className="creatorMarker">{creatorMarker}</span>}
+      </div>
       <div className="waitTimer">{formatTime(secondsLeft)}</div>
       <button className="waitButton" onClick={onCancel}>Cancel</button>
     </div>

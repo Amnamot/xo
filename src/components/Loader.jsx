@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Loader.css';
-import { initSocket, connectSocket, joinLobby, disconnectSocket } from '../services/socket';
+import { joinLobby } from '../services/socket';
 
 const Loader = () => {
   const navigate = useNavigate();
@@ -46,25 +46,7 @@ const Loader = () => {
         stars: 10
       };
       localStorage.setItem('user', JSON.stringify(mockUser));
-      
-      // Подключаем сокет и логируем состояние для мок-режима
-      const connectAndLog = async () => {
-        try {
-          await connectSocket();
-          const socket = initSocket();
-          socket.emit('uiState', { 
-            state: 'loader', 
-            telegramId: mockUser.telegramId,
-            details: { progress: 0 }
-          });
-          setAuthorized(true);
-        } catch (err) {
-          console.error("Socket connection error in mock mode:", err);
-          setError("Failed to connect to game server");
-        }
-      };
-      
-      connectAndLog();
+      setAuthorized(true);
       return;
     }
 
@@ -85,28 +67,7 @@ const Loader = () => {
           user.avatar = tgUser.photo_url;
         }
         localStorage.setItem("user", JSON.stringify(user));
-        
-        // Подключаем сокет и логируем состояние после успешной авторизации
-        try {
-          await connectSocket();
-          const socket = initSocket();
-          socket.emit('uiState', { 
-            state: 'loader', 
-            telegramId: telegramId || user.telegramId,
-            details: { progress: 0 }
-          });
-          setAuthorized(true);
-        } catch (err) {
-          console.error("Socket connection error:", err);
-          setError("Failed to connect to game server");
-          navigate("/nolobby", {
-            state: {
-              type: 'losst2',
-              message: 'Failed to connect to game server.<br />Please try again.',
-              redirectTo: '/start'
-            }
-          });
-        }
+        setAuthorized(true);
       })
       .catch((err) => {
         console.error("Authorization error:", err);
@@ -136,105 +97,24 @@ const Loader = () => {
           return;
         }
 
-        // Пытаемся присоединиться к лобби
-        const connectAndJoin = async () => {
-          try {
-            console.log('🔄 Connecting to WebSocket and joining lobby:', startParam);
-            const joinResponse = await joinLobby(startParam, telegramId || user.telegramId);
-            
-            if (joinResponse.status === 'error') {
-              console.warn('❌ Error joining lobby:', joinResponse);
-              
-              // Отключаем сокет при ошибке
-              disconnectSocket();
-              
-              if (joinResponse.errorType === 'expired') {
-                navigate("/nolobby", {
-                  state: {
-                    type: 'losst2',
-                    message: joinResponse.message || 'The game session has expired.',
-                    redirectTo: '/start'
-                  }
-                });
-              } else if (joinResponse.errorType === 'disconnected') {
-                navigate("/nolobby", {
-                  state: {
-                    type: 'losst2',
-                    message: joinResponse.message || 'Waiting for the opponent to reconnect...',
-                    timer: joinResponse.ttl,
-                    redirectTo: '/start'
-                  }
-                });
-              } else {
-                navigate("/nolobby", {
-                  state: {
-                    type: 'losst2',
-                    message: joinResponse.message || 'Failed to join the game.',
-                    redirectTo: '/start'
-                  }
-                });
-              }
-              return;
-            }
-
-            console.log('✅ Successfully joined lobby:', joinResponse);
-            // Если всё успешно, переходим на страницу игры
-            navigate(`/game/${startParam}`, { replace: true });
-          } catch (error) {
-            console.error("❌ Failed to join lobby:", error);
-            
-            // Отключаем сокет при ошибке
-            disconnectSocket();
-            
-            navigate("/nolobby", {
-              state: {
-                type: 'losst2',
-                message: 'Failed to join the game.<br />Please try again.',
-                redirectTo: '/start'
-              }
-            });
-          }
-        };
-
-        // Ждем полной загрузки UI перед подключением к лобби
-        setTimeout(() => {
-          connectAndJoin();
-        }, 500);
+        // Переходим на страницу игры с параметром лобби
+        navigate(`/game/${startParam}`, { replace: true });
       } else {
-        // Проверяем, есть ли активное лобби для этого пользователя
-        const socket = initSocket();
-        
-        if (telegramId || user.telegramId) {
-          socket.emit('checkActiveLobby', { telegramId: telegramId || user.telegramId }, (response) => {
-            if (response?.lobbyId) {
-              // Если есть активное лобби, устанавливаем флаг для показа WaitModal
-              localStorage.setItem('showWaitModal', 'true');
-              localStorage.setItem('lobbyTTL', response.ttl.toString());
-            }
-            // В любом случае переходим на стартовый экран
-            navigate("/start", { replace: true });
-          });
-        } else {
-          navigate("/start", { replace: true });
-        }
+        // Если нет start_param, переходим на стартовый экран
+        navigate("/start", { replace: true });
       }
     }
   }, [progress, authorized, navigate]);
 
-  if (error) {
-    return (
-      <div className="loader">
-        <div className="loader-error">{error}</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="loader">
-      <div className="loader-bar">
-        <div className="loader-progress" style={{ width: `${progress}%` }}></div>
+    <div className="loader-container">
+      <div className="loader-content">
+        <img src="/media/3tICO.svg" alt="Logo" className="loader-logo" />
+        <div className="progress-bar">
+          <div className="progress" style={{ width: `${progress}%` }} />
+        </div>
+        {error && <div className="error-message">{error}</div>}
       </div>
-      <div className="loader-version">Created with symbiotic intelligence</div>
     </div>
   );
 };

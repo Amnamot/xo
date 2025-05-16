@@ -14,7 +14,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "build:dev": "cross-env BABEL_ENV=development NODE_ENV=development GENERATE_SOURCEMAP=true react-scripts build --no-minify",
+    "build:dev": "cross-env GENERATE_SOURCEMAP=true craco build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

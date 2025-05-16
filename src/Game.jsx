@@ -74,15 +74,6 @@ const getVisibleCells = (board) => {
   return visibleCells;
 };
 
-// Функции для работы с localStorage
-const saveGameState = (state) => {
-  try {
-    localStorage.setItem('gameState', JSON.stringify(state));
-  } catch (error) {
-    console.error('Failed to save game state:', error);
-  }
-};
-
 const isValidGameState = (state) => {
   if (!state || typeof state !== 'object') return false;
 
@@ -123,19 +114,6 @@ const isValidGameState = (state) => {
   }
 
   return true;
-};
-
-const loadGameState = () => {
-  try {
-    const savedState = localStorage.getItem('gameState');
-    if (!savedState) return null;
-    
-    const state = JSON.parse(savedState);
-    return isValidGameState(state) ? state : null;
-  } catch (error) {
-    console.error('Failed to load game state:', error);
-    return null;
-  }
 };
 
 // Функции нормализации координат
@@ -183,54 +161,21 @@ const Game = () => {
     };
   }, []);
 
-  const [board, setBoard] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.board || createEmptyBoard();
-  });
-  const [currentPlayer, setCurrentPlayer] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.currentPlayer || "O";
-  });
+  const [board, setBoard] = useState(createEmptyBoard());
+  const [currentPlayer, setCurrentPlayer] = useState("O");
   const [winLine, setWinLine] = useState(null);
-  const [scale, setScale] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.scale || 1;
-  });
-  const [position, setPosition] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.position || { x: 0, y: 0 };
-  });
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
   const [touchStart, setTouchStart] = useState(null);
   const [initialDistance, setInitialDistance] = useState(null);
-  const [moveStartTime, setMoveStartTime] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.moveStartTime || null;
-  });
-  const [gameStartTime, setGameStartTime] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.gameStartTime || null;
-  });
+  const [moveStartTime, setMoveStartTime] = useState(null);
+  const [gameStartTime, setGameStartTime] = useState(null);
   const [moveTimer, setMoveTimer] = useState(2400);
-  const [time, setTime] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.time || 0;
-  });
-  const [playerTime1, setPlayerTime1] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.playerTime1 || 0;
-  });
-  const [playerTime2, setPlayerTime2] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.playerTime2 || 0;
-  });
-  const [gameSession, setGameSession] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.gameSession || null;
-  });
-  const [opponentInfo, setOpponentInfo] = useState(() => {
-    const savedState = loadGameState();
-    return savedState?.opponentInfo || null;
-  });
+  const [time, setTime] = useState(0);
+  const [playerTime1, setPlayerTime1] = useState(0);
+  const [playerTime2, setPlayerTime2] = useState(0);
+  const [gameSession, setGameSession] = useState(null);
+  const [opponentInfo, setOpponentInfo] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const maxReconnectAttempts = 5;
@@ -240,54 +185,6 @@ const Game = () => {
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const CELL_SIZE = isMobile ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP;
-
-  // Сохраняем состояние при изменении важных данных
-  useEffect(() => {
-    if (!mountedRef.current) return;
-
-    console.log('💾 Game state update', {
-      board: board.length,
-      currentPlayer,
-      scale,
-      position,
-      moveStartTime: moveStartTime ? new Date(moveStartTime).toISOString() : null,
-      gameStartTime: gameStartTime ? new Date(gameStartTime).toISOString() : null,
-      time,
-      playerTime1,
-      playerTime2,
-      gameSession: gameSession?.id,
-      isConnected,
-      timestamp: new Date().toISOString()
-    });
-
-    const gameState = {
-      board,
-      currentPlayer,
-      scale,
-      position,
-      moveStartTime,
-      gameStartTime,
-      time,
-      playerTime1,
-      playerTime2,
-      gameSession,
-      opponentInfo
-    };
-    saveGameState(gameState);
-  }, [
-    board,
-    currentPlayer,
-    scale,
-    position,
-    moveStartTime,
-    gameStartTime,
-    time,
-    playerTime1,
-    playerTime2,
-    gameSession,
-    opponentInfo,
-    isConnected
-  ]);
 
   // При монтировании компонента проверяем сохраненное состояние
   useEffect(() => {
@@ -365,8 +262,6 @@ const Game = () => {
         setPlayerTime2(data.playerTime2);
         setGameSession(data.gameSession);
         setMoveStartTime(Date.now());
-        
-        saveGameState(data);
       });
 
       socket.on('connect_error', (error) => {
@@ -417,8 +312,6 @@ const Game = () => {
         setPlayerTime2(gameState.playerTime2);
         setBoard(gameState.board);
         setCurrentPlayer(gameState.currentPlayer);
-        
-        saveGameState(gameState);
       },
 
       onOpponentJoined: (data) => {
@@ -537,8 +430,6 @@ const Game = () => {
         const { winner, reason } = data;
         setWinLine(data.finalBoard ? checkWinner(data.finalBoard, 0, 0, winner) : null);
         
-        localStorage.removeItem('gameState');
-        
         setTimeout(() => {
           navigate(winner === socket.telegramId ? "/end" : "/lost", {
             replace: true,
@@ -651,7 +542,7 @@ const Game = () => {
         x: e.touches[0].clientX - position.x,
         y: e.touches[0].clientY - position.y,
       };
-      console.log('📱 Single touch start', {
+      console.log('👆 Single touch start', {
         position,
         newTouchStart,
         timestamp: new Date().toISOString()

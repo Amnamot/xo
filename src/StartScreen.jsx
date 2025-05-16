@@ -89,8 +89,21 @@ const StartScreen = () => {
           console.log('✨ [StartGame] Received gameStart event:', {
             socketId: socket.id,
             sessionId: data.session.id,
+            creator: data.creator,
+            opponent: data.opponent,
+            currentUser: telegramId,
+            isCreator: telegramId === data.creator,
+            connected: socket.connected,
+            rooms: Array.from(socket.rooms || []),
             timestamp: new Date().toISOString()
           });
+          
+          // Проверяем, что мы все еще подключены
+          if (!socket.connected) {
+            console.warn('⚠️ [StartGame] Socket disconnected before navigation');
+            socket.connect();
+          }
+          
           navigate(`/game/${data.session.id}`, { replace: true });
         });
 

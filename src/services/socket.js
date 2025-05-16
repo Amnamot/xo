@@ -99,16 +99,22 @@ const setupGameListeners = (socket) => {
         data,
         timestamp: new Date().toISOString()
       });
-      cleanup();
+      clearTimeout(timeout); // Очищаем только таймаут
       resolve(data);
     };
+
+    // Устанавливаем постоянный слушатель
+    socket.on('gameStart', handleGameStart);
 
     const cleanup = () => {
       clearTimeout(timeout);
       socket.off('gameStart', handleGameStart);
     };
 
-    socket.once('gameStart', handleGameStart);
+    // Возвращаем функцию для удаления слушателя
+    return () => {
+      cleanup();
+    };
   });
 };
 
@@ -136,13 +142,8 @@ export const createLobby = (telegramId) => {
         });
       });
 
-      // Ждем любое из событий
-      const result = await Promise.race([
-        gameStartPromise,
-        Promise.resolve(lobbyResponse)
-      ]);
-
-      resolve(result);
+      // Возвращаем ответ создания лобби, но оставляем слушатель активным
+      resolve(lobbyResponse);
     } catch (error) {
       console.error('Failed to create lobby:', {
         error: error.message,
@@ -177,13 +178,8 @@ export const joinLobby = (lobbyId, telegramId) => {
         });
       });
 
-      // Ждем любое из событий
-      const result = await Promise.race([
-        gameStartPromise,
-        Promise.resolve(joinResponse)
-      ]);
-
-      resolve(result);
+      // Возвращаем ответ присоединения к лобби, но оставляем слушатель активным
+      resolve(joinResponse);
     } catch (error) {
       console.error('Failed to join lobby:', {
         error: error.message,

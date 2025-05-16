@@ -308,7 +308,7 @@ const Game = () => {
 
     const moveInterval = setInterval(() => {
       const elapsed = Date.now() - moveStartTime;
-      setMoveTimer(Math.max(2400 - Math.floor(elapsed / 10), 0));
+      setMoveTimer(Math.max(24000 - Math.floor(elapsed / 10), 0));
       
       // Обновляем время только активного игрока
       if (currentPlayer === "X") {

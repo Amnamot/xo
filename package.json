@@ -14,7 +14,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "build:dev": "set \"GENERATE_SOURCEMAP=true\" && set \"DISABLE_MINIMIZE=true\" && react-scripts build",
+    "build:dev": "set \"GENERATE_SOURCEMAP=true\" && set \"CI=false\" && set \"INLINE_RUNTIME_CHUNK=false\" && react-scripts build --mode development",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

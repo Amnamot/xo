@@ -57,21 +57,66 @@ const StartScreen = () => {
       }
 
       // Инициализируем соединение
-      console.log('🔄 Connecting to WebSocket...');
+      console.log('🔄 [Socket Init] Starting socket initialization...', {
+        existingSocket: socketRef.current ? 'exists' : 'null',
+        existingConnection: socketRef.current?.connected ? 'connected' : 'disconnected'
+      });
+
       await connectSocket();
       const socket = initSocket();
-      socketRef.current = socket;
-      console.log('✅ WebSocket connected successfully');
+      console.log('🔍 [Socket Init] Socket instance created:', {
+        socketId: socket.id,
+        connected: socket.connected,
+        disconnected: socket.disconnected
+      });
 
-      // Устанавливаем обработчики событий ПЕРЕД созданием лобби
-      console.log('🎮 Setting up game event handlers');
+      socketRef.current = socket;
+      console.log('✅ [Socket Init] Socket reference updated');
+
+      // Отслеживаем состояние подключения
+      socket.on('connect', () => {
+        console.log('🌟 [Socket Event] Socket connected:', {
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
+      });
+
+      socket.on('disconnect', (reason) => {
+        console.log('⚠️ [Socket Event] Socket disconnected:', {
+          socketId: socket.id,
+          reason,
+          timestamp: new Date().toISOString()
+        });
+      });
+
+      socket.on('error', (error) => {
+        console.error('❌ [Socket Event] Socket error:', {
+          socketId: socket.id,
+          error,
+          timestamp: new Date().toISOString()
+        });
+      });
+
+      // Устанавливаем обработчики событий
+      console.log('🎮 [Game Events] Setting up game event handlers');
+      
       socket.on('gameStart', (data) => {
-        console.log('✅ Received gameStart event:', data);
+        console.log('✨ [Game Events] Received gameStart event:', {
+          socketId: socket.id,
+          data,
+          timestamp: new Date().toISOString(),
+          connected: socket.connected
+        });
         navigate(`/game/${data.session.id}`, { replace: true });
       });
 
       socket.on('setShowWaitModal', (data) => {
-        console.log('📱 Received setShowWaitModal event:', data);
+        console.log('📱 [Game Events] Received setShowWaitModal event:', {
+          socketId: socket.id,
+          data,
+          timestamp: new Date().toISOString(),
+          connected: socket.connected
+        });
         if (data.show) {
           setShowWaitModal(true);
           if (telegramId) {
@@ -90,24 +135,39 @@ const StartScreen = () => {
       });
 
       // Создаем Promise для ожидания готовности лобби
-      console.log('⏳ Setting up lobby ready listener');
+      console.log('⏳ [Lobby] Setting up lobby ready listener');
       const lobbyReadyPromise = new Promise((resolve, reject) => {
         let timeoutId = setTimeout(() => {
-          console.error('❌ Lobby creation timeout');
+          console.error('❌ [Lobby] Lobby creation timeout');
           reject(new Error('Lobby creation timeout'));
         }, 5000);
         
         socket.once('lobbyReady', (data) => {
           clearTimeout(timeoutId);
-          console.log('✅ Received lobbyReady event:', data);
+          console.log('✅ [Lobby] Received lobbyReady event:', {
+            socketId: socket.id,
+            data,
+            timestamp: new Date().toISOString(),
+            connected: socket.connected
+          });
           resolve(data);
         });
       });
 
-      // Создаем лобби ПОСЛЕ установки всех обработчиков
-      console.log('🎲 Creating lobby...');
+      // Создаем лобби
+      console.log('🎲 [Lobby] Creating lobby...', {
+        socketId: socket.id,
+        telegramId,
+        timestamp: new Date().toISOString()
+      });
+      
       const lobbyResponse = await createLobby(telegramId);
-      console.log('✅ Lobby created:', lobbyResponse);
+      console.log('✅ [Lobby] Lobby created:', {
+        socketId: socket.id,
+        response: lobbyResponse,
+        timestamp: new Date().toISOString(),
+        connected: socket.connected
+      });
 
       // Ожидаем подтверждения готовности лобби
       console.log('⏳ Waiting for lobby ready confirmation...');

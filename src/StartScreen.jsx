@@ -92,6 +92,9 @@ const StartScreen = () => {
               connected: socket.connected,
               transport: socket.io?.engine?.transport?.name || 'unknown',
               rooms: Array.from(socket.rooms || []),
+              readyState: socket.io?.engine?.readyState,
+              handshake: socket.handshake?.query || {},
+              reconnecting: socket.io?.engine?.reconnecting || false
             },
             gameDetails: {
               sessionId: data.session.id,
@@ -99,13 +102,13 @@ const StartScreen = () => {
               opponent: data.opponent,
               currentUser: telegramId,
               isCreator: telegramId === data.creator,
+              currentTurn: data.session.currentTurn
             },
-            connectionState: {
-              readyState: socket.io?.engine?.readyState,
-              wasConnected: socket.connected,
-              reconnecting: socket.io?.engine?.reconnecting || false,
-            },
-            timestamp: new Date().toISOString()
+            navigationDetails: {
+              targetPath: `/game/${data.session.id}`,
+              currentPath: window.location.pathname,
+              timestamp: new Date().toISOString()
+            }
           });
           
           // Проверяем состояние подключения
@@ -113,10 +116,34 @@ const StartScreen = () => {
             console.warn('⚠️ [Game Events] Socket disconnected before navigation:', {
               socketId: socket.id,
               lastError: socket.io?.engine?.transport?.lastError,
+              reconnectAttempts: socket.io?.engine?.reconnectAttempts || 0,
               timestamp: new Date().toISOString()
             });
+            
+            // Пытаемся переподключиться
+            console.log('🔄 [Game Events] Attempting to reconnect...');
             socket.connect();
+            
+            // Проверяем успешность переподключения
+            console.log('🔍 [Game Events] Connection state after reconnect:', {
+              connected: socket.connected,
+              transport: socket.io?.engine?.transport?.name,
+              readyState: socket.io?.engine?.readyState,
+              timestamp: new Date().toISOString()
+            });
           }
+          
+          // Логируем состояние перед навигацией
+          console.log('🚀 [Game Events] Navigating to game:', {
+            from: window.location.pathname,
+            to: `/game/${data.session.id}`,
+            socketState: {
+              connected: socket.connected,
+              transport: socket.io?.engine?.transport?.name,
+              rooms: Array.from(socket.rooms || [])
+            },
+            timestamp: new Date().toISOString()
+          });
           
           navigate(`/game/${data.session.id}`, { replace: true });
         });

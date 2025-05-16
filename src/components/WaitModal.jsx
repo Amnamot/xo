@@ -12,6 +12,7 @@ const WaitModal = ({ onCancel }) => {
   const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
 
   useEffect(() => {
+    console.log('🔄 [WaitModal] Component mounted');
     const socket = initSocket();
 
     // Отправляем начальное состояние
@@ -25,7 +26,7 @@ const WaitModal = ({ onCancel }) => {
 
     // Слушаем событие setShowWaitModal для получения маркера
     socket.on('setShowWaitModal', (data) => {
-      console.log('📢 [WaitModal] Received setShowWaitModal event:', {
+      console.log('👑 [WaitModal] Received setShowWaitModal:', {
         data,
         hasMarker: !!data.creatorMarker,
         marker: data.creatorMarker,
@@ -34,7 +35,20 @@ const WaitModal = ({ onCancel }) => {
       
       if (data.creatorMarker) {
         setCreatorMarker(data.creatorMarker);
-        console.log('👑 [WaitModal] Setting creator marker:', data.creatorMarker);
+      }
+    });
+
+    // Слушаем событие lobbyReady для получения маркера
+    socket.on('lobbyReady', (data) => {
+      console.log('👑 [WaitModal] Received lobbyReady:', {
+        data,
+        hasMarker: !!data.creatorMarker,
+        marker: data.creatorMarker,
+        timestamp: new Date().toISOString()
+      });
+      
+      if (data.creatorMarker) {
+        setCreatorMarker(data.creatorMarker);
       }
     });
 
@@ -60,9 +74,11 @@ const WaitModal = ({ onCancel }) => {
     }, 1000);
 
     return () => {
+      console.log('🔄 [WaitModal] Component unmounting');
       clearInterval(timer);
       socket.off('uiState');
       socket.off('setShowWaitModal');
+      socket.off('lobbyReady');
     };
   }, [onCancel, startTime, telegramId]);
 
@@ -75,8 +91,8 @@ const WaitModal = ({ onCancel }) => {
   return (
     <div className="waitFrame">
       <div className="waitText">
-        We are waiting for<br />
-        {creatorMarker && <span className="creatorMarker">{creatorMarker}</span>} the zero to join
+        We are waiting for<br />the zero to join<br />
+        {creatorMarker && <span className="creatorMarker">{creatorMarker}</span>}
       </div>
       <div className="waitTimer">{formatTime(secondsLeft)}</div>
       <button className="waitButton" onClick={onCancel}>Cancel</button>

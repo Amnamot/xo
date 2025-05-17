@@ -53,11 +53,22 @@ const StartScreen = () => {
       if (!telegramId) return;
       
       try {
+        console.log('🔌 [StartScreen] Initializing socket connection:', {
+          telegramId,
+          timestamp: new Date().toISOString()
+        });
+
         await connectSocket();
         const socket = initSocket();
         socketRef.current = socket;
 
         socket.on('gameStart', (data) => {
+          console.log('🎮 [StartScreen] Received gameStart event:', {
+            session: data?.session,
+            telegramId,
+            timestamp: new Date().toISOString()
+          });
+
           if (data && data.session && data.session.id) {
             setShowWaitModal(false);
             navigate(`/game/${data.session.id}`);
@@ -65,6 +76,13 @@ const StartScreen = () => {
         });
 
         socket.on('setShowWaitModal', (data) => {
+          console.log('🎯 [StartScreen] Received setShowWaitModal event:', {
+            show: data.show,
+            creatorMarker: data.creatorMarker,
+            telegramId,
+            timestamp: new Date().toISOString()
+          });
+
           if (data.show) {
             setShowWaitModal(true);
             if (data.creatorMarker) {
@@ -76,6 +94,13 @@ const StartScreen = () => {
         });
 
         socket.on('lobbyReady', (data) => {
+          console.log('🎯 [StartScreen] Received lobbyReady event:', {
+            lobbyId: data.lobbyId,
+            creatorMarker: data.creatorMarker,
+            telegramId,
+            timestamp: new Date().toISOString()
+          });
+
           if (data.creatorMarker) {
             setCreatorMarker(data.creatorMarker);
             setShowWaitModal(true);

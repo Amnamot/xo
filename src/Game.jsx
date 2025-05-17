@@ -192,26 +192,89 @@ const Game = () => {
 
     const initializeSocket = async () => {
       try {
-        if (socketRef.current?.connected) {
-          return;
-        }
+        console.log('🔌 [Game] Initializing socket connection:', {
+          lobbyId,
+          telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString(),
+          timestamp: new Date().toISOString()
+        });
 
-        socketRef.current = initSocket();
-        const socket = socketRef.current;
-        
+        const socket = initSocket();
+        socketRef.current = socket;
+
         socket.on('connect', () => {
+          console.log('✅ [Game] Socket connected:', {
+            socketId: socket.id,
+            lobbyId,
+            timestamp: new Date().toISOString()
+          });
           setIsConnected(true);
-          setReconnectAttempts(0);
         });
 
         socket.on('disconnect', () => {
+          console.log('❌ [Game] Socket disconnected:', {
+            lobbyId,
+            timestamp: new Date().toISOString()
+          });
           setIsConnected(false);
-          handleReconnect();
         });
 
-        socket.on('error', (error) => {
-          console.error('Socket error:', error);
-          handleReconnect();
+        socket.on('moveMade', (data) => {
+          console.log('🎲 [Game] Move made:', {
+            moveId: data.moveId,
+            position: data.position,
+            player: data.player,
+            gameState: {
+              board: data.gameState.board,
+              currentTurn: data.gameState.currentTurn,
+              timeLeft: data.gameState.timeLeft
+            },
+            timestamp: new Date().toISOString()
+          });
+
+          setBoard(data.gameState.board);
+          setCurrentPlayer(data.gameState.currentTurn);
+          setMoveStartTime(data.gameState.moveStartTime);
+
+          const winner = checkWinner(
+            data.gameState.board,
+            Number(data.position),
+            data.player
+          );
+
+          if (winner) {
+            console.log('🏆 [Game] Winner found:', {
+              winner,
+              lastMove: {
+                position: data.position,
+                player: data.player
+              },
+              timestamp: new Date().toISOString()
+            });
+            setWinLine(winner);
+          }
+        });
+
+        socket.on('playerDisconnected', (data) => {
+          console.log('👋 [Game] Player disconnected:', {
+            telegramId: data.telegramId,
+            timestamp: new Date().toISOString()
+          });
+        });
+
+        socket.on('gameEnded', (data) => {
+          console.log('🏁 [Game] Game ended:', {
+            winner: data.winner,
+            reason: data.reason,
+            statistics: data.statistics,
+            timestamp: new Date().toISOString()
+          });
+
+          const currentTelegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
+          if (data.winner === currentTelegramId) {
+            navigate('/end');
+          } else {
+            navigate('/lost');
+          }
         });
 
         // Подписываемся на игровые события
@@ -551,7 +614,7 @@ const Game = () => {
       onTouchEnd={handleTouchEnd}
       style={{ 
         cursor: isOurTurn ? 'default' : 'not-allowed',
-        pointerEvents: isOurTurn ? 'auto' : 'none' // Полностью блокируем взаимодействие
+        pointerEvents: isOurTurn ? 'auto' : 'none'
       }}
     >
       <GameHeader 
@@ -573,7 +636,7 @@ const Game = () => {
           gridTemplateRows: `repeat(${BOARD_SIZE}, ${CELL_SIZE}px)`,
           width: boardDimensions.width,
           height: boardDimensions.height,
-          opacity: isOurTurn ? 1 : 0.7 // Визуально показываем, что поле неактивно
+          opacity: isOurTurn ? 1 : 0.7
         }}
       >
         {board.map((row, i) =>

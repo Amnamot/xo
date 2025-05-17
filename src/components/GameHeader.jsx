@@ -1,6 +1,7 @@
 // GameHeader.jsx
 import React, { useEffect, useState } from "react";
 import "./GameHeader.css";
+import logoIcon from '../media/3tbICO.svg';
 
 const GameHeader = ({ 
   currentPlayer, 
@@ -54,7 +55,7 @@ const GameHeader = ({
   return (
     <>
       <div className="top-logo">
-        <img src="/media/3tICO.svg" width={128} alt="Logo" />
+        <img src={logoIcon} width={128} alt="Logo" />
         {!isConnected && (
           <div className="connection-status">
             Переподключение...

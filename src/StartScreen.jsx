@@ -75,6 +75,32 @@ const StartScreen = () => {
           }
         });
 
+        // Добавляем обработчик изменения состояния окна
+        if (window.Telegram?.WebApp) {
+          window.Telegram.WebApp.onEvent('viewportChanged', async () => {
+            const isExpanded = window.Telegram.WebApp.isExpanded;
+            if (isExpanded) {
+              try {
+                console.log('🔄 [Viewport Expanded] Attempting to reconnect');
+                await connectSocket();
+                const socket = initSocket();
+                const savedTelegramId = localStorage.getItem('current_telegram_id');
+                if (savedTelegramId) {
+                  console.log('🔄 [Viewport Expanded] Attempting to rejoin lobby:', {
+                    telegramId: savedTelegramId,
+                    timestamp: new Date().toISOString()
+                  });
+                  socket.emit('joinLobby', { 
+                    telegramId: savedTelegramId
+                  });
+                }
+              } catch (error) {
+                console.error('Failed to reconnect after expand:', error);
+              }
+            }
+          });
+        }
+
       } catch (error) {
         console.error('Failed to initialize socket:', error);
       }

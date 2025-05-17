@@ -26,7 +26,7 @@ const WaitModal = ({ onCancel }) => {
 
     // Слушаем событие setShowWaitModal для получения маркера
     socket.on('setShowWaitModal', (data) => {
-      console.log('👑 [WaitModal] Received setShowWaitModal:', {
+      console.log('⭕ [WaitModal] Received setShowWaitModal:', {
         data,
         hasMarker: !!data.creatorMarker,
         marker: data.creatorMarker,
@@ -40,7 +40,7 @@ const WaitModal = ({ onCancel }) => {
 
     // Слушаем событие lobbyReady для получения маркера
     socket.on('lobbyReady', (data) => {
-      console.log('👑 [WaitModal] Received lobbyReady:', {
+      console.log('⭕ [WaitModal] Received lobbyReady:', {
         data,
         hasMarker: !!data.creatorMarker,
         marker: data.creatorMarker,

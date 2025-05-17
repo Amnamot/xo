@@ -32,9 +32,9 @@ export const initSocket = () => {
     return socket;
   }
   
-  const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
+  const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() || localStorage.getItem('current_telegram_id');
   if (!telegramId) {
-    console.error('❌ [Socket Service] Telegram ID not found');
+    console.error('❌ [Socket Service] Telegram ID not found in WebApp or localStorage');
     throw new Error('Telegram user ID not found');
   }
 
@@ -88,6 +88,12 @@ export const initSocket = () => {
         timestamp: new Date().toISOString()
       });
       reconnectAttempts = 0;
+      
+      // Обновляем telegramId в localStorage при успешном подключении
+      if (telegramId) {
+        localStorage.setItem('current_telegram_id', telegramId);
+        console.log('💾 [Socket Service] Updated telegramId in localStorage:', telegramId);
+      }
     });
 
     socket.on('disconnect', (reason) => {

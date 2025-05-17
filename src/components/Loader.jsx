@@ -30,6 +30,12 @@ const Loader = () => {
     const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
     const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
 
+    // Сохраняем telegramId в localStorage
+    if (telegramId) {
+      localStorage.setItem('current_telegram_id', telegramId);
+      console.log('💾 [Loader] Saved telegramId to localStorage:', telegramId);
+    }
+
     console.log("🧪 RAW initData:", initDataRaw);
     console.log("🧪 Parsed initDataUnsafe:", window.Telegram?.WebApp?.initDataUnsafe);
 

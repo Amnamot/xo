@@ -81,8 +81,9 @@ const StartScreen = () => {
         }
       });
 
-      const lobbyResponse = await createLobby(telegramId);
       setShowWaitModal(true);
+
+      const lobbyResponse = await createLobby(telegramId);
 
       const inviteData = await createInviteWS(telegramId);
 

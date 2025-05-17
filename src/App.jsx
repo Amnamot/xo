@@ -12,10 +12,14 @@ import { initSocket, connectSocket } from './services/socket';
 const App = () => {
   const [telegramId, setTelegramId] = useState(null);
 
+  // Функция для получения актуального telegramId
+  const getCurrentTelegramId = () => {
+    return localStorage.getItem('current_telegram_id') || 'unknown';
+  };
+
   useEffect(() => {
-    // Получаем telegramId из localStorage при инициализации
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    setTelegramId(user.telegramId || 'unknown');
+    // Инициализируем telegramId из localStorage
+    setTelegramId(getCurrentTelegramId());
 
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.ready();
@@ -27,7 +31,7 @@ const App = () => {
           const socket = initSocket();
           socket.emit('uiState', { 
             state: 'appClosed', 
-            telegramId: user.telegramId || 'unknown',
+            telegramId: getCurrentTelegramId(),
             details: { 
               lastScreen: window.location.pathname,
               timestamp: Date.now()
@@ -36,6 +40,16 @@ const App = () => {
         }
       });
     }
+
+    // Следим за изменениями в localStorage
+    const handleStorageChange = (e) => {
+      if (e.key === 'current_telegram_id') {
+        setTelegramId(e.newValue || 'unknown');
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // Функция для отправки состояния UI
@@ -43,7 +57,7 @@ const App = () => {
     const socket = initSocket();
     socket.emit('uiState', {
       state,
-      telegramId,
+      telegramId: getCurrentTelegramId(),
       details
     });
   };

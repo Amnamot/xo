@@ -62,6 +62,14 @@ const StartScreen = () => {
         const socket = initSocket();
         socketRef.current = socket;
 
+        console.log('Socket initialization state:', {
+          socketId: socket.id,
+          connected: socket.connected,
+          rooms: Array.from(socket.rooms || []),
+          hasGameStartListener: socket.listeners('gameStart').length,
+          timestamp: new Date().toISOString()
+        });
+
         socket.on('gameStart', (data) => {
           console.log('🎮 [StartScreen] Received gameStart event:', {
             session: data?.session,

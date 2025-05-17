@@ -75,6 +75,12 @@ const StartScreen = () => {
         }
       });
 
+      socket.on('lobbyReady', (data) => {
+        if (data.creatorMarker) {
+          setShowWaitModal(true);
+        }
+      });
+
       const lobbyResponse = await createLobby(telegramId);
       setShowWaitModal(true);
 

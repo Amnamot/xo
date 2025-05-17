@@ -11,7 +11,8 @@ import {
   makeMove, 
   updatePlayerTime, 
   updateViewport,
-  subscribeToGameEvents 
+  subscribeToGameEvents,
+  checkAndRestoreGameState
 } from "./services/socket";
 
 const BOARD_SIZE = 100;

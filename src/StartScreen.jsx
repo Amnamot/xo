@@ -4,7 +4,14 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
 import './StartScreen.css';
-import { initSocket, connectSocket, disconnectSocket, createLobby, createInviteWS } from './services/socket';
+import { 
+  initSocket, 
+  connectSocket, 
+  disconnectSocket, 
+  createLobby, 
+  createInviteWS,
+  checkAndRestoreGameState 
+} from './services/socket';
 import logoIcon from './media/3tbICO.svg';
 
 const StartScreen = () => {

@@ -99,6 +99,15 @@ const StartScreen = () => {
                     socket.emit('joinLobby', { 
                       telegramId: savedTelegramId,
                       lobbyId: response.lobbyId
+                    }, (joinResponse) => {
+                      if (joinResponse?.status === 'creator_game_joined') {
+                        console.log('✅ [Creator Rejoin] Successfully joined game session:', {
+                          lobbyId: response.lobbyId,
+                          timestamp: new Date().toISOString()
+                        });
+                        // Переходим на экран игры
+                        navigate(`/game/${response.lobbyId}`);
+                      }
                     });
                   }
                 });

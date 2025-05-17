@@ -332,4 +332,22 @@ export const disconnectSocket = () => {
     socket.disconnect();
   }
   reconnectAttempts = 0;
+};
+
+export const checkAndRestoreGameState = async (telegramId) => {
+  const currentSocket = initSocket();
+  return new Promise((resolve, reject) => {
+    if (!currentSocket.connected) {
+      reject(new Error('WebSocket is not connected'));
+      return;
+    }
+
+    currentSocket.emit('checkGameState', { telegramId }, (response) => {
+      if (response?.error) {
+        reject(new Error(response.error));
+      } else {
+        resolve(response);
+      }
+    });
+  });
 }; 

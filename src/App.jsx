@@ -24,19 +24,39 @@ const App = () => {
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.ready();
       
-      // Отслеживаем закрытие приложения
+      // Отслеживаем изменения состояния приложения
       window.Telegram.WebApp.onEvent('viewportChanged', async () => {
-        if (!window.Telegram.WebApp.isExpanded) {
-          await connectSocket();
-          const socket = initSocket();
+        const isExpanded = window.Telegram.WebApp.isExpanded;
+        await connectSocket();
+        const socket = initSocket();
+        
+        if (!isExpanded) {
+          // При сворачивании приложения
           socket.emit('uiState', { 
-            state: 'appClosed', 
+            state: 'minimized', 
             telegramId: getCurrentTelegramId(),
             details: { 
               lastScreen: window.location.pathname,
               timestamp: Date.now()
             }
           });
+        } else {
+          // При разворачивании приложения
+          try {
+            const gameState = await checkAndRestoreGameState(getCurrentTelegramId());
+            if (gameState?.gameId) {
+              console.log('🔄 [App] Restoring game after expand:', {
+                gameId: gameState.gameId,
+                timestamp: new Date().toISOString()
+              });
+              window.location.href = `/game/${gameState.gameId}`;
+            }
+          } catch (error) {
+            console.warn('⚠️ [App] No active game found after expand:', {
+              error: error.message,
+              timestamp: new Date().toISOString()
+            });
+          }
         }
       });
     }

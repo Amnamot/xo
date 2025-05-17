@@ -75,6 +75,33 @@ const StartScreen = () => {
           }
         });
 
+        socket.on('restoreGameState', (data) => {
+          if (data.gameId) {
+            console.log('🔄 [StartScreen] Restoring game state:', {
+              gameId: data.gameId,
+              timestamp: new Date().toISOString()
+            });
+            navigate(`/game/${data.gameId}`);
+          }
+        });
+
+        // Проверяем сохраненное состояние при инициализации
+        try {
+          const gameState = await checkAndRestoreGameState(telegramId);
+          if (gameState?.gameId) {
+            console.log('🔄 [StartScreen] Found saved game:', {
+              gameId: gameState.gameId,
+              timestamp: new Date().toISOString()
+            });
+            navigate(`/game/${gameState.gameId}`);
+          }
+        } catch (error) {
+          console.warn('⚠️ [StartScreen] No saved game state found:', {
+            error: error.message,
+            timestamp: new Date().toISOString()
+          });
+        }
+
         // Добавляем обработчик изменения состояния окна
         if (window.Telegram?.WebApp) {
           window.Telegram.WebApp.onEvent('viewportChanged', async () => {

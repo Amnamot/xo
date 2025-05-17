@@ -216,6 +216,21 @@ const Game = () => {
         // Подписываемся на игровые события
         subscribeToGameEvents(socket, {
           onGameState: (gameState) => {
+            if (!isValidGameState(gameState)) {
+              console.error('❌ [Game] Invalid game state received:', {
+                gameState,
+                timestamp: new Date().toISOString()
+              });
+              return;
+            }
+
+            console.log('🎮 [Game] Received game state:', {
+              currentPlayer: gameState.currentPlayer,
+              scale: gameState.scale,
+              position: gameState.position,
+              timestamp: new Date().toISOString()
+            });
+
             setBoard(gameState.board);
             setCurrentPlayer(gameState.currentPlayer);
             setScale(gameState.scale);
@@ -235,6 +250,12 @@ const Game = () => {
                 });
               }
             }
+
+            // Если это первое получение состояния, инициализируем таймеры
+            if (gameStartTime === null) {
+              setGameStartTime(Date.now() - (gameState.time * 1000));
+              setMoveStartTime(Date.now());
+            }
           },
           onOpponentJoined: (opponent) => {
             setOpponentInfo(opponent);
@@ -248,6 +269,28 @@ const Game = () => {
         });
 
         await connectSocket(socket, lobbyId);
+
+        // Проверяем сохраненное состояние после подключения
+        try {
+          const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() || 
+                            localStorage.getItem('current_telegram_id');
+          if (telegramId) {
+            const gameState = await checkAndRestoreGameState(telegramId);
+            if (gameState?.gameId && gameState.gameId !== lobbyId) {
+              console.log('🔄 [Game] Found different active game:', {
+                currentLobby: lobbyId,
+                savedGame: gameState.gameId,
+                timestamp: new Date().toISOString()
+              });
+              navigate(`/game/${gameState.gameId}`);
+            }
+          }
+        } catch (error) {
+          console.warn('⚠️ [Game] Failed to check game state:', {
+            error: error.message,
+            timestamp: new Date().toISOString()
+          });
+        }
       } catch (error) {
         console.error('Error during socket initialization:', error);
         handleReconnect();

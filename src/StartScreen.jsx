@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
 import './StartScreen.css';
 import { initSocket, connectSocket, disconnectSocket, createLobby, createInviteWS } from './services/socket';
+import logoIcon from './media/3tICO.svg';
 
 const StartScreen = () => {
   const [user, setUser] = useState(null);
@@ -147,7 +148,7 @@ const StartScreen = () => {
     <div className="start-screen">
       {showWaitModal && <WaitModal onCancel={handleCancelLobby} />}
       <div className="top-logo">
-        <img src="../media/3tICO.svg" width={128} alt="Logo" />
+        <img src={logoIcon} width={128} alt="Logo" />
       </div>
 
       <div className="user-info">

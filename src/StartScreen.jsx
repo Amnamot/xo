@@ -42,9 +42,10 @@ const StartScreen = () => {
       if (socketRef.current) {
         socketRef.current.off('gameStart');
         socketRef.current.off('setShowWaitModal');
-        if (socketRef.current.connected) {
-          socketRef.current.disconnect();
-        }
+        // Не отключаем сокет при размонтировании
+        // if (socketRef.current.connected) {
+        //   socketRef.current.disconnect();
+        // }
       }
     };
   }, []);
@@ -85,80 +86,94 @@ const StartScreen = () => {
         // Устанавливаем обработчики событий
         console.log('🎮 [StartGame] Setting up game event handlers');
         
-        socket.on('gameStart', (data) => {
-          console.log('🎮 [Game Start] Received event:', {
-            socketState: {
-              id: socket.id,
-              connected: socket.connected,
-              transport: socket.io?.engine?.transport?.name,
-              readyState: socket.io?.engine?.readyState,
-              rooms: Array.from(socket.rooms || []),
-              reconnecting: socket.io?.engine?.reconnecting
-            },
-            gameData: {
-              creator: data.creator,
-              opponent: data.opponent,
-              isCreator: telegramId === data.creator,
-              sessionId: data.session.id
-            },
-            timestamp: new Date().toISOString()
-          });
-          
-          // Переходим на страницу игры
-          navigate(`/game/${data.session.id}`);
-          
-          // Добавляем обработчик для отслеживания состояния подключения
-          socket.on('connect', () => {
-            console.log('🔌 [Socket] Reconnected:', {
-              id: socket.id,
-              rooms: Array.from(socket.rooms || []),
-              timestamp: new Date().toISOString()
-            });
-          });
+        // Создаем Promise для ожидания начала игры
+        const gameStartPromise = new Promise((resolve) => {
+          let gameState = null;
 
-          socket.on('disconnect', (reason) => {
-            console.log('❌ [Socket] Disconnected:', {
-              reason,
-              lastSocketId: socket.id,
-              timestamp: new Date().toISOString()
-            });
-          });
-          
-          // Проверяем состояние подключения
-          if (!socket.connected) {
-            console.warn('⚠️ [Game Events] Socket disconnected before navigation:', {
+          // Обработчик gameState
+          const handleGameState = (state) => {
+            console.log('🎮 [Game State] Received initial state:', {
               socketId: socket.id,
-              lastError: socket.io?.engine?.transport?.lastError,
-              reconnectAttempts: socket.io?.engine?.reconnectAttempts || 0,
+              state,
               timestamp: new Date().toISOString()
             });
-            
-            // Пытаемся переподключиться
-            console.log('🔄 [Game Events] Attempting to reconnect...');
-            socket.connect();
-            
-            // Проверяем успешность переподключения
-            console.log('🔍 [Game Events] Connection state after reconnect:', {
-              connected: socket.connected,
-              transport: socket.io?.engine?.transport?.name,
-              readyState: socket.io?.engine?.readyState,
+            gameState = state;
+          };
+
+          // Обработчик gameStart
+          socket.once('gameStart', (data) => {
+            console.log('🎮 [Game Start] Received event:', {
+              socketState: {
+                id: socket.id,
+                connected: socket.connected,
+                transport: socket.io?.engine?.transport?.name,
+                readyState: socket.io?.engine?.readyState,
+                rooms: Array.from(socket.rooms || []),
+                reconnecting: socket.io?.engine?.reconnecting
+              },
+              gameData: {
+                creator: data.creator,
+                opponent: data.opponent,
+                isCreator: telegramId === data.creator,
+                sessionId: data.session.id
+              },
               timestamp: new Date().toISOString()
             });
-          }
-          
-          // Логируем состояние перед навигацией
-          console.log('🚀 [Game Events] Navigating to game:', {
-            from: window.location.pathname,
-            to: `/game/${data.session.id}`,
-            socketState: {
-              connected: socket.connected,
-              transport: socket.io?.engine?.transport?.name,
-              rooms: Array.from(socket.rooms || [])
-            },
+
+            // Подписываемся на gameState
+            socket.once('gameState', handleGameState);
+
+            // Ждем небольшую задержку для получения gameState
+            setTimeout(() => {
+              // Отписываемся от gameState если не получили
+              socket.off('gameState', handleGameState);
+              
+              // Закрываем модальное окно
+              setShowWaitModal(false);
+
+              // Резолвим промис с данными
+              resolve({
+                gameStart: data,
+                gameState
+              });
+            }, 1000);
+          });
+        });
+
+        // Ожидаем получения всех необходимых данных
+        const { gameStart, gameState } = await gameStartPromise;
+
+        // Проверяем состояние подключения
+        if (!socket.connected) {
+          console.warn('⚠️ [Game Events] Socket disconnected before navigation:', {
+            socketId: socket.id,
+            lastError: socket.io?.engine?.transport?.lastError,
+            reconnectAttempts: socket.io?.engine?.reconnectAttempts || 0,
             timestamp: new Date().toISOString()
           });
           
-          navigate(`/game/${data.session.id}`, { replace: true });
+          // Пытаемся переподключиться
+          console.log('🔄 [Game Events] Attempting to reconnect...');
+          socket.connect();
+        }
+
+        // Логируем состояние перед навигацией
+        console.log('🚀 [Game Events] Navigating to game:', {
+          from: window.location.pathname,
+          to: `/game/${gameStart.session.id}`,
+          socketState: {
+            connected: socket.connected,
+            transport: socket.io?.engine?.transport?.name,
+            rooms: Array.from(socket.rooms || [])
+          },
+          gameState: gameState,
+          timestamp: new Date().toISOString()
+        });
+
+        // Делаем навигацию только один раз
+        navigate(`/game/${gameStart.session.id}`, { 
+          replace: true,
+          state: { gameState } // Передаем состояние игры через navigation state
         });
 
         socket.on('setShowWaitModal', (data) => {

@@ -1,6 +1,6 @@
 // Game.jsx
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import "./Game.css";
 import "./Shape.css";
 import Shape from "./Shape";
@@ -22,6 +22,54 @@ const INITIAL_POSITION = Math.floor(BOARD_SIZE / 2);
 
 const createEmptyBoard = () =>
   Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
+
+const isValidGameState = (gameState) => {
+  if (!gameState || typeof gameState !== 'object') return false;
+  
+  // Проверяем обязательные поля
+  const requiredFields = ['board', 'currentPlayer', 'scale', 'position'];
+  if (!requiredFields.every(field => field in gameState)) return false;
+  
+  // Проверяем board
+  if (!Array.isArray(gameState.board) || 
+      gameState.board.length !== BOARD_SIZE || 
+      !gameState.board.every(row => 
+        Array.isArray(row) && 
+        row.length === BOARD_SIZE && 
+        row.every(cell => cell === null || cell === 'X' || cell === 'O')
+      )) {
+    return false;
+  }
+  
+  // Проверяем currentPlayer
+  if (gameState.currentPlayer !== 'X' && gameState.currentPlayer !== 'O') return false;
+  
+  // Проверяем scale
+  if (typeof gameState.scale !== 'number' || gameState.scale <= 0) return false;
+  
+  // Проверяем position
+  if (!gameState.position || 
+      typeof gameState.position.x !== 'number' || 
+      typeof gameState.position.y !== 'number') {
+    return false;
+  }
+  
+  // Проверяем опциональные числовые поля
+  const optionalNumberFields = ['time', 'playerTime1', 'playerTime2'];
+  for (const field of optionalNumberFields) {
+    if (field in gameState && typeof gameState[field] !== 'number') return false;
+  }
+  
+  // Проверяем gameSession если он есть
+  if (gameState.gameSession) {
+    const sessionFields = ['id', 'creatorId', 'opponentId'];
+    if (!sessionFields.every(field => typeof gameState.gameSession[field] === 'string')) {
+      return false;
+    }
+  }
+  
+  return true;
+};
 
 const checkWinner = (board, row, col, player) => {
   const directions = [
@@ -74,48 +122,6 @@ const getVisibleCells = (board) => {
   return visibleCells;
 };
 
-const isValidGameState = (state) => {
-  if (!state || typeof state !== 'object') return false;
-
-  // Проверка основных полей
-  const requiredFields = {
-    board: Array.isArray,
-    currentPlayer: (val) => typeof val === 'string' && ['X', 'O'].includes(val),
-    scale: (val) => typeof val === 'number' && val > 0,
-    position: (val) => val && typeof val.x === 'number' && typeof val.y === 'number',
-    time: (val) => typeof val === 'number' && val >= 0,
-    playerTime1: (val) => typeof val === 'number' && val >= 0,
-    playerTime2: (val) => typeof val === 'number' && val >= 0
-  };
-
-  for (const [field, validator] of Object.entries(requiredFields)) {
-    if (!validator(state[field])) {
-      console.error(`Invalid game state: ${field} is invalid`);
-      return false;
-    }
-  }
-
-  // Проверка структуры доски
-  if (!state.board.every(row => 
-    Array.isArray(row) && 
-    row.length === BOARD_SIZE && 
-    row.every(cell => cell === null || cell === 'X' || cell === 'O')
-  )) {
-    console.error('Invalid game state: board structure is invalid');
-    return false;
-  }
-
-  // Проверка игровой сессии
-  if (state.gameSession) {
-    if (!state.gameSession.id || typeof state.gameSession.id !== 'string') {
-      console.error('Invalid game state: gameSession.id is invalid');
-      return false;
-    }
-  }
-
-  return true;
-};
-
 // Функции нормализации координат
 const normalizeCoordinates = (x, y, boardWidth, boardHeight) => {
   // Преобразуем координаты в проценты от размера поля
@@ -143,6 +149,8 @@ const calculateBoardDimensions = (cellSize) => {
 const Game = () => {
   const navigate = useNavigate();
   const { lobbyId } = useParams();
+  const location = useLocation();
+  const initialGameState = location.state?.gameState;
   const mountedRef = useRef(false);
   
   console.log('🎮 Game component initialization', {
@@ -209,6 +217,40 @@ const Game = () => {
           console.log('✅ Socket connected successfully');
           setIsConnected(true);
           setReconnectAttempts(0);
+          
+          // При успешном подключении присоединяемся к комнате игры
+          socket.emit('joinGame', { 
+            gameId: lobbyId,
+            telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id 
+          }, (response) => {
+            if (response.status === 'joined') {
+              console.log('✅ Successfully joined game room:', lobbyId);
+              
+              // Если есть начальное состояние из navigation state, применяем его
+              if (initialGameState) {
+                console.log('🎮 Applying initial game state from navigation');
+                setBoard(initialGameState.board);
+                setCurrentPlayer(initialGameState.currentPlayer);
+                setScale(initialGameState.scale);
+                setPosition(initialGameState.position);
+                setTime(initialGameState.time);
+                setPlayerTime1(initialGameState.playerTime1);
+                setPlayerTime2(initialGameState.playerTime2);
+                setGameSession(initialGameState.gameSession);
+                
+                if (initialGameState.gameSession) {
+                  const isCreator = initialGameState.gameSession.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+                  if (!isCreator && initialGameState.gameSession.creatorId) {
+                    setOpponentInfo({
+                      id: initialGameState.gameSession.creatorId,
+                      name: initialGameState.gameSession.creatorName,
+                      avatar: initialGameState.gameSession.creatorAvatar
+                    });
+                  }
+                }
+              }
+            }
+          });
         });
 
         socket.on('disconnect', () => {
@@ -222,50 +264,44 @@ const Game = () => {
           handleReconnect();
         });
 
-        // Подписываемся на игровые события
-        subscribeToGameEvents(socket, {
-          onGameState: (gameState) => {
-            if (!isValidGameState(gameState)) {
-              console.error('Received invalid game state:', gameState);
-              return;
+        // Добавляем обработчик для синхронизации состояния при переподключении
+        socket.on('gameState', (gameState) => {
+          if (!isValidGameState(gameState)) {
+            console.error('Received invalid game state:', gameState);
+            return;
+          }
+          
+          console.log('🔄 Syncing game state:', {
+            currentBoard: board,
+            newBoard: gameState.board,
+            currentPlayer: gameState.currentPlayer,
+            timestamp: new Date().toISOString()
+          });
+          
+          setBoard(gameState.board);
+          setCurrentPlayer(gameState.currentPlayer);
+          setScale(gameState.scale);
+          setPosition(gameState.position);
+          setTime(gameState.time);
+          setPlayerTime1(gameState.playerTime1);
+          setPlayerTime2(gameState.playerTime2);
+          
+          if (gameState.gameSession) {
+            setGameSession(gameState.gameSession);
+            const isCreator = gameState.gameSession.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+            if (!isCreator && gameState.gameSession.creatorId) {
+              setOpponentInfo({
+                id: gameState.gameSession.creatorId,
+                name: gameState.gameSession.creatorName,
+                avatar: gameState.gameSession.creatorAvatar
+              });
             }
-            
-            setBoard(gameState.board);
-            setCurrentPlayer(gameState.currentPlayer);
-            setScale(gameState.scale);
-            setPosition(gameState.position);
-            setTime(gameState.time);
-            setPlayerTime1(gameState.playerTime1);
-            setPlayerTime2(gameState.playerTime2);
-            
-            if (gameState.gameSession) {
-              setGameSession(gameState.gameSession);
-              // Если мы не создатель, устанавливаем информацию о создателе
-              if (gameState.gameSession.creatorId !== window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
-                setOpponentInfo({
-                  id: gameState.gameSession.creatorId,
-                  name: gameState.gameSession.creatorName,
-                  avatar: gameState.gameSession.creatorAvatar
-                });
-              }
-            }
-          },
-          onOpponentJoined: (opponent) => {
-            console.log('👥 Opponent joined:', opponent);
-            setOpponentInfo(opponent);
-          },
-          onOpponentLeft: () => {
-            console.log('👋 Opponent left');
-            setOpponentInfo(null);
-          },
-          onError: (error) => {
-            console.error('🎮 Game error:', error);
           }
         });
 
-        await connectSocket(socket, lobbyId);
+        await connectSocket(socket);
       } catch (error) {
-        console.error('🚨 Error during socket initialization:', error);
+        console.error('🚨 Error initializing socket:', error);
         handleReconnect();
       }
     };
@@ -289,11 +325,16 @@ const Game = () => {
     return () => {
       console.log('🔌 Cleaning up socket connection');
       if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
+        socketRef.current.off('connect');
+        socketRef.current.off('disconnect');
+        socketRef.current.off('error');
+        socketRef.current.off('gameState');
+        socketRef.current.off('moveMade');
+        socketRef.current.off('timeUpdated');
+        socketRef.current.off('gameEnded');
       }
     };
-  }, [lobbyId, navigate, reconnectAttempts]);
+  }, [lobbyId, initialGameState]);
 
   // Обновляем viewport при изменении масштаба или позиции
   useEffect(() => {

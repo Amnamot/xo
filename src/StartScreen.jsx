@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
 import './StartScreen.css';
 import { initSocket, connectSocket, disconnectSocket, createLobby, createInviteWS } from './services/socket';
-import logoIcon from './media/3tICO.svg';
+import logoIcon from './media/3tbICO.svg';
 
 const StartScreen = () => {
   const [user, setUser] = useState(null);

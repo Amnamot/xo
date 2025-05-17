@@ -60,9 +60,11 @@ const StartScreen = () => {
       const socket = initSocket();
       socketRef.current = socket;
 
-      socket.once('gameStart', (data) => {
-        setShowWaitModal(false);
-        navigate(`/game/${data.session.id}`);
+      socket.on('gameStart', (data) => {
+        if (data && data.session && data.session.id) {
+          setShowWaitModal(false);
+          navigate(`/game/${data.session.id}`);
+        }
       });
 
       socket.on('setShowWaitModal', (data) => {

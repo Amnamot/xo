@@ -39,17 +39,60 @@ const StartScreen = () => {
     };
 
     initializeUI();
+  }, []);
+
+  useEffect(() => {
+    const initializeSocket = async () => {
+      if (!telegramId) return;
+      
+      try {
+        await connectSocket();
+        const socket = initSocket();
+        socketRef.current = socket;
+
+        socket.on('gameStart', (data) => {
+          if (data && data.session && data.session.id) {
+            setShowWaitModal(false);
+            navigate(`/game/${data.session.id}`);
+          }
+        });
+
+        socket.on('setShowWaitModal', (data) => {
+          if (data.show) {
+            setShowWaitModal(true);
+            if (data.creatorMarker) {
+              setCreatorMarker(data.creatorMarker);
+            }
+          } else {
+            setShowWaitModal(false);
+          }
+        });
+
+        socket.on('lobbyReady', (data) => {
+          if (data.creatorMarker) {
+            setCreatorMarker(data.creatorMarker);
+            setShowWaitModal(true);
+          }
+        });
+
+      } catch (error) {
+        console.error('Failed to initialize socket:', error);
+      }
+    };
+
+    initializeSocket();
 
     return () => {
       if (socketRef.current) {
         socketRef.current.off('gameStart');
         socketRef.current.off('setShowWaitModal');
+        socketRef.current.off('lobbyReady');
         if (socketRef.current.connected) {
           socketRef.current.disconnect();
         }
       }
     };
-  }, []);
+  }, [telegramId, navigate]);
 
   const handleStartGame = async () => {
     try {
@@ -57,38 +100,8 @@ const StartScreen = () => {
         throw new Error("Missing Telegram ID");
       }
 
-      await connectSocket();
-      const socket = initSocket();
-      socketRef.current = socket;
-
-      socket.on('gameStart', (data) => {
-        if (data && data.session && data.session.id) {
-          setShowWaitModal(false);
-          navigate(`/game/${data.session.id}`);
-        }
-      });
-
-      socket.on('setShowWaitModal', (data) => {
-        if (data.show) {
-          setShowWaitModal(true);
-          if (data.creatorMarker) {
-            setCreatorMarker(data.creatorMarker);
-          }
-        } else {
-          setShowWaitModal(false);
-        }
-      });
-
-      socket.on('lobbyReady', (data) => {
-        if (data.creatorMarker) {
-          setCreatorMarker(data.creatorMarker);
-          setShowWaitModal(true);
-        }
-      });
-
-      setShowWaitModal(true);
-
       const lobbyResponse = await createLobby(telegramId);
+      setShowWaitModal(true);
 
       const inviteData = await createInviteWS(telegramId);
 

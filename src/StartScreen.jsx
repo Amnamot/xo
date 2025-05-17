@@ -42,257 +42,51 @@ const StartScreen = () => {
       if (socketRef.current) {
         socketRef.current.off('gameStart');
         socketRef.current.off('setShowWaitModal');
-        // Не отключаем сокет при размонтировании
-        // if (socketRef.current.connected) {
-        //   socketRef.current.disconnect();
-        // }
+        if (socketRef.current.connected) {
+          socketRef.current.disconnect();
+        }
       }
     };
   }, []);
 
   const handleStartGame = async () => {
-    console.log('🎮 [StartGame] Button clicked');
-    
     try {
-      // Проверяем наличие telegramId
       if (!telegramId) {
-        console.error('❌ [StartGame] Missing Telegram ID');
         throw new Error("Missing Telegram ID");
       }
 
-      console.log('👤 [StartGame] Using Telegram ID:', telegramId);
+      await connectSocket();
+      const socket = initSocket();
+      socketRef.current = socket;
 
-      // Проверяем текущее состояние сокета
-      console.log('🔍 [StartGame] Current socket state:', {
-        exists: socketRef.current ? 'yes' : 'no',
-        connected: socketRef.current?.connected ? 'yes' : 'no',
-        id: socketRef.current?.id
+      socket.once('gameStart', (data) => {
+        setShowWaitModal(false);
+        navigate(`/game/${data.session.id}`);
       });
 
-      // Инициализируем соединение
-      console.log('🔄 [StartGame] Connecting to WebSocket...');
-      
-      try {
-        await connectSocket();
-        const socket = initSocket();
-        socketRef.current = socket;
-        
-        console.log('✅ [StartGame] Socket initialized:', {
-          id: socket.id,
-          connected: socket.connected,
-          readyState: socket.readyState
-        });
-
-        // Устанавливаем обработчики событий
-        console.log('🎮 [StartGame] Setting up game event handlers');
-        
-        // Создаем Promise для ожидания начала игры
-        const gameStartPromise = new Promise((resolve) => {
-          let gameState = null;
-
-          // Обработчик gameState
-          const handleGameState = (state) => {
-            console.log('🎮 [Game State] Received initial state:', {
-              socketId: socket.id,
-              state,
-              timestamp: new Date().toISOString()
-            });
-            gameState = state;
-          };
-
-          // Обработчик gameStart
-          socket.once('gameStart', (data) => {
-            console.log('🎮 [Game Start] Received event:', {
-              socketState: {
-                id: socket.id,
-                connected: socket.connected,
-                transport: socket.io?.engine?.transport?.name,
-                readyState: socket.io?.engine?.readyState,
-                rooms: Array.from(socket.rooms || []),
-                reconnecting: socket.io?.engine?.reconnecting
-              },
-              gameData: {
-                creator: data.creator,
-                opponent: data.opponent,
-                isCreator: telegramId === data.creator,
-                sessionId: data.session.id
-              },
-              timestamp: new Date().toISOString()
-            });
-
-            // Подписываемся на gameState
-            socket.once('gameState', handleGameState);
-
-            // Ждем небольшую задержку для получения gameState
-            setTimeout(() => {
-              // Отписываемся от gameState если не получили
-              socket.off('gameState', handleGameState);
-              
-              // Закрываем модальное окно
-              setShowWaitModal(false);
-
-              // Резолвим промис с данными
-              resolve({
-                gameStart: data,
-                gameState
-              });
-            }, 1000);
-          });
-        });
-
-        // Ожидаем получения всех необходимых данных
-        const { gameStart, gameState } = await gameStartPromise;
-
-        // Проверяем состояние подключения
-        if (!socket.connected) {
-          console.warn('⚠️ [Game Events] Socket disconnected before navigation:', {
-            socketId: socket.id,
-            lastError: socket.io?.engine?.transport?.lastError,
-            reconnectAttempts: socket.io?.engine?.reconnectAttempts || 0,
-            timestamp: new Date().toISOString()
-          });
-          
-          // Пытаемся переподключиться
-          console.log('🔄 [Game Events] Attempting to reconnect...');
-          socket.connect();
+      socket.on('setShowWaitModal', (data) => {
+        if (data.show) {
+          setShowWaitModal(true);
+        } else {
+          setShowWaitModal(false);
         }
+      });
 
-        // Логируем состояние перед навигацией
-        console.log('🚀 [Game Events] Navigating to game:', {
-          from: window.location.pathname,
-          to: `/game/${gameStart.session.id}`,
-          socketState: {
-            connected: socket.connected,
-            transport: socket.io?.engine?.transport?.name,
-            rooms: Array.from(socket.rooms || [])
-          },
-          gameState: gameState,
-          timestamp: new Date().toISOString()
-        });
+      const lobbyResponse = await createLobby(telegramId);
+      setShowWaitModal(true);
 
-        // Делаем навигацию только один раз
-        navigate(`/game/${gameStart.session.id}`, { 
-          replace: true,
-          state: { gameState } // Передаем состояние игры через navigation state
-        });
+      const inviteData = await createInviteWS(telegramId);
 
-        socket.on('setShowWaitModal', (data) => {
-          console.log('📱 [Game Events] Received setShowWaitModal event:', {
-            socketId: socket.id,
-            data,
-            timestamp: new Date().toISOString(),
-            connected: socket.connected
-          });
-          if (data.show) {
-            setShowWaitModal(true);
-            if (telegramId) {
-              socket.emit('uiState', { 
-                state: 'waitModal', 
-                telegramId,
-                details: { 
-                  timeLeft: data.ttl,
-                  isReconnect: true 
-                }
-              });
-            }
-          } else {
-            setShowWaitModal(false);
-          }
-        });
-
-        // Создаем Promise для ожидания готовности лобби
-        console.log('⏳ [Lobby] Setting up lobby ready listener');
-        const lobbyReadyPromise = new Promise((resolve, reject) => {
-          let timeoutId = setTimeout(() => {
-            console.error('❌ [Lobby] Lobby creation timeout');
-            reject(new Error('Lobby creation timeout'));
-          }, 5000);
-          
-          socket.once('lobbyReady', (data) => {
-            clearTimeout(timeoutId);
-            console.log('✅ [Lobby] Received lobbyReady event:', {
-              socketId: socket.id,
-              data,
-              timestamp: new Date().toISOString(),
-              connected: socket.connected
-            });
-            resolve(data);
-          });
-        });
-
-        // Создаем лобби
-        console.log('🎲 [Lobby] Creating lobby...', {
-          socketId: socket.id,
-          telegramId,
-          timestamp: new Date().toISOString()
-        });
-        
-        const lobbyResponse = await createLobby(telegramId);
-        console.log('✅ [Lobby] Lobby created:', {
-          socketId: socket.id,
-          response: lobbyResponse,
-          timestamp: new Date().toISOString(),
-          connected: socket.connected
-        });
-
-        // Ожидаем подтверждения готовности лобби
-        console.log('⏳ Waiting for lobby ready confirmation...');
-        await lobbyReadyPromise;
-
-        // Показываем модальное окно ожидания
-        setShowWaitModal(true);
-        console.log('👁️ Showing wait modal');
-
-        // Отправляем состояние UI
-        if (telegramId) {
-          socket.emit('uiState', { 
-            state: 'waitModal', 
-            telegramId,
-            details: { 
-              timeLeft: lobbyResponse.ttl,
-              isReconnect: false 
-            }
-          });
-        }
-
-        // Создаем инвайт
-        console.log('📤 Creating invite...');
-        const inviteData = await createInviteWS(telegramId);
-        console.log('📬 Invite created:', inviteData);
-
-        // Отправляем через Telegram
-        if (window.Telegram?.WebApp?.shareMessage) {
-          console.log('📱 Sharing message via Telegram...');
-          await window.Telegram.WebApp.shareMessage(inviteData.messageId);
-          console.log('📨 Message shared successfully');
-        }
-
-      } catch (error) {
-        console.error('Failed to start game:', error);
-        
-        setShowWaitModal(false);
-        
-        // Отключаем сокет при ошибке
-        if (socketRef.current?.connected) {
-          console.log('🔌 Disconnecting socket due to error');
-          socketRef.current.disconnect();
-        }
-        
-        // Показываем ошибку пользователю
-        alert(error.message || 'Failed to start game. Please try again.');
+      if (window.Telegram?.WebApp?.shareMessage) {
+        await window.Telegram.WebApp.shareMessage(inviteData.messageId);
       }
+
     } catch (error) {
       console.error('Failed to start game:', error);
-      
       setShowWaitModal(false);
-      
-      // Отключаем сокет при ошибке
       if (socketRef.current?.connected) {
-        console.log('🔌 Disconnecting socket due to error');
         socketRef.current.disconnect();
       }
-      
-      // Показываем ошибку пользователю
       alert(error.message || 'Failed to start game. Please try again.');
     }
   };
@@ -301,69 +95,26 @@ const StartScreen = () => {
     const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
     
     if (!telegramId) {
-      console.error("❌ Missing telegramId for lobby cancellation");
       setShowWaitModal(false);
       return;
     }
 
-    console.log('🔄 Starting lobby cancellation process for user:', telegramId);
-
     try {
       const socket = initSocket();
       
-      // Создаем Promise для ожидания ответа от сервера
-      const cancelPromise = new Promise((resolve, reject) => {
-        // Устанавливаем таймаут
-        const timeoutId = setTimeout(() => {
-          console.error('⏰ Lobby cancellation timeout after 5 seconds');
-          reject(new Error('Lobby cancellation timeout'));
-        }, 5000);
-
-        // Слушаем событие подтверждения удаления
-        socket.once('lobbyDeleted', (data) => {
-          clearTimeout(timeoutId);
-          console.log('✅ Received lobby deletion confirmation:', {
-            reason: data.reason,
-            timestamp: new Date(data.timestamp).toISOString()
-          });
-          resolve(data);
-        });
-
-        // Отправляем событие отмены лобби
-        console.log('📤 Sending cancelLobby request...');
-        socket.emit('cancelLobby', {
-          telegramId: telegramId.toString()
-        }, (response) => {
-          console.log('📨 Received cancelLobby response:', response);
-          if (response?.status === 'error') {
-            clearTimeout(timeoutId);
-            reject(new Error(response.message || 'Failed to cancel lobby'));
-          }
-        });
+      socket.once('lobbyDeleted', () => {
+        setShowWaitModal(false);
+        if (socket.connected) {
+          socket.disconnect();
+        }
       });
 
-      // Ждем ответа от сервера
-      console.log('⏳ Waiting for server confirmation...');
-      await cancelPromise;
-
-      // Только после успешного удаления закрываем модальное окно
-      console.log('🚫 Closing WaitModal...');
-      setShowWaitModal(false);
-
-      // И только потом отключаем сокет
-      if (socket.connected) {
-        console.log('🔌 Disconnecting socket...');
-        socket.disconnect();
-      }
-
-      console.log('✅ Lobby cancellation process completed successfully');
+      socket.emit('cancelLobby', {
+        telegramId: telegramId.toString()
+      });
 
     } catch (error) {
-      console.error('❌ Failed to cancel lobby:', {
-        error: error.message,
-        stack: error.stack
-      });
-      // В случае ошибки тоже закрываем модальное окно
+      console.error('Failed to cancel lobby:', error);
       setShowWaitModal(false);
       alert(error.message || "Failed to cancel lobby");
     }

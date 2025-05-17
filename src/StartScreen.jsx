@@ -85,15 +85,23 @@ const StartScreen = () => {
                 await connectSocket();
                 const socket = initSocket();
                 const savedTelegramId = localStorage.getItem('current_telegram_id');
-                if (savedTelegramId) {
-                  console.log('🔄 [Viewport Expanded] Attempting to rejoin lobby:', {
-                    telegramId: savedTelegramId,
-                    timestamp: new Date().toISOString()
-                  });
-                  socket.emit('joinLobby', { 
-                    telegramId: savedTelegramId
-                  });
-                }
+                
+                // Проверяем активное лобби на сервере
+                socket.emit('checkActiveLobby', { telegramId: savedTelegramId }, async (response) => {
+                  if (response?.lobbyId) {
+                    console.log('🔄 [Viewport Expanded] Found active lobby:', {
+                      lobbyId: response.lobbyId,
+                      telegramId: savedTelegramId,
+                      timestamp: new Date().toISOString()
+                    });
+                    
+                    // Переподключаемся к лобби
+                    socket.emit('joinLobby', { 
+                      telegramId: savedTelegramId,
+                      lobbyId: response.lobbyId
+                    });
+                  }
+                });
               } catch (error) {
                 console.error('Failed to reconnect after expand:', error);
               }

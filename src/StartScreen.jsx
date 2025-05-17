@@ -70,6 +70,8 @@ const StartScreen = () => {
           timestamp: new Date().toISOString()
         });
 
+        // Регистрируем обработчик gameStart до всех остальных операций
+        console.log('🎮 [StartScreen] Registering gameStart handler');
         socket.on('gameStart', (data) => {
           console.log('🎮 [StartScreen] Received gameStart event:', {
             session: data?.session,
@@ -77,6 +79,7 @@ const StartScreen = () => {
             socketId: socket.id,
             connected: socket.connected,
             rooms: Array.from(socket.rooms || []),
+            hasGameStartListener: socket.listeners('gameStart').length,
             timestamp: new Date().toISOString()
           });
 
@@ -95,6 +98,11 @@ const StartScreen = () => {
               timestamp: new Date().toISOString()
             });
           }
+        });
+
+        console.log('✅ [StartScreen] GameStart handler registered:', {
+          hasGameStartListener: socket.listeners('gameStart').length,
+          timestamp: new Date().toISOString()
         });
 
         socket.on('setShowWaitModal', (data) => {

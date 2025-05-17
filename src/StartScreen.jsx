@@ -202,17 +202,42 @@ const StartScreen = () => {
         throw new Error("Missing Telegram ID");
       }
 
+      console.log('🎮 [StartScreen] Starting game:', {
+        telegramId,
+        timestamp: new Date().toISOString()
+      });
+
       const lobbyResponse = await createLobby(telegramId);
+      console.log('✅ [StartScreen] Lobby created:', {
+        response: lobbyResponse,
+        telegramId,
+        timestamp: new Date().toISOString()
+      });
+
       setShowWaitModal(true);
 
       const inviteData = await createInviteWS(telegramId);
+      console.log('📨 [StartScreen] Invite created:', {
+        inviteData,
+        telegramId,
+        timestamp: new Date().toISOString()
+      });
 
       if (window.Telegram?.WebApp?.shareMessage) {
         await window.Telegram.WebApp.shareMessage(inviteData.messageId);
+        console.log('✅ [StartScreen] Invite shared:', {
+          messageId: inviteData.messageId,
+          telegramId,
+          timestamp: new Date().toISOString()
+        });
       }
 
     } catch (error) {
-      console.error('Failed to start game:', error);
+      console.error('❌ [StartScreen] Failed to start game:', {
+        error: error.message,
+        telegramId,
+        timestamp: new Date().toISOString()
+      });
       setShowWaitModal(false);
       if (socketRef.current?.connected) {
         socketRef.current.disconnect();
@@ -230,9 +255,18 @@ const StartScreen = () => {
     }
 
     try {
+      console.log('🔄 [StartScreen] Canceling lobby:', {
+        telegramId,
+        timestamp: new Date().toISOString()
+      });
+
       const socket = initSocket();
       
       socket.once('lobbyDeleted', () => {
+        console.log('✅ [StartScreen] Lobby deleted:', {
+          telegramId,
+          timestamp: new Date().toISOString()
+        });
         setShowWaitModal(false);
         if (socket.connected) {
           socket.disconnect();
@@ -244,7 +278,11 @@ const StartScreen = () => {
       });
 
     } catch (error) {
-      console.error('Failed to cancel lobby:', error);
+      console.error('❌ [StartScreen] Failed to cancel lobby:', {
+        error: error.message,
+        telegramId,
+        timestamp: new Date().toISOString()
+      });
       setShowWaitModal(false);
       alert(error.message || "Failed to cancel lobby");
     }

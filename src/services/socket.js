@@ -138,22 +138,34 @@ export const initSocket = () => {
 };
 
 // Функции для игровых событий
-export const createLobby = (telegramId) => {
-  const currentSocket = initSocket();
-  return new Promise((resolve, reject) => {
-    if (!currentSocket.connected) {
-      reject(new Error('WebSocket is not connected'));
-      return;
-    }
-
-    currentSocket.emit('createLobby', { telegramId }, (response) => {
-      if (response?.error) {
-        reject(new Error(response.error));
-      } else {
-        resolve(response);
-      }
+export const createLobby = async (telegramId) => {
+  try {
+    console.log('🎮 [Socket Service] Creating lobby:', {
+      telegramId,
+      timestamp: new Date().toISOString()
     });
-  });
+
+    const socket = initSocket();
+    const response = await new Promise((resolve) => {
+      socket.emit('createLobby', { telegramId }, (response) => {
+        console.log('✅ [Socket Service] Lobby creation result:', {
+          response,
+          telegramId,
+          timestamp: new Date().toISOString()
+        });
+        resolve(response);
+      });
+    });
+
+    return response;
+  } catch (error) {
+    console.error('❌ [Socket Service] Failed to create lobby:', {
+      error: error.message,
+      telegramId,
+      timestamp: new Date().toISOString()
+    });
+    throw error;
+  }
 };
 
 export const joinLobby = (lobbyId, telegramId) => {
@@ -198,21 +210,34 @@ export const confirmMoveReceived = (gameId, moveId) => {
   currentSocket.emit('moveReceived', { gameId, moveId });
 };
 
-export const createInviteWS = (telegramId) => {
-  const currentSocket = initSocket();
-  return new Promise((resolve, reject) => {
-    if (!currentSocket.connected) {
-      reject(new Error('WebSocket is not connected'));
-      return;
-    }
-    currentSocket.emit('createInvite', { telegramId }, (response) => {
-      if (response?.error) {
-        reject(new Error(response.error));
-      } else {
-        resolve(response);
-      }
+export const createInviteWS = async (telegramId) => {
+  try {
+    console.log('📨 [Socket Service] Creating invite:', {
+      telegramId,
+      timestamp: new Date().toISOString()
     });
-  });
+
+    const socket = initSocket();
+    const response = await new Promise((resolve) => {
+      socket.emit('createInvite', { telegramId }, (response) => {
+        console.log('✅ [Socket Service] Invite creation result:', {
+          response,
+          telegramId,
+          timestamp: new Date().toISOString()
+        });
+        resolve(response);
+      });
+    });
+
+    return response;
+  } catch (error) {
+    console.error('❌ [Socket Service] Failed to create invite:', {
+      error: error.message,
+      telegramId,
+      timestamp: new Date().toISOString()
+    });
+    throw error;
+  }
 };
 
 // Функция для подписки на события игры
@@ -335,19 +360,31 @@ export const disconnectSocket = () => {
 };
 
 export const checkAndRestoreGameState = async (telegramId) => {
-  const currentSocket = initSocket();
-  return new Promise((resolve, reject) => {
-    if (!currentSocket.connected) {
-      reject(new Error('WebSocket is not connected'));
-      return;
-    }
-
-    currentSocket.emit('checkGameState', { telegramId }, (response) => {
-      if (response?.error) {
-        reject(new Error(response.error));
-      } else {
-        resolve(response);
-      }
+  try {
+    console.log('🔍 [Socket Service] Checking game state:', {
+      telegramId,
+      timestamp: new Date().toISOString()
     });
-  });
+
+    const socket = initSocket();
+    const response = await new Promise((resolve) => {
+      socket.emit('checkActiveLobby', { telegramId }, (response) => {
+        console.log('📊 [Socket Service] Game state check result:', {
+          response,
+          telegramId,
+          timestamp: new Date().toISOString()
+        });
+        resolve(response);
+      });
+    });
+
+    return response;
+  } catch (error) {
+    console.error('❌ [Socket Service] Failed to check game state:', {
+      error: error.message,
+      telegramId,
+      timestamp: new Date().toISOString()
+    });
+    throw error;
+  }
 }; 

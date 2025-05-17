@@ -15,30 +15,32 @@ const checkNetworkConnection = () => {
 };
 
 export const initSocket = () => {
-  console.log('🔍 [Socket Service] Initializing socket...', {
-    existingSocket: socket ? 'exists' : 'null',
-    existingSocketId: socket?.id,
-    existingSocketConnected: socket?.connected,
-    timestamp: new Date().toISOString()
-  });
-
-  if (socket) {
-    console.log('♻️ [Socket Service] Reusing existing socket:', {
-      socketId: socket.id,
-      connected: socket.connected,
-      readyState: socket.connected ? 'connected' : 'disconnected',
+  try {
+    console.log('🔍 [Socket Service] Initializing socket...', {
+      existingSocket: socket ? 'exists' : 'null',
+      existingSocketId: socket?.id,
+      existingSocketConnected: socket?.connected,
+      existingRooms: socket ? Array.from(socket.rooms || []) : [],
       timestamp: new Date().toISOString()
     });
-    return socket;
-  }
-  
-  const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() || localStorage.getItem('current_telegram_id');
-  if (!telegramId) {
-    console.error('❌ [Socket Service] Telegram ID not found in WebApp or localStorage');
-    throw new Error('Telegram user ID not found');
-  }
 
-  try {
+    if (socket && socket.connected) {
+      console.log('♻️ [Socket Service] Reusing existing socket:', {
+        socketId: socket.id,
+        connected: socket.connected,
+        readyState: socket.connected ? 'connected' : 'disconnected',
+        rooms: Array.from(socket.rooms || []),
+        timestamp: new Date().toISOString()
+      });
+      return socket;
+    }
+  
+    const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() || localStorage.getItem('current_telegram_id');
+    if (!telegramId) {
+      console.error('❌ [Socket Service] Telegram ID not found in WebApp or localStorage');
+      throw new Error('Telegram user ID not found');
+    }
+
     console.log('🔄 [Socket Service] Creating new socket...', {
       telegramId,
       timestamp: new Date().toISOString()
@@ -85,10 +87,18 @@ export const initSocket = () => {
     socket.on('connect', () => {
       console.log('🌟 [Socket Service] Connected:', {
         socketId: socket.id,
+        rooms: Array.from(socket.rooms || []),
         timestamp: new Date().toISOString()
       });
       reconnectAttempts = 0;
       
+      // Проверяем комнаты после подключения
+      console.log('🔍 [Socket Service] Rooms after connect:', {
+        socketId: socket.id,
+        rooms: Array.from(socket.rooms || []),
+        timestamp: new Date().toISOString()
+      });
+
       // Обновляем telegramId в localStorage при успешном подключении
       if (telegramId) {
         localStorage.setItem('current_telegram_id', telegramId);
@@ -124,6 +134,16 @@ export const initSocket = () => {
           timestamp: new Date().toISOString()
         });
       }
+    });
+
+    // Добавляем слушатель для отслеживания изменений в комнатах
+    socket.on('room', (roomData) => {
+      console.log('🏠 [Socket Service] Room event:', {
+        socketId: socket.id,
+        roomData,
+        currentRooms: Array.from(socket.rooms || []),
+        timestamp: new Date().toISOString()
+      });
     });
 
     return socket;

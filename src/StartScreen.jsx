@@ -62,7 +62,7 @@ const StartScreen = () => {
         const socket = initSocket();
         socketRef.current = socket;
 
-        console.log('Socket initialization state:', {
+        console.log('🔍 [StartScreen] Socket state after connection:', {
           socketId: socket.id,
           connected: socket.connected,
           rooms: Array.from(socket.rooms || []),
@@ -87,6 +87,15 @@ const StartScreen = () => {
             console.log('🎯 [StartScreen] Navigating to game:', {
               gameId: data.session.id,
               telegramId,
+              socketState: {
+                connected: socket.connected,
+                rooms: Array.from(socket.rooms || []),
+                listeners: {
+                  gameStart: socket.listeners('gameStart').length,
+                  lobbyReady: socket.listeners('lobbyReady').length,
+                  setShowWaitModal: socket.listeners('setShowWaitModal').length
+                }
+              },
               timestamp: new Date().toISOString()
             });
             setShowWaitModal(false);
@@ -95,14 +104,13 @@ const StartScreen = () => {
             console.warn('⚠️ [StartScreen] Invalid gameStart data:', {
               data,
               telegramId,
+              socketState: {
+                connected: socket.connected,
+                rooms: Array.from(socket.rooms || [])
+              },
               timestamp: new Date().toISOString()
             });
           }
-        });
-
-        console.log('✅ [StartScreen] GameStart handler registered:', {
-          hasGameStartListener: socket.listeners('gameStart').length,
-          timestamp: new Date().toISOString()
         });
 
         socket.on('setShowWaitModal', (data) => {
@@ -128,9 +136,15 @@ const StartScreen = () => {
             lobbyId: data.lobbyId,
             creatorMarker: data.creatorMarker,
             telegramId,
-            socketId: socket.id,
-            connected: socket.connected,
-            rooms: Array.from(socket.rooms || []),
+            socketState: {
+              socketId: socket.id,
+              connected: socket.connected,
+              rooms: Array.from(socket.rooms || []),
+              listeners: {
+                gameStart: socket.listeners('gameStart').length,
+                lobbyReady: socket.listeners('lobbyReady').length
+              }
+            },
             timestamp: new Date().toISOString()
           });
 
@@ -138,6 +152,9 @@ const StartScreen = () => {
             console.log('✅ [StartScreen] Setting creator marker:', {
               marker: data.creatorMarker,
               telegramId,
+              socketState: {
+                rooms: Array.from(socket.rooms || [])
+              },
               timestamp: new Date().toISOString()
             });
             setCreatorMarker(data.creatorMarker);
@@ -145,22 +162,25 @@ const StartScreen = () => {
           }
         });
 
-        socket.on('restoreGameState', (data) => {
-          if (data.gameId) {
-            console.log('🔄 [StartScreen] Restoring game state:', {
-              gameId: data.gameId,
-              timestamp: new Date().toISOString()
-            });
-            navigate(`/game/${data.gameId}`);
-          }
-        });
-
         // Проверяем сохраненное состояние при инициализации
         try {
+          console.log('🔍 [StartScreen] Checking saved game state:', {
+            telegramId,
+            socketState: {
+              connected: socket.connected,
+              rooms: Array.from(socket.rooms || [])
+            },
+            timestamp: new Date().toISOString()
+          });
+
           const gameState = await checkAndRestoreGameState(telegramId);
           if (gameState?.gameId) {
             console.log('🔄 [StartScreen] Found saved game:', {
               gameId: gameState.gameId,
+              socketState: {
+                connected: socket.connected,
+                rooms: Array.from(socket.rooms || [])
+              },
               timestamp: new Date().toISOString()
             });
             navigate(`/game/${gameState.gameId}`);
@@ -168,6 +188,10 @@ const StartScreen = () => {
         } catch (error) {
           console.warn('⚠️ [StartScreen] No saved game state found:', {
             error: error.message,
+            socketState: {
+              connected: socket.connected,
+              rooms: Array.from(socket.rooms || [])
+            },
             timestamp: new Date().toISOString()
           });
         }

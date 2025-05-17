@@ -66,12 +66,26 @@ const StartScreen = () => {
           console.log('🎮 [StartScreen] Received gameStart event:', {
             session: data?.session,
             telegramId,
+            socketId: socket.id,
+            connected: socket.connected,
+            rooms: Array.from(socket.rooms || []),
             timestamp: new Date().toISOString()
           });
 
           if (data && data.session && data.session.id) {
+            console.log('🎯 [StartScreen] Navigating to game:', {
+              gameId: data.session.id,
+              telegramId,
+              timestamp: new Date().toISOString()
+            });
             setShowWaitModal(false);
             navigate(`/game/${data.session.id}`);
+          } else {
+            console.warn('⚠️ [StartScreen] Invalid gameStart data:', {
+              data,
+              telegramId,
+              timestamp: new Date().toISOString()
+            });
           }
         });
 
@@ -98,10 +112,18 @@ const StartScreen = () => {
             lobbyId: data.lobbyId,
             creatorMarker: data.creatorMarker,
             telegramId,
+            socketId: socket.id,
+            connected: socket.connected,
+            rooms: Array.from(socket.rooms || []),
             timestamp: new Date().toISOString()
           });
 
           if (data.creatorMarker) {
+            console.log('✅ [StartScreen] Setting creator marker:', {
+              marker: data.creatorMarker,
+              telegramId,
+              timestamp: new Date().toISOString()
+            });
             setCreatorMarker(data.creatorMarker);
             setShowWaitModal(true);
           }

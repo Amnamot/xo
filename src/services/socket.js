@@ -146,10 +146,21 @@ export const createLobby = async (telegramId) => {
     });
 
     const socket = initSocket();
+    
+    console.log('🔍 [Socket Service] Socket state before lobby creation:', {
+      socketId: socket.id,
+      connected: socket.connected,
+      rooms: Array.from(socket.rooms || []),
+      timestamp: new Date().toISOString()
+    });
+
     const response = await new Promise((resolve) => {
       socket.emit('createLobby', { telegramId }, (response) => {
         console.log('✅ [Socket Service] Lobby creation result:', {
           response,
+          socketId: socket.id,
+          connected: socket.connected,
+          rooms: Array.from(socket.rooms || []),
           telegramId,
           timestamp: new Date().toISOString()
         });

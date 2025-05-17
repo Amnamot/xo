@@ -165,35 +165,44 @@ const StartScreen = () => {
                 console.log('🔄 [Viewport Expanded] Attempting to reconnect');
                 await connectSocket();
                 const socket = initSocket();
-                const savedTelegramId = localStorage.getItem('current_telegram_id');
+
+                // Используем текущий telegramId вместо сохраненного
+                console.log('🔍 [Viewport Expanded] Checking active lobby for:', {
+                  telegramId,
+                  timestamp: new Date().toISOString()
+                });
                 
-                // Проверяем активное лобби на сервере
-                socket.emit('checkActiveLobby', { telegramId: savedTelegramId }, async (response) => {
+                socket.emit('checkActiveLobby', { telegramId }, async (response) => {
                   if (response?.lobbyId) {
-                    console.log('🔄 [Viewport Expanded] Found active lobby:', {
+                    console.log('🎯 [Viewport Expanded] Found active lobby:', {
                       lobbyId: response.lobbyId,
-                      telegramId: savedTelegramId,
+                      telegramId,
                       timestamp: new Date().toISOString()
                     });
                     
-                    // Переподключаемся к лобби
-                    socket.emit('joinLobby', { 
-                      telegramId: savedTelegramId,
-                      lobbyId: response.lobbyId
-                    }, (joinResponse) => {
-                      if (joinResponse?.status === 'creator_game_joined') {
-                        console.log('✅ [Creator Rejoin] Successfully joined game session:', {
+                    // Переподключаемся к лобби и ждем ответа
+                    await new Promise((resolve) => {
+                      socket.emit('joinLobby', { 
+                        telegramId,
+                        lobbyId: response.lobbyId
+                      }, (joinResponse) => {
+                        console.log('✅ [Viewport Expanded] Lobby join result:', {
+                          status: joinResponse?.status,
                           lobbyId: response.lobbyId,
+                          telegramId,
                           timestamp: new Date().toISOString()
                         });
-                        // Переходим на экран игры
-                        navigate(`/game/${response.lobbyId}`);
-                      }
+                        resolve(joinResponse);
+                      });
                     });
                   }
                 });
               } catch (error) {
-                console.error('Failed to reconnect after expand:', error);
+                console.error('❌ [Viewport Expanded] Error:', {
+                  error: error.message,
+                  telegramId,
+                  timestamp: new Date().toISOString()
+                });
               }
             }
           });

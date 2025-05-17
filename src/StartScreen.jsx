@@ -11,6 +11,7 @@ const StartScreen = () => {
   const [user, setUser] = useState(null);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
   const [showWaitModal, setShowWaitModal] = useState(false);
+  const [creatorMarker, setCreatorMarker] = useState('');
   const initData = window.Telegram?.WebApp?.initData;
   const navigate = useNavigate();
   const socketRef = useRef(null);
@@ -70,6 +71,9 @@ const StartScreen = () => {
       socket.on('setShowWaitModal', (data) => {
         if (data.show) {
           setShowWaitModal(true);
+          if (data.creatorMarker) {
+            setCreatorMarker(data.creatorMarker);
+          }
         } else {
           setShowWaitModal(false);
         }
@@ -77,6 +81,7 @@ const StartScreen = () => {
 
       socket.on('lobbyReady', (data) => {
         if (data.creatorMarker) {
+          setCreatorMarker(data.creatorMarker);
           setShowWaitModal(true);
         }
       });
@@ -155,7 +160,10 @@ const StartScreen = () => {
 
   return (
     <div className="start-screen">
-      {showWaitModal && <WaitModal onCancel={handleCancelLobby} />}
+      {showWaitModal && <WaitModal 
+        onCancel={handleCancelLobby}
+        creatorMarker={creatorMarker}
+      />}
       <div className="top-logo">
         <img src={logoIcon} width={128} alt="Logo" />
       </div>

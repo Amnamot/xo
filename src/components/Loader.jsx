@@ -40,7 +40,7 @@ const Loader = () => {
         userName: "devuser",
         firstName: "Developer",
         lastName: "Mode",
-        avatar: "/media/buddha.svg",
+        avatar: "../media/buddha.svg",
         numGames: 12,
         numWins: 4,
         stars: 10

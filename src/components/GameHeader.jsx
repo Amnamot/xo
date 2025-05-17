@@ -47,9 +47,9 @@ const GameHeader = ({
   const currentUserName = tgUser?.first_name || "You";
 
   // Определяем, какой игрок где (создатель всегда слева)
-  const leftPlayerAvatar = isCreator ? currentUserAvatar : (opponentInfo?.avatar || "/media/buddha.svg");
+  const leftPlayerAvatar = isCreator ? currentUserAvatar : (opponentInfo?.avatar || "../media/buddha.svg");
   const leftPlayerName = isCreator ? currentUserName : (opponentInfo?.name || "Opponent");
-  const rightPlayerAvatar = isCreator ? (opponentInfo?.avatar || "/media/buddha.svg") : currentUserAvatar;
+  const rightPlayerAvatar = isCreator ? (opponentInfo?.avatar || "../media/buddha.svg") : currentUserAvatar;
   const rightPlayerName = isCreator ? (opponentInfo?.name || "Opponent") : currentUserName;
 
   return (

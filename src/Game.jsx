@@ -221,13 +221,15 @@ const Game = () => {
 
         socket.on('gameStart', (data) => {
           console.log('🎮 [Game] Game started:', {
-            startTime: data.startTime,
-            gameId: data.gameId,
+            session: data.session,
+            gameData: data.gameData,
             timestamp: new Date().toISOString()
           });
           
-          setGameStartTime(data.startTime);
-          setMoveStartTime(data.startTime);
+          if (data.gameData?.startTime) {
+            setGameStartTime(data.gameData.startTime);
+            setMoveStartTime(data.gameData.startTime);
+          }
         });
 
         socket.on('gameState', (gameState) => {

@@ -8,6 +8,7 @@ const GameHeader = ({
   moveTimer, 
   time, 
   opponentInfo,
+  creatorInfo,
   playerTime1 = 0,
   playerTime2 = 0,
   isConnected = true,
@@ -58,11 +59,15 @@ const GameHeader = ({
   const currentUserAvatar = tgUser?.photo_url || "/src/media/JohnAva.png";
   const currentUserName = tgUser?.first_name || "You";
 
+  // Проверяем доступность данных игроков
+  const isOpponentDataAvailable = opponentInfo && opponentInfo.name && opponentInfo.avatar;
+  const isCreatorDataAvailable = creatorInfo && creatorInfo.name && creatorInfo.avatar;
+
   // Определяем, какой игрок где (создатель всегда слева)
-  const leftPlayerAvatar = isCreator ? currentUserAvatar : (opponentInfo?.avatar || "/src/media/JohnAva.png");
-  const leftPlayerName = isCreator ? currentUserName : (opponentInfo?.name || "Opponent");
-  const rightPlayerAvatar = isCreator ? (opponentInfo?.avatar || "/src/media/JohnAva.png") : currentUserAvatar;
-  const rightPlayerName = isCreator ? (opponentInfo?.name || "Opponent") : currentUserName;
+  const leftPlayerAvatar = isCreator ? currentUserAvatar : (isOpponentDataAvailable ? opponentInfo.avatar : "/src/media/JohnAva.png");
+  const leftPlayerName = isCreator ? currentUserName : (isOpponentDataAvailable ? opponentInfo.name : "Opponent");
+  const rightPlayerAvatar = isCreator ? (isOpponentDataAvailable ? opponentInfo.avatar : "/src/media/JohnAva.png") : currentUserAvatar;
+  const rightPlayerName = isCreator ? (isOpponentDataAvailable ? opponentInfo.name : "Opponent") : currentUserName;
 
   return (
     <>

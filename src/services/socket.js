@@ -175,63 +175,31 @@ export const initSocket = () => {
 };
 
 // Функции для игровых событий
-export const createLobby = async (telegramId) => {
-  try {
-    console.log('🎮 [Socket Service] Creating lobby:', {
-      telegramId,
-      timestamp: new Date().toISOString()
+export const createLobby = () => {
+  const currentSocket = initSocket();
+  const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  
+  if (currentSocket.connected && user) {
+    currentSocket.emit('createLobby', {
+      telegramId: user.id.toString(),
+      playerName: user.first_name,
+      playerAvatar: user.photo_url
     });
-
-    const socket = initSocket();
-    
-    console.log('🔍 [Socket Service] Socket state before lobby creation:', {
-      socketId: socket.id,
-      connected: socket.connected,
-      rooms: Array.from(socket.rooms || []),
-      timestamp: new Date().toISOString()
-    });
-
-    const response = await new Promise((resolve) => {
-      socket.emit('createLobby', { telegramId }, (response) => {
-        console.log('✅ [Socket Service] Lobby creation result:', {
-          response,
-          socketId: socket.id,
-          connected: socket.connected,
-          rooms: Array.from(socket.rooms || []),
-          telegramId,
-          timestamp: new Date().toISOString()
-        });
-        resolve(response);
-      });
-    });
-
-    return response;
-  } catch (error) {
-    console.error('❌ [Socket Service] Failed to create lobby:', {
-      error: error.message,
-      telegramId,
-      timestamp: new Date().toISOString()
-    });
-    throw error;
   }
 };
 
-export const joinLobby = (lobbyId, telegramId) => {
+export const joinLobby = (lobbyId) => {
   const currentSocket = initSocket();
-  return new Promise((resolve, reject) => {
-    if (!currentSocket.connected) {
-      reject(new Error('WebSocket is not connected'));
-      return;
-    }
-
-    currentSocket.emit('joinLobby', { lobbyId, telegramId }, (response) => {
-      if (response?.status === 'error') {
-        reject(response);
-      } else {
-        resolve(response);
-      }
+  const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  
+  if (currentSocket.connected && user) {
+    currentSocket.emit('joinLobby', {
+      telegramId: user.id.toString(),
+      lobbyId,
+      playerName: user.first_name,
+      playerAvatar: user.photo_url
     });
-  });
+  }
 };
 
 export const updatePlayerTime = (gameId, playerTimes) => {

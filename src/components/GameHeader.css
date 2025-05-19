@@ -49,6 +49,33 @@
     border-radius: 5px;
     user-select: none;
     -webkit-user-drag: none;
+    position: relative;
+  }
+  
+  .buddha-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 5px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .buddha-overlay.visible {
+    opacity: 1;
+    animation: buddhaPulse 2s infinite;
+  }
+
+  @keyframes buddhaPulse {
+    0% { opacity: 0.3; }
+    50% { opacity: 0.7; }
+    100% { opacity: 0.3; }
   }
   
   .namegamer1 {
@@ -101,6 +128,27 @@
     user-select: none;
     text-align: center;
     width: 100%;
+    transition: opacity 0.3s ease;
+  }
+
+  .timer.blink-slow {
+    animation: blinkSlow 1s infinite;
+  }
+
+  .timer.blink-fast {
+    animation: blinkFast 0.5s infinite;
+  }
+
+  @keyframes blinkSlow {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+  }
+
+  @keyframes blinkFast {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
   }
   
   .player-timer {

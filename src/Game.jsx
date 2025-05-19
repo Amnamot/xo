@@ -221,15 +221,13 @@ const Game = () => {
 
         socket.on('gameStart', (data) => {
           console.log('🎮 [Game] Game started:', {
-            session: data.session,
-            gameData: data.gameData,
+            startTime: data.startTime,
+            gameId: data.gameId,
             timestamp: new Date().toISOString()
           });
           
-          if (data.gameData?.startTime) {
-            setGameStartTime(data.gameData.startTime);
-            setMoveStartTime(data.gameData.startTime);
-          }
+          setGameStartTime(data.startTime);
+          setMoveStartTime(data.startTime);
         });
 
         socket.on('gameState', (gameState) => {
@@ -401,49 +399,16 @@ const Game = () => {
       }
     };
 
-    const handleReconnect = async () => {
+    const handleReconnect = () => {
       if (reconnectAttempts >= maxReconnectAttempts) {
-        console.error('❌ [Game] Max reconnection attempts reached:', {
-          attempts: reconnectAttempts,
-          maxAttempts: maxReconnectAttempts,
-          timestamp: new Date().toISOString()
-        });
         navigate('/');
         return;
       }
 
-      try {
-        console.log('🔄 [Game] Attempting to reconnect:', {
-          attempt: reconnectAttempts + 1,
-          maxAttempts: maxReconnectAttempts,
-          timestamp: new Date().toISOString()
-        });
-
-        // Увеличиваем счетчик попыток
+      setTimeout(() => {
         setReconnectAttempts(prev => prev + 1);
-        
-        // Ждем задержку
-        await new Promise(resolve => setTimeout(resolve, reconnectDelay));
-        
-        // Инициализируем сокет и ждем завершения
-        const socket = await initializeSocket();
-        socketRef.current = socket;
-        
-        console.log('✅ [Game] Reconnection successful:', {
-          attempt: reconnectAttempts,
-          socketId: socket.id,
-          timestamp: new Date().toISOString()
-        });
-      } catch (error) {
-        console.error('❌ [Game] Reconnection failed:', {
-          error: error.message,
-          attempt: reconnectAttempts,
-          timestamp: new Date().toISOString()
-        });
-        
-        // Если произошла ошибка, пробуем еще раз
-        setTimeout(() => handleReconnect(), reconnectDelay);
-      }
+        initializeSocket();
+      }, reconnectDelay);
     };
 
     initializeSocket();

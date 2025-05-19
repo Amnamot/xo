@@ -4,42 +4,22 @@
     justify-content: center;
     position: relative;
     z-index: 3;
-    user-select: none;
   }
   
   .gameplayers {
     margin-top: 36px;
-    width: calc(100% - 96px); /* 48px отступ с каждой стороны */
-    margin-left: 48px;
-    margin-right: 48px;
+    width: 80%;
     display: flex;
     justify-content: space-between;
     position: relative;
     z-index: 3;
-    user-select: none;
   }
   
   .gamer1,
-  .gamer2,
-  .times {
-    flex: 1;
+  .gamer2 {
     display: flex;
     flex-direction: column;
     align-items: center;
-    user-select: none;
-  }
-  
-  .gamer1 {
-    margin-right: 16px;
-  }
-  
-  .gamer2 {
-    margin-left: 16px;
-  }
-  
-  .times {
-    flex: 0 0 auto;
-    min-width: 120px;
   }
   
   .avagamer1,
@@ -47,35 +27,6 @@
     width: 12vw;
     max-width: 128px;
     border-radius: 5px;
-    user-select: none;
-    -webkit-user-drag: none;
-    position: relative;
-  }
-  
-  .buddha-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 5px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  .buddha-overlay.visible {
-    opacity: 1;
-    animation: buddhaPulse 2s infinite;
-  }
-
-  @keyframes buddhaPulse {
-    0% { opacity: 0.3; }
-    50% { opacity: 0.7; }
-    100% { opacity: 0.3; }
   }
   
   .namegamer1 {
@@ -86,11 +37,6 @@
     text-align: center;
     padding: 4px 8px;
     text-shadow: 0 0 8px rgb(255, 255, 255);
-    user-select: none;
-    width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .namegamer2 {
@@ -101,11 +47,12 @@
     text-align: center;
     padding: 4px 8px;
     text-shadow: 0 0 8px rgb(255, 255, 255);
-    user-select: none;
-    width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  }
+  
+  .times {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
   
   .time {
@@ -114,9 +61,6 @@
     font-size: 32px;
     color: #FFB323;
     text-shadow: 0 0 8px rgb(0, 0, 0);
-    user-select: none;
-    text-align: center;
-    width: 100%;
   }
   
   .timer {
@@ -125,30 +69,6 @@
     font-size: 24px;
     color: #00A811;
     text-shadow: 0 0 8px rgb(0, 0, 0);
-    user-select: none;
-    text-align: center;
-    width: 100%;
-    transition: opacity 0.3s ease;
-  }
-
-  .timer.blink-slow {
-    animation: blinkSlow 1s infinite;
-  }
-
-  .timer.blink-fast {
-    animation: blinkFast 0.5s infinite;
-  }
-
-  @keyframes blinkSlow {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
-  }
-
-  @keyframes blinkFast {
-    0% { opacity: 1; }
-    50% { opacity: 0.3; }
-    100% { opacity: 1; }
   }
   
   .player-timer {
@@ -157,9 +77,6 @@
     font-weight: bold;
     margin-top: 0.25rem;
     transition: color 0.3s ease;
-    user-select: none;
-    text-align: center;
-    width: 100%;
   }
   
   .connection-status {
@@ -174,7 +91,6 @@
     font-size: 14px;
     margin-top: 8px;
     animation: pulse 1.5s infinite;
-    user-select: none;
   }
 
   @keyframes pulse {

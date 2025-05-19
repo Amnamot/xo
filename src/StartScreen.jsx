@@ -58,8 +58,10 @@ const StartScreen = () => {
           timestamp: new Date().toISOString()
         });
 
-        // Получаем существующее или создаем новое подключение
         const socket = await initSocket();
+        if (!socket || typeof socket.on !== 'function') {
+          throw new Error('Invalid socket instance');
+        }
         socketRef.current = socket;
 
         console.log('🔍 [StartScreen] Socket state after connection:', {
@@ -72,46 +74,50 @@ const StartScreen = () => {
 
         // Регистрируем обработчик gameStart до всех остальных операций
         console.log('🎮 [StartScreen] Registering gameStart handler');
-        socket.off('gameStart').on('gameStart', (data) => {
-          console.log('🎮 [StartScreen] Received gameStart event:', {
-            session: data?.session,
-            telegramId,
-            socketId: socket.id,
-            connected: socket.connected,
-            rooms: Array.from(socket.rooms || []),
-            hasGameStartListener: socket.listeners('gameStart').length,
-            timestamp: new Date().toISOString()
-          });
+        if (typeof socket.off === 'function' && typeof socket.on === 'function') {
+          socket.off('gameStart').on('gameStart', (data) => {
+            console.log('🎮 [StartScreen] Received gameStart event:', {
+              session: data?.session,
+              telegramId,
+              socketId: socket.id,
+              connected: socket.connected,
+              rooms: Array.from(socket.rooms || []),
+              hasGameStartListener: socket.listeners('gameStart').length,
+              timestamp: new Date().toISOString()
+            });
 
-          if (data && data.session && data.session.id) {
-            console.log('🎯 [StartScreen] Navigating to game:', {
-              gameId: data.session.id,
-              telegramId,
-              socketState: {
-                connected: socket.connected,
-                rooms: Array.from(socket.rooms || []),
-                listeners: {
-                  gameStart: socket.listeners('gameStart').length,
-                  lobbyReady: socket.listeners('lobbyReady').length,
-                  setShowWaitModal: socket.listeners('setShowWaitModal').length
-                }
-              },
-              timestamp: new Date().toISOString()
-            });
-            setShowWaitModal(false);
-            navigate(`/game/${data.session.id}`);
-          } else {
-            console.warn('⚠️ [StartScreen] Invalid gameStart data:', {
-              data,
-              telegramId,
-              socketState: {
-                connected: socket.connected,
-                rooms: Array.from(socket.rooms || [])
-              },
-              timestamp: new Date().toISOString()
-            });
-          }
-        });
+            if (data && data.session && data.session.id) {
+              console.log('🎯 [StartScreen] Navigating to game:', {
+                gameId: data.session.id,
+                telegramId,
+                socketState: {
+                  connected: socket.connected,
+                  rooms: Array.from(socket.rooms || []),
+                  listeners: {
+                    gameStart: socket.listeners('gameStart').length,
+                    lobbyReady: socket.listeners('lobbyReady').length,
+                    setShowWaitModal: socket.listeners('setShowWaitModal').length
+                  }
+                },
+                timestamp: new Date().toISOString()
+              });
+              setShowWaitModal(false);
+              navigate(`/game/${data.session.id}`);
+            } else {
+              console.warn('⚠️ [StartScreen] Invalid gameStart data:', {
+                data,
+                telegramId,
+                socketState: {
+                  connected: socket.connected,
+                  rooms: Array.from(socket.rooms || [])
+                },
+                timestamp: new Date().toISOString()
+              });
+            }
+          });
+        } else {
+          throw new Error('Socket event methods not available');
+        }
 
         socket.on('setShowWaitModal', (data) => {
           console.log('🎯 [StartScreen] Received setShowWaitModal event:', {
@@ -204,7 +210,7 @@ const StartScreen = () => {
               try {
                 console.log('🔄 [Viewport Expanded] Attempting to reconnect');
                 await connectSocket();
-                const socket = initSocket();
+                const socket = await initSocket();
 
                 // Используем текущий telegramId вместо сохраненного
                 console.log('🔍 [Viewport Expanded] Checking active lobby for:', {

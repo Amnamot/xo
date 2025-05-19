@@ -23,7 +23,6 @@ export const initSocket = async () => {
       timestamp: new Date().toISOString()
     });
 
-    // Если сокет существует и подключен, возвращаем его
     if (socket && socket.connected) {
       console.log('♻️ [Socket Service] Reusing existing socket:', {
         socketId: socket.id,
@@ -33,14 +32,12 @@ export const initSocket = async () => {
       return socket;
     }
 
-    // Если сокет существует, но отключен, отключаем его перед созданием нового
-    if (socket && !socket.connected) {
+    if (socket) {
       console.log('🔄 [Socket Service] Disconnecting existing socket before reconnecting:', {
         socketId: socket.id,
         timestamp: new Date().toISOString()
       });
       socket.disconnect();
-      socket = null;
     }
   
     const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() || localStorage.getItem('current_telegram_id');
@@ -51,9 +48,9 @@ export const initSocket = async () => {
       throw new Error('Telegram user ID not found');
     }
 
-    socket = io(SOCKET_URL, {
+    const newSocket = io(SOCKET_URL, {
       autoConnect: false,
-      transports: ['websocket', 'polling'],
+      transports: ['websocket'],
       path: '/socket.io/',
       reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
       reconnectionDelay: RECONNECTION_DELAY,
@@ -67,74 +64,36 @@ export const initSocket = async () => {
       }
     });
 
-    // Ждем подключения сокета
-    await new Promise((resolve, reject) => {
+    if (!newSocket || typeof newSocket.on !== 'function') {
+      throw new Error('Invalid socket instance');
+    }
+
+    socket = newSocket;
+
+    return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        if (socket) {
-          socket.off('connect', handleConnect);
-          socket.off('connect_error', handleError);
-        }
         reject(new Error('Socket connection timeout'));
-      }, CONNECTION_TIMEOUT);
+      }, 10000);
 
-      const handleConnect = () => {
+      socket.on('connect', () => {
         clearTimeout(timeout);
-        if (socket) {
-          socket.off('connect', handleConnect);
-          socket.off('connect_error', handleError);
-        }
-        resolve();
-      };
+        console.log('✅ [Socket Service] Socket initialized and connected:', {
+          socketId: socket.id,
+          connected: socket.connected,
+          timestamp: new Date().toISOString()
+        });
+        resolve(socket);
+      });
 
-      const handleError = (error) => {
+      socket.on('connect_error', (error) => {
         clearTimeout(timeout);
-        if (socket) {
-          socket.off('connect', handleConnect);
-          socket.off('connect_error', handleError);
-        }
+        console.error('❌ [Socket Service] Connection error:', {
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
         reject(error);
-      };
-
-      if (socket) {
-        socket.on('connect', handleConnect);
-        socket.on('connect_error', handleError);
-        socket.connect();
-      } else {
-        clearTimeout(timeout);
-        reject(new Error('Failed to create socket instance'));
-      }
-    });
-
-    // Добавляем базовые обработчики событий
-    socket.on('connect', () => {
-      console.log('✅ [Socket Service] Connected:', {
-        socketId: socket.id,
-        timestamp: new Date().toISOString()
-      });
-      reconnectAttempts = 0;
-    });
-
-    socket.on('disconnect', (reason) => {
-      console.log('🔌 [Socket Service] Disconnected:', {
-        reason,
-        timestamp: new Date().toISOString()
       });
     });
-
-    socket.on('connect_error', (error) => {
-      console.error('❌ [Socket Service] Connection error:', {
-        error: error.message,
-        timestamp: new Date().toISOString()
-      });
-    });
-
-    console.log('✅ [Socket Service] Socket initialized and connected:', {
-      socketId: socket.id,
-      connected: socket.connected,
-      timestamp: new Date().toISOString()
-    });
-
-    return socket;
   } catch (error) {
     console.error('❌ [Socket Service] Failed to initialize socket:', {
       error: error.message,

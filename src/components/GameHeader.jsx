@@ -7,11 +7,14 @@ const GameHeader = ({
   currentPlayer, 
   moveTimer, 
   time, 
-  opponentInfo,
   playerTime1 = 0,
   playerTime2 = 0,
   isConnected = true,
-  isCreator = false
+  isCreator = false,
+  playerInfo = {
+    creator: { avatar: null, name: null },
+    opponent: { avatar: null, name: null }
+  }
 }) => {
   const [timerColor, setTimerColor] = useState("#6800D7");
   const [isGameStarted, setIsGameStarted] = useState(false);
@@ -59,10 +62,10 @@ const GameHeader = ({
   const currentUserName = tgUser?.first_name || "You";
 
   // Определяем, какой игрок где (создатель всегда слева)
-  const leftPlayerAvatar = isCreator ? currentUserAvatar : (opponentInfo?.avatar || "/media/JohnAva.png");
-  const leftPlayerName = isCreator ? currentUserName : (opponentInfo?.name || "Opponent");
-  const rightPlayerAvatar = isCreator ? (opponentInfo?.avatar || "/media/JohnAva.png") : currentUserAvatar;
-  const rightPlayerName = isCreator ? (opponentInfo?.name || "Opponent") : currentUserName;
+  const leftPlayerAvatar = isCreator ? currentUserAvatar : (playerInfo.opponent.avatar || "/media/JohnAva.png");
+  const leftPlayerName = isCreator ? currentUserName : (playerInfo.opponent.name || "Opponent");
+  const rightPlayerAvatar = isCreator ? (playerInfo.opponent.avatar || "/media/JohnAva.png") : currentUserAvatar;
+  const rightPlayerName = isCreator ? (playerInfo.opponent.name || "Opponent") : currentUserName;
 
   return (
     <>

@@ -12,7 +12,8 @@ import {
   updatePlayerTime, 
   updateViewport,
   subscribeToGameEvents,
-  checkAndRestoreGameState
+  checkAndRestoreGameState,
+  sendPlayerInfo
 } from "./services/socket";
 
 const BOARD_SIZE = 100;
@@ -181,6 +182,16 @@ const Game = () => {
   const socketRef = useRef(null);
   const boardRef = useRef(null);
   const [boardDimensions, setBoardDimensions] = useState({ width: 0, height: 0 });
+  const [playerInfo, setPlayerInfo] = useState({
+    creator: {
+      avatar: null,
+      name: null
+    },
+    opponent: {
+      avatar: null,
+      name: null
+    }
+  });
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const CELL_SIZE = isMobile ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP;
@@ -326,6 +337,25 @@ const Game = () => {
             hasAvatar: !!data.avatar
           });
           setOpponentInfo(data);
+        });
+
+        socket.on('playerInfo', (data) => {
+          console.log('👤 [Game] Received player info:', {
+            gameId: data.gameId,
+            playerInfo: data.playerInfo,
+            timestamp: new Date().toISOString()
+          });
+
+          setPlayerInfo(prevInfo => {
+            const isCreator = gameSession?.creatorId === data.playerInfo.id;
+            return {
+              ...prevInfo,
+              [isCreator ? 'creator' : 'opponent']: {
+                avatar: data.playerInfo.avatar,
+                name: data.playerInfo.name
+              }
+            };
+          });
         });
 
         // Подписываемся на игровые события
@@ -520,6 +550,18 @@ const Game = () => {
     };
   }, []);
 
+  // Отправляем информацию о текущем игроке при инициализации игры
+  useEffect(() => {
+    if (gameSession?.id && window.Telegram?.WebApp?.initDataUnsafe?.user) {
+      const user = window.Telegram.WebApp.initDataUnsafe.user;
+      sendPlayerInfo(gameSession.id, {
+        id: user.id.toString(),
+        name: user.first_name,
+        avatar: user.photo_url
+      });
+    }
+  }, [gameSession?.id]);
+
   const handleTouchStart = (e) => {
     console.log('👆 Touch start event', {
       isOurTurn,
@@ -694,6 +736,7 @@ const Game = () => {
         opponentInfo={opponentInfo}
         isConnected={isConnected}
         isCreator={gameSession?.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id}
+        playerInfo={playerInfo}
       />
 
       <div

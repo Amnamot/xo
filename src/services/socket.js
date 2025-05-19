@@ -435,4 +435,16 @@ export const checkAndRestoreGameState = async (telegramId) => {
     });
     throw error;
   }
+};
+
+export const sendPlayerInfo = (gameId, playerInfo) => {
+  const currentSocket = initSocket();
+  if (currentSocket.connected) {
+    console.log('👤 [Socket Service] Sending player info:', {
+      gameId,
+      playerInfo,
+      timestamp: new Date().toISOString()
+    });
+    currentSocket.emit('playerInfo', { gameId, playerInfo });
+  }
 }; 

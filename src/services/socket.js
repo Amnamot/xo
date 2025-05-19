@@ -64,16 +64,13 @@ export const initSocket = async () => {
       }
     });
 
-    if (!newSocket || typeof newSocket.on !== 'function') {
-      throw new Error('Invalid socket instance');
-    }
-
     socket = newSocket;
 
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
+        socket.disconnect();
         reject(new Error('Socket connection timeout'));
-      }, 10000);
+      }, CONNECTION_TIMEOUT);
 
       socket.on('connect', () => {
         clearTimeout(timeout);
@@ -87,12 +84,15 @@ export const initSocket = async () => {
 
       socket.on('connect_error', (error) => {
         clearTimeout(timeout);
+        socket.disconnect();
         console.error('❌ [Socket Service] Connection error:', {
           error: error.message,
           timestamp: new Date().toISOString()
         });
         reject(error);
       });
+
+      socket.connect();
     });
   } catch (error) {
     console.error('❌ [Socket Service] Failed to initialize socket:', {

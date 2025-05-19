@@ -27,18 +27,8 @@ const GameHeader = ({
   useEffect(() => {
     if (currentPlayer === "X") {
       setTimerColor("#6800D7");
-      console.log('🎨 [GameHeader] Timer color changed to creator color', {
-        color: "#6800D7",
-        currentPlayer,
-        timestamp: new Date().toISOString()
-      });
     } else if (currentPlayer === "O") {
       setTimerColor("#E10303");
-      console.log('🎨 [GameHeader] Timer color changed to opponent color', {
-        color: "#E10303",
-        currentPlayer,
-        timestamp: new Date().toISOString()
-      });
     }
   }, [currentPlayer]);
 
@@ -46,40 +36,17 @@ const GameHeader = ({
     if (moveTimer <= 700 && moveTimer > 300) {
       setShouldBlink(true);
       setBlinkSpeed('slow');
-      console.log('⚡ [GameHeader] Timer started slow blinking', {
-        moveTimer,
-        blinkSpeed: 'slow',
-        timestamp: new Date().toISOString()
-      });
     } else if (moveTimer <= 300) {
       setShouldBlink(true);
       setBlinkSpeed('fast');
-      console.log('⚡ [GameHeader] Timer started fast blinking', {
-        moveTimer,
-        blinkSpeed: 'fast',
-        timestamp: new Date().toISOString()
-      });
     } else {
       setShouldBlink(false);
       setBlinkSpeed('normal');
-      console.log('⚡ [GameHeader] Timer blinking stopped', {
-        moveTimer,
-        blinkSpeed: 'normal',
-        timestamp: new Date().toISOString()
-      });
     }
   }, [moveTimer]);
 
   useEffect(() => {
     if (currentPlayer && moveTimer > 0 && !isGameStarted) {
-      console.log('🎮 [GameHeader] Game started, initializing timers', {
-        currentPlayer,
-        moveTimer,
-        time,
-        playerTime1,
-        playerTime2,
-        timestamp: new Date().toISOString()
-      });
       setIsGameStarted(true);
     }
   }, [currentPlayer, moveTimer, time, playerTime1, playerTime2]);
@@ -96,13 +63,6 @@ const GameHeader = ({
         fontSize--;
         element.style.fontSize = `${fontSize}px`;
       }
-
-      console.log('📏 [GameHeader] Font size adjusted', {
-        element: element.className,
-        finalSize: fontSize,
-        parentWidth,
-        timestamp: new Date().toISOString()
-      });
     };
 
     if (nameRef1.current) adjustFontSize(nameRef1.current);
@@ -111,17 +71,23 @@ const GameHeader = ({
 
   useEffect(() => {
     if (!isConnected) {
-      console.log('🔌 [GameHeader] Connection lost', {
-        isCreator,
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      console.log('🔌 [GameHeader] Connection restored', {
-        isCreator,
-        timestamp: new Date().toISOString()
-      });
+      // Проверяем состояние подключения через сокет
+      const socket = window.socket;
+      if (socket) {
+        socket.emit('checkConnection', {
+          telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
+          gameId: window.location.pathname.split('/').pop()
+        });
+
+        socket.once('connectionState', (data) => {
+          if (data.isConnected) {
+            // Если соединение активно, не показываем статус переподключения
+            return;
+          }
+        });
+      }
     }
-  }, [isConnected, isCreator]);
+  }, [isConnected]);
 
   const formatTimer = (time) => {
     if (!isGameStarted || time === undefined || time === null) return "0:00";
@@ -154,19 +120,6 @@ const GameHeader = ({
   const leftPlayerName = isCreator ? currentUserName : (playerInfo.opponent.name || "Opponent");
   const rightPlayerAvatar = isCreator ? (playerInfo.opponent.avatar || "/media/JohnAva.png") : currentUserAvatar;
   const rightPlayerName = isCreator ? (playerInfo.opponent.name || "Opponent") : currentUserName;
-
-  console.log('👥 [GameHeader] Player info updated', {
-    isCreator,
-    leftPlayer: {
-      name: leftPlayerName,
-      avatar: leftPlayerAvatar
-    },
-    rightPlayer: {
-      name: rightPlayerName,
-      avatar: rightPlayerAvatar
-    },
-    timestamp: new Date().toISOString()
-  });
 
   return (
     <>

@@ -59,13 +59,8 @@ const StartScreen = () => {
         });
 
         // Получаем существующее или создаем новое подключение
-        const socket = initSocket();
+        const socket = await initSocket();
         socketRef.current = socket;
-
-        // Подключаемся только если сокет не подключен
-        if (!socket.connected) {
-          await connectSocket();
-        }
 
         console.log('🔍 [StartScreen] Socket state after connection:', {
           socketId: socket.id,
@@ -77,7 +72,7 @@ const StartScreen = () => {
 
         // Регистрируем обработчик gameStart до всех остальных операций
         console.log('🎮 [StartScreen] Registering gameStart handler');
-        socket.on('gameStart', (data) => {
+        socket.off('gameStart').on('gameStart', (data) => {
           console.log('🎮 [StartScreen] Received gameStart event:', {
             session: data?.session,
             telegramId,

@@ -70,29 +70,62 @@ export const initSocket = async () => {
     // Ждем подключения сокета
     await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        cleanup();
+        if (socket) {
+          socket.off('connect', handleConnect);
+          socket.off('connect_error', handleError);
+        }
         reject(new Error('Socket connection timeout'));
       }, CONNECTION_TIMEOUT);
 
       const handleConnect = () => {
-        cleanup();
+        clearTimeout(timeout);
+        if (socket) {
+          socket.off('connect', handleConnect);
+          socket.off('connect_error', handleError);
+        }
         resolve();
       };
 
       const handleError = (error) => {
-        cleanup();
+        clearTimeout(timeout);
+        if (socket) {
+          socket.off('connect', handleConnect);
+          socket.off('connect_error', handleError);
+        }
         reject(error);
       };
 
-      const cleanup = () => {
+      if (socket) {
+        socket.on('connect', handleConnect);
+        socket.on('connect_error', handleError);
+        socket.connect();
+      } else {
         clearTimeout(timeout);
-        socket.off('connect', handleConnect);
-        socket.off('connect_error', handleError);
-      };
+        reject(new Error('Failed to create socket instance'));
+      }
+    });
 
-      socket.once('connect', handleConnect);
-      socket.once('connect_error', handleError);
-      socket.connect();
+    // Добавляем базовые обработчики событий
+    socket.on('connect', () => {
+      console.log('✅ [Socket Service] Connected:', {
+        socketId: socket.id,
+        timestamp: new Date().toISOString()
+      });
+      reconnectAttempts = 0;
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('🔌 [Socket Service] Disconnected:', {
+        reason,
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('❌ [Socket Service] Connection error:', {
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
     });
 
     console.log('✅ [Socket Service] Socket initialized and connected:', {

@@ -201,284 +201,41 @@ const Game = () => {
       return;
     }
 
-    const initializeSocket = async () => {
-      try {
-        console.log('🔌 [Game] Initializing socket connection:', {
-          lobbyId,
-          telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString(),
-          timestamp: new Date().toISOString()
-        });
+    const socket = window.socket;
+    if (!socket) {
+      console.error('❌ [Game] No socket instance found');
+      navigate('/loss', { 
+        state: { 
+          type: 'losst2',
+          message: 'Connection lost. Please try again.',
+          redirectTo: '/start'
+        } 
+      });
+      return;
+    }
 
-        const socket = initSocket();
-        socketRef.current = socket;
-
-        socket.on('connect', () => {
-          console.log('🔌 [Game] Socket connected:', {
-            socketId: socket.id,
-            timestamp: new Date().toISOString()
-          });
-          setIsConnected(true);
-          setReconnectAttempts(0);
-        });
-
-        socket.on('disconnect', () => {
-          console.log('🔌 [Game] Socket disconnected:', {
-            socketId: socket.id,
-            timestamp: new Date().toISOString()
-          });
-          setIsConnected(false);
-          handleReconnect();
-        });
-
-        socket.on('gameStart', (data) => {
-          console.log('🎮 [Game] Game started:', {
-            startTime: data.startTime,
-            gameId: data.gameId,
-            timestamp: new Date().toISOString()
-          });
-          
-          setGameStartTime(data.startTime);
-          setMoveStartTime(data.startTime);
-        });
-
-        socket.on('gameState', (gameState) => {
-          console.log('🎮 [Game] Received game state:', {
-            currentPlayer: gameState.currentPlayer,
-            hasBoard: !!gameState.board,
-            timestamp: new Date().toISOString()
-          });
-
-          if (!isValidGameState(gameState)) {
-            console.error('❌ [Game] Invalid game state received:', gameState);
-            return;
-          }
-
-          setBoard(gameState.board);
-          setCurrentPlayer(gameState.currentPlayer);
-          setScale(gameState.scale);
-          setPosition(gameState.position);
-          setTime(gameState.time || 0);
-          setPlayerTime1(gameState.playerTime1 || 0);
-          setPlayerTime2(gameState.playerTime2 || 0);
-          setGameSession(gameState.gameSession);
-          setOpponentInfo(gameState.opponentInfo);
-          setMoveTimer(gameState.maxMoveTime || 30000);
-          
-          if (gameState.startTime) {
-            setGameStartTime(gameState.startTime);
-            setMoveStartTime(gameState.startTime);
-          }
-        });
-
-        socket.on('moveMade', (data) => {
-          console.log('🎲 [Game] Move made:', {
-            moveId: data.moveId,
-            position: data.position,
-            player: data.player,
-            gameState: {
-              board: data.gameState.board,
-              currentTurn: data.gameState.currentTurn,
-              timeLeft: data.gameState.timeLeft
-            },
-            timestamp: new Date().toISOString()
-          });
-
-          setBoard(data.gameState.board);
-          setCurrentPlayer(data.gameState.currentTurn);
-          setMoveStartTime(data.gameState.moveStartTime);
-          setMoveTimer(30000);
-
-          const winner = checkWinner(
-            data.gameState.board,
-            Number(data.position),
-            data.player
-          );
-
-          if (winner) {
-            console.log('🏆 [Game] Winner found:', {
-              winner,
-              lastMove: {
-                position: data.position,
-                player: data.player
-              },
-              timestamp: new Date().toISOString()
-            });
-            setWinLine(winner);
-          }
-        });
-
-        socket.on('playerDisconnected', (data) => {
-          console.log('👋 [Game] Player disconnected:', {
-            telegramId: data.telegramId,
-            timestamp: new Date().toISOString()
-          });
-        });
-
-        socket.on('gameEnded', (data) => {
-          console.log('🏁 [Game] Game ended:', {
-            winner: data.winner,
-            reason: data.reason,
-            statistics: data.statistics,
-            timestamp: new Date().toISOString()
-          });
-
-          const currentTelegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
-          if (data.winner === currentTelegramId) {
-            navigate('/end');
-          } else {
-            navigate('/lost');
-          }
-        });
-
-        socket.on('opponentInfo', (data) => {
-          console.log('Received opponent info:', {
-            id: data.id,
-            hasName: !!data.name,
-            hasAvatar: !!data.avatar
-          });
-          setOpponentInfo(data);
-        });
-
-        socket.on('playerInfo', (data) => {
-          console.log('👤 [Game] Received player info:', {
-            gameId: data.gameId,
-            playerInfo: data.playerInfo,
-            timestamp: new Date().toISOString()
-          });
-
-          setPlayerInfo(prevInfo => {
-            const isCreator = gameSession?.creatorId === data.playerInfo.id;
-            return {
-              ...prevInfo,
-              [isCreator ? 'creator' : 'opponent']: {
-                avatar: data.playerInfo.avatar,
-                name: data.playerInfo.name
-              }
-            };
-          });
-        });
-
-        // Подписываемся на игровые события
-        subscribeToGameEvents(socket, {
-          onGameState: (gameState) => {
-            if (!isValidGameState(gameState)) {
-              console.error('❌ [Game] Invalid game state received:', {
-                gameState,
-                timestamp: new Date().toISOString()
-              });
-              return;
-            }
-
-            console.log('🎮 [Game] Received game state:', {
-              currentPlayer: gameState.currentPlayer,
-              scale: gameState.scale,
-              position: gameState.position,
-              timestamp: new Date().toISOString()
-            });
-
-            setBoard(gameState.board);
-            setCurrentPlayer(gameState.currentPlayer);
-            setScale(gameState.scale);
-            setPosition(gameState.position);
-            setTime(gameState.time);
-            setPlayerTime1(gameState.playerTime1);
-            setPlayerTime2(gameState.playerTime2);
-            
-            if (gameState.gameSession) {
-              setGameSession(gameState.gameSession);
-              if (gameState.gameSession.creatorId !== window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
-                setOpponentInfo({
-                  id: gameState.gameSession.creatorId,
-                  name: gameState.gameSession.creatorName,
-                  avatar: gameState.gameSession.creatorAvatar
-                });
-              }
-            }
-
-            if (gameStartTime === null) {
-              setGameStartTime(Date.now() - (gameState.time * 1000));
-              setMoveStartTime(Date.now());
-            }
-          },
-          onOpponentJoined: (opponent) => {
-            setOpponentInfo(opponent);
-          },
-          onOpponentLeft: () => {
-            setOpponentInfo(null);
-          },
-          onError: (error) => {
-            console.error('Game error:', error);
-          }
-        });
-
-        // Проверяем сохраненное состояние после подключения
-        try {
-          const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() || 
-                            localStorage.getItem('current_telegram_id');
-          if (telegramId) {
-            const gameState = await checkAndRestoreGameState(telegramId);
-            if (gameState?.gameId && gameState.gameId !== lobbyId) {
-              console.log('🔄 [Game] Found different active game:', {
-                currentLobby: lobbyId,
-                savedGame: gameState.gameId,
-                timestamp: new Date().toISOString()
-              });
-              navigate(`/game/${gameState.gameId}`);
-            }
-          }
-        } catch (error) {
-          console.warn('⚠️ [Game] Failed to check game state:', {
-            error: error.message,
-            timestamp: new Date().toISOString()
-          });
-        }
-
-        if (socket && lobbyId) {
-          const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-          if (tgUser) {
-            socket.emit('playerInfo', {
-              gameId: lobbyId,
-              playerInfo: {
-                id: tgUser.id.toString(),
-                name: tgUser.first_name,
-                avatar: tgUser.photo_url
-              }
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error during socket initialization:', error);
-        handleReconnect();
-      }
+    const handleConnect = () => {
+      console.log('✅ [Game] Socket connected');
+      setIsConnected(true);
+      setReconnectAttempts(0);
     };
 
-    const handleReconnect = () => {
-      if (reconnectAttempts >= maxReconnectAttempts) {
-        navigate('/');
-        return;
-      }
-
-      setTimeout(() => {
-        setReconnectAttempts(prev => prev + 1);
-        initializeSocket();
-      }, reconnectDelay);
+    const handleDisconnect = () => {
+      console.log('❌ [Game] Socket disconnected');
+      setIsConnected(false);
+      handleReconnect();
     };
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
 
     initializeSocket();
 
     return () => {
-      // Не отключаем сокет при размонтировании компонента
-      // Только очищаем обработчики событий
-      if (socketRef.current) {
-        socketRef.current.off('connect');
-        socketRef.current.off('disconnect');
-        socketRef.current.off('moveMade');
-        socketRef.current.off('playerDisconnected');
-        socketRef.current.off('gameEnded');
-        socketRef.current.off('gameState');
-      }
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
     };
-  }, [lobbyId, navigate, reconnectAttempts]);
+  }, [lobbyId, navigate]);
 
   // Обновляем viewport при изменении масштаба или позиции
   useEffect(() => {
@@ -714,6 +471,126 @@ const Game = () => {
       width: `${length}px`,
       transform: `translateY(-50%) rotate(${angle}deg)`
     };
+  };
+
+  const handleReconnect = () => {
+    if (reconnectAttempts >= maxReconnectAttempts) {
+      console.error('❌ [Game] Max reconnection attempts reached');
+      navigate('/loss', { 
+        state: { 
+          type: 'losst2',
+          message: 'Connection lost. Please try again.',
+          redirectTo: '/start'
+        } 
+      });
+      return;
+    }
+
+    const socket = window.socket;
+    if (!socket) {
+      console.error('❌ [Game] No socket instance found');
+      navigate('/loss', { 
+        state: { 
+          type: 'losst2',
+          message: 'Connection lost. Please try again.',
+          redirectTo: '/start'
+        } 
+      });
+      return;
+    }
+
+    if (socket.connected) {
+      console.log('✅ [Game] Socket already connected');
+      setIsConnected(true);
+      setReconnectAttempts(0);
+      return;
+    }
+
+    console.log('🔄 [Game] Attempting to reconnect:', {
+      attempt: reconnectAttempts + 1,
+      maxAttempts: maxReconnectAttempts,
+      timestamp: new Date().toISOString()
+    });
+
+    setReconnectAttempts(prev => prev + 1);
+    socket.connect();
+  };
+
+  const initializeSocket = async () => {
+    try {
+      const socket = window.socket;
+      if (!socket) {
+        console.error('❌ [Game] No socket instance found');
+        navigate('/loss', { 
+          state: { 
+            type: 'losst2',
+            message: 'Connection lost. Please try again.',
+            redirectTo: '/start'
+          } 
+        });
+        return;
+      }
+
+      if (!socket.connected) {
+        console.error('❌ [Game] Socket not connected');
+        navigate('/loss', { 
+          state: { 
+            type: 'losst2',
+            message: 'Connection lost. Please try again.',
+            redirectTo: '/start'
+          } 
+        });
+        return;
+      }
+
+      socketRef.current = socket;
+
+      socket.on('gameState', (state) => {
+        if (!mountedRef.current) return;
+        if (!isValidGameState(state)) {
+          console.error('❌ [Game] Invalid game state received:', state);
+          return;
+        }
+        setBoard(state.board);
+        setCurrentPlayer(state.currentPlayer);
+        setScale(state.scale);
+        setPosition(state.position);
+        if (state.time) setTime(state.time);
+        if (state.playerTime1) setPlayerTime1(state.playerTime1);
+        if (state.playerTime2) setPlayerTime2(state.playerTime2);
+        if (state.gameSession) setGameSession(state.gameSession);
+      });
+
+      socket.on('playerInfo', (info) => {
+        if (!mountedRef.current) return;
+        setPlayerInfo(info);
+      });
+
+      socket.on('opponentInfo', (info) => {
+        if (!mountedRef.current) return;
+        setOpponentInfo(info);
+      });
+
+      socket.on('gameOver', (result) => {
+        if (!mountedRef.current) return;
+        if (result.winner) {
+          setWinLine(result.winLine);
+        }
+        navigate('/result', { state: result });
+      });
+
+      socket.emit('joinGame', { lobbyId });
+
+    } catch (error) {
+      console.error('❌ [Game] Error initializing socket:', error);
+      navigate('/loss', { 
+        state: { 
+          type: 'losst2',
+          message: 'Connection lost. Please try again.',
+          redirectTo: '/start'
+        } 
+      });
+    }
   };
 
   return (

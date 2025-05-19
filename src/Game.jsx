@@ -174,7 +174,6 @@ const Game = () => {
   const [playerTime2, setPlayerTime2] = useState(0);
   const [gameSession, setGameSession] = useState(null);
   const [opponentInfo, setOpponentInfo] = useState(null);
-  const [creatorInfo, setCreatorInfo] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const maxReconnectAttempts = 5;
@@ -320,23 +319,6 @@ const Game = () => {
           }
         });
 
-        socket.on('lobbyCreated', (data) => {
-          console.log('🎮 [Game] Lobby created:', {
-            lobbyId: data.lobbyId,
-            creator: data.creator,
-            timestamp: new Date().toISOString()
-          });
-          setCreatorInfo(data.creator);
-        });
-
-        socket.on('playerJoined', (data) => {
-          console.log('🎮 [Game] Player joined:', {
-            opponent: data.opponent,
-            timestamp: new Date().toISOString()
-          });
-          setOpponentInfo(data.opponent);
-        });
-
         // Подписываемся на игровые события
         subscribeToGameEvents(socket, {
           onGameState: (gameState) => {
@@ -441,8 +423,6 @@ const Game = () => {
         socketRef.current.off('playerDisconnected');
         socketRef.current.off('gameEnded');
         socketRef.current.off('gameState');
-        socketRef.current.off('lobbyCreated');
-        socketRef.current.off('playerJoined');
       }
     };
   }, [lobbyId, navigate, reconnectAttempts]);
@@ -689,7 +669,6 @@ const Game = () => {
         playerTime1={playerTime1}
         playerTime2={playerTime2}
         opponentInfo={opponentInfo}
-        creatorInfo={creatorInfo}
         isConnected={isConnected}
         isCreator={gameSession?.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id}
       />

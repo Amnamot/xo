@@ -1,0 +1,103 @@
+/* src/components/TopUpModal.css version 1.0.0 */
+
+.topup-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  .topup-modal-container {
+    width: 80vw;
+    height: 50vh;
+    background-color: #282c34;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    position: relative;
+  }
+  
+  .topup-modal-star {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 16px;
+  }
+  
+  .topup-modal-transfer-text {
+    font-family: 'Inter', sans-serif;
+    font-size: 18px;
+    color: #CEDCFF;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  .topup-modal-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    width: 100%;
+    margin-bottom: 20px;
+  }
+  
+  .topup-modal-button {
+    font-family: 'Inter', sans-serif;
+    font-size: 20px;
+    font-weight: bold;
+    color: #CEDCFF;
+    background-color: #5f687a;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 0;
+    text-align: center;
+  }
+  
+  .topup-modal-button.active {
+    background-color: #CEDCFF;
+    color: #282c34;
+  }
+  
+  .topup-modal-transfer-button {
+    font-family: 'Inter', sans-serif;
+    font-size: 20px;
+    font-weight: bold;
+    color: #282c34;
+    background-color: #5f687a;
+    border: none;
+    border-radius: 8px;
+    width: 100%;
+    padding: 12px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: auto;
+  }
+  
+  .topup-modal-transfer-button.active {
+    background-color: #CEDCFF;
+    color: #282c34;
+  }
+  
+  .topup-modal-star-icon {
+    width: 24px;
+    height: 24px;
+  }
+  

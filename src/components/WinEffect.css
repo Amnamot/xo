@@ -1,0 +1,37 @@
+.win-effect-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;           /* Растягиваем канвас на всю ширину экрана */
+    height: 100vh;          /* Растягиваем канвас на всю высоту экрана */
+    background: transparent; /* Прозрачный фон */
+    pointer-events: none;    /* Отключаем взаимодействие с канвасом */
+    z-index: 10;             /* Поставим канвас поверх остальных элементов */
+  }
+  
+  /* Стили для эффектов победы */
+  .effect {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    background-color: #00A811; /* Цвет эффекта */
+    border-radius: 50%;
+    opacity: 0;
+    animation: flash 2s ease-in-out infinite;
+  }
+  
+  @keyframes flash {
+    0% {
+      opacity: 0;
+      transform: scale(0);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(0);
+    }
+  }
+  

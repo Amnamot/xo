@@ -1,0 +1,38 @@
+/* Game.css */
+
+.game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    position: relative;
+    touch-action: none;
+    background-color: lightblue;  /* Для визуализации */
+  }
+  
+  .board-grid {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: grid;
+    transform: translate(-50%, -50%);
+  }
+  
+  .cell {
+    border: 1px solid #555;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .cell-available {
+    background-color: #d1d5db;
+  }
+  
+  .cell-blocked {
+    background-color: #6b7280;
+  }
+  

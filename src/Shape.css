@@ -1,0 +1,86 @@
+/* Shape.css */
+
+/* Крестик через SVG */
+.cross {
+    width: calc(100% + 4px);
+    height: calc(100% + 4px);
+  }
+  
+  .cross-line-1,
+  .cross-line-2 {
+    stroke: #6800D7;
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 113;
+    stroke-dashoffset: 113;
+    animation: drawLine 0.3s forwards;
+    opacity: 0;
+  }
+  
+  .cross-line-1 {
+    animation-delay: 0s;
+  }
+  
+  .cross-line-2 {
+    animation-delay: 0.3s;
+  }
+  
+  @keyframes drawLine {
+    0% {
+      stroke-dashoffset: 113;
+      opacity: 0;
+    }
+    10% {
+      opacity: 1;
+    }
+    100% {
+      stroke-dashoffset: 0;
+      opacity: 1;
+    }
+  }
+  
+  /* Нолик через SVG */
+  .circle {
+    width: calc(100% + 4px);
+    height: calc(100% + 4px);
+  }
+  
+  .circle-shape {
+    fill: none;
+    stroke: #E10303;
+    stroke-width: 8;
+    stroke-dasharray: 251.2;
+    stroke-dashoffset: 251.2;
+    transform: rotate(0deg);
+    transform-origin: center;
+    animation: drawCircle 0.6s linear forwards;
+  }
+  
+  @keyframes drawCircle {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  
+  /* Линия выигрыша */
+  .win-line {
+    position: absolute;
+    height: 4px;
+    background-color: #00A811;
+    border-radius: 4px;
+    transform-origin: 0 50%;
+    transform: translateY(-50%);
+    animation: growLine 0.4s ease-out forwards;
+    opacity: 0;
+  }
+  
+  @keyframes growLine {
+    0% {
+      width: 0;
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  

@@ -1,0 +1,158 @@
+.start-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+  background-color: #282c34;
+}
+
+.top-logo {
+  margin-top: 42px;
+  display: flex;
+  justify-content: center;
+}
+
+/* UserInfo_v2 */
+.user-info {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-top: 64px;
+  height: 120px;
+}
+
+.ava1 {
+  height: 100%;
+  border-radius: 5px;
+}
+
+.user-data {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-left: 6px;
+  height: 100%;
+}
+
+.name1 {
+  font-size: 22px;
+  color: #CEDCFF;
+  font-weight: 400;
+}
+
+.stata1 {
+  font-size: 16px;
+  color: #CEDCFF;
+  font-weight: 400;
+}
+
+.stata2 {
+  font-weight: bold;
+}
+
+/* Нижняя часть */
+.bottom-block {
+  margin-top: auto;
+  margin-bottom: 36px;
+  text-align: center;
+}
+
+.call1 {
+  font-size: 16px;
+  color: #CEDCFF;
+  font-weight: 300;
+  margin-bottom: 12px;
+}
+
+.button1 {
+  font-size: 24px;
+  font-weight: bold;
+  color: #CEDCFF;
+  border: 2px solid #CEDCFF;
+  background-color: rgba(206, 220, 255, 0.7);
+  border-radius: 8px;
+  width: 100%;
+  height: 46px;
+}
+
+.button2 {
+  font-size: 24px;
+  font-weight: bold;
+  color: #FFB323;
+  border: 2px solid #FFB323;
+  background-color: rgba(255, 179, 35, 0.3);
+  border-radius: 8px;
+  width: 100%;
+  height: 46px;
+}
+
+/* 9games block */
+.ninegames {
+  margin-top: 32px;
+  text-align: center;
+}
+
+.endinggames {
+  font-size: 14px;
+  color: #FFB323;
+  font-weight: 300;
+  white-space: pre-line;
+}
+
+.starinfo {
+  margin-top: 16px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.balance {
+  font-size: 24px;
+  font-weight: bold;
+  color: #FFB323;
+  text-align: right;
+  flex: 1;
+}
+
+.star {
+  flex: 0 0 64px;
+  display: flex;
+  justify-content: center;
+}
+
+.star img {
+  height: 64px;
+  width: auto;
+}
+
+.starsvalue {
+  font-size: 24px;
+  font-weight: bold;
+  color: #FFB323;
+  text-align: left;
+  flex: 1;
+}
+
+.topup {
+  margin-top: 32px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #FFB323;
+  border: 2px solid #FFB323;
+  background-color: rgba(255, 179, 35, 0.3);
+  border-radius: 8px;
+  width: 100%;
+  height: 46px;
+  line-height: 46px; /* Выравнивание текста по центру */
+  text-align: center;
+  padding: 0; /* Убираем лишние отступы */
+}
+
+/* Мобильный ховер — деликатный */
+.topup:active {
+  background-color: rgba(255, 179, 35, 0.5);
+}
+

@@ -401,16 +401,49 @@ const Game = () => {
       }
     };
 
-    const handleReconnect = () => {
+    const handleReconnect = async () => {
       if (reconnectAttempts >= maxReconnectAttempts) {
+        console.error('❌ [Game] Max reconnection attempts reached:', {
+          attempts: reconnectAttempts,
+          maxAttempts: maxReconnectAttempts,
+          timestamp: new Date().toISOString()
+        });
         navigate('/');
         return;
       }
 
-      setTimeout(() => {
+      try {
+        console.log('🔄 [Game] Attempting to reconnect:', {
+          attempt: reconnectAttempts + 1,
+          maxAttempts: maxReconnectAttempts,
+          timestamp: new Date().toISOString()
+        });
+
+        // Увеличиваем счетчик попыток
         setReconnectAttempts(prev => prev + 1);
-        initializeSocket();
-      }, reconnectDelay);
+        
+        // Ждем задержку
+        await new Promise(resolve => setTimeout(resolve, reconnectDelay));
+        
+        // Инициализируем сокет и ждем завершения
+        const socket = await initializeSocket();
+        socketRef.current = socket;
+        
+        console.log('✅ [Game] Reconnection successful:', {
+          attempt: reconnectAttempts,
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
+      } catch (error) {
+        console.error('❌ [Game] Reconnection failed:', {
+          error: error.message,
+          attempt: reconnectAttempts,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Если произошла ошибка, пробуем еще раз
+        setTimeout(() => handleReconnect(), reconnectDelay);
+      }
     };
 
     initializeSocket();

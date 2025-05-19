@@ -14,13 +14,12 @@ const checkNetworkConnection = () => {
   return navigator.onLine;
 };
 
-export const initSocket = () => {
+export const initSocket = async () => {
   try {
     console.log('🔍 [Socket Service] Initializing socket...', {
       existingSocket: socket ? 'exists' : 'null',
       existingSocketId: socket?.id,
       existingSocketConnected: socket?.connected,
-      existingRooms: socket ? Array.from(socket.rooms || []) : [],
       timestamp: new Date().toISOString()
     });
 
@@ -29,21 +28,19 @@ export const initSocket = () => {
       console.log('♻️ [Socket Service] Reusing existing socket:', {
         socketId: socket.id,
         connected: socket.connected,
-        readyState: socket.connected ? 'connected' : 'disconnected',
-        rooms: Array.from(socket.rooms || []),
         timestamp: new Date().toISOString()
       });
       return socket;
     }
 
-    // Если сокет существует, но отключен, пробуем переподключиться
+    // Если сокет существует, но отключен, отключаем его перед созданием нового
     if (socket && !socket.connected) {
-      console.log('🔄 [Socket Service] Reconnecting existing socket:', {
+      console.log('🔄 [Socket Service] Disconnecting existing socket before reconnecting:', {
         socketId: socket.id,
         timestamp: new Date().toISOString()
       });
-      socket.connect();
-      return socket;
+      socket.disconnect();
+      socket = null;
     }
   
     const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() || localStorage.getItem('current_telegram_id');
@@ -54,15 +51,6 @@ export const initSocket = () => {
       throw new Error('Telegram user ID not found');
     }
 
-    console.log('🔄 [Socket Service] Creating new socket...', {
-      telegramId,
-      startParam,
-      timestamp: new Date().toISOString()
-    });
-
-    // Проверяем URL
-    console.log('🌐 [Socket Service] Using URL:', SOCKET_URL);
-
     socket = io(SOCKET_URL, {
       autoConnect: false,
       transports: ['websocket', 'polling'],
@@ -71,7 +59,7 @@ export const initSocket = () => {
       reconnectionDelay: RECONNECTION_DELAY,
       reconnectionDelayMax: RECONNECTION_DELAY * 5,
       timeout: CONNECTION_TIMEOUT,
-      forceNew: false, // Изменено с true на false для переиспользования подключения
+      forceNew: true,
       withCredentials: true,
       query: { 
         telegramId,
@@ -79,88 +67,38 @@ export const initSocket = () => {
       }
     });
 
-    // Проверяем создание сокета
-    if (!socket) {
-      throw new Error('Failed to create socket instance');
-    }
+    // Ждем подключения сокета
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error('Socket connection timeout'));
+      }, CONNECTION_TIMEOUT);
 
-    console.log('✅ [Socket Service] Socket instance created:', {
+      const handleConnect = () => {
+        cleanup();
+        resolve();
+      };
+
+      const handleError = (error) => {
+        cleanup();
+        reject(error);
+      };
+
+      const cleanup = () => {
+        clearTimeout(timeout);
+        socket.off('connect', handleConnect);
+        socket.off('connect_error', handleError);
+      };
+
+      socket.once('connect', handleConnect);
+      socket.once('connect_error', handleError);
+      socket.connect();
+    });
+
+    console.log('✅ [Socket Service] Socket initialized and connected:', {
       socketId: socket.id,
       connected: socket.connected,
-      readyState: socket.connected ? 'connected' : 'disconnected',
       timestamp: new Date().toISOString()
-    });
-
-    // Обработка ошибок
-    socket.on('connect_error', (error) => {
-      console.error('❌ [Socket Service] Connection error:', {
-        error: error.message,
-        online: checkNetworkConnection(),
-        attempts: reconnectAttempts,
-        timestamp: new Date().toISOString()
-      });
-    });
-
-    socket.on('connect', () => {
-      console.log('🌟 [Socket Service] Connected:', {
-        socketId: socket.id,
-        rooms: Array.from(socket.rooms || []),
-        timestamp: new Date().toISOString()
-      });
-      reconnectAttempts = 0;
-      
-      // Проверяем комнаты после подключения
-      console.log('🔍 [Socket Service] Rooms after connect:', {
-        socketId: socket.id,
-        rooms: Array.from(socket.rooms || []),
-        timestamp: new Date().toISOString()
-      });
-
-      // Обновляем telegramId в localStorage при успешном подключении
-      if (telegramId) {
-        localStorage.setItem('current_telegram_id', telegramId);
-        console.log('💾 [Socket Service] Updated telegramId in localStorage:', telegramId);
-      }
-    });
-
-    socket.on('disconnect', (reason) => {
-      console.log('⚠️ [Socket Service] Disconnected:', {
-        reason,
-        online: checkNetworkConnection(),
-        timestamp: new Date().toISOString()
-      });
-      
-      if (reason === 'io server disconnect' || reason === 'io client disconnect') {
-        return;
-      }
-
-      if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS && checkNetworkConnection()) {
-        reconnectAttempts++;
-        setTimeout(() => {
-          console.log('🔄 [Socket Service] Reconnecting:', {
-            attempt: reconnectAttempts,
-            maxAttempts: MAX_RECONNECT_ATTEMPTS,
-            timestamp: new Date().toISOString()
-          });
-          socket.connect();
-        }, RECONNECTION_DELAY * reconnectAttempts);
-      } else {
-        console.error('❌ [Socket Service] Max reconnection attempts reached:', {
-          attempts: reconnectAttempts,
-          online: checkNetworkConnection(),
-          timestamp: new Date().toISOString()
-        });
-      }
-    });
-
-    // Добавляем слушатель для отслеживания изменений в комнатах
-    socket.on('room', (roomData) => {
-      console.log('🏠 [Socket Service] Room event:', {
-        socketId: socket.id,
-        roomData,
-        currentRooms: Array.from(socket.rooms || []),
-        timestamp: new Date().toISOString()
-      });
     });
 
     return socket;
@@ -182,7 +120,7 @@ export const createLobby = async (telegramId) => {
       timestamp: new Date().toISOString()
     });
 
-    const socket = initSocket();
+    const socket = await initSocket();
     
     console.log('🔍 [Socket Service] Socket state before lobby creation:', {
       socketId: socket.id,
@@ -216,8 +154,8 @@ export const createLobby = async (telegramId) => {
   }
 };
 
-export const joinLobby = (lobbyId, telegramId) => {
-  const currentSocket = initSocket();
+export const joinLobby = async (lobbyId, telegramId) => {
+  const currentSocket = await initSocket();
   return new Promise((resolve, reject) => {
     if (!currentSocket.connected) {
       reject(new Error('WebSocket is not connected'));
@@ -234,27 +172,27 @@ export const joinLobby = (lobbyId, telegramId) => {
   });
 };
 
-export const updatePlayerTime = (gameId, playerTimes) => {
-  const currentSocket = initSocket();
+export const updatePlayerTime = async (gameId, playerTimes) => {
+  const currentSocket = await initSocket();
   if (currentSocket.connected) {
     currentSocket.emit('updatePlayerTime', { gameId, playerTimes });
   }
 };
 
-export const makeMove = (gameId, position, player, moveTime) => {
-  const currentSocket = initSocket();
+export const makeMove = async (gameId, position, player, moveTime) => {
+  const currentSocket = await initSocket();
   return new Promise((resolve) => {
     currentSocket.emit('makeMove', { gameId, position, player, moveTime }, resolve);
   });
 };
 
-export const updateViewport = (gameId, viewport) => {
-  const currentSocket = initSocket();
+export const updateViewport = async (gameId, viewport) => {
+  const currentSocket = await initSocket();
   currentSocket.emit('updateViewport', { gameId, viewport });
 };
 
-export const confirmMoveReceived = (gameId, moveId) => {
-  const currentSocket = initSocket();
+export const confirmMoveReceived = async (gameId, moveId) => {
+  const currentSocket = await initSocket();
   currentSocket.emit('moveReceived', { gameId, moveId });
 };
 
@@ -265,7 +203,7 @@ export const createInviteWS = async (telegramId) => {
       timestamp: new Date().toISOString()
     });
 
-    const socket = initSocket();
+    const socket = await initSocket();
     const response = await new Promise((resolve) => {
       socket.emit('createInvite', { telegramId }, (response) => {
         console.log('✅ [Socket Service] Invite creation result:', {
@@ -289,8 +227,8 @@ export const createInviteWS = async (telegramId) => {
 };
 
 // Функция для подписки на события игры
-export const subscribeToGameEvents = (handlers) => {
-  const currentSocket = initSocket();
+export const subscribeToGameEvents = async (handlers) => {
+  const currentSocket = await initSocket();
   const {
     onGameStart,
     onOpponentJoined,
@@ -328,10 +266,10 @@ export const subscribeToGameEvents = (handlers) => {
 };
 
 // Функции-хелперы для работы с сокетами
-export const connectSocket = () => {
+export const connectSocket = async () => {
   console.log('🔄 [Socket Connect] Starting connection process...');
   
-  const currentSocket = initSocket();
+  const currentSocket = await initSocket();
   console.log('📡 [Socket Connect] Got socket instance:', {
     socketId: currentSocket.id,
     connected: currentSocket.connected,
@@ -414,7 +352,7 @@ export const checkAndRestoreGameState = async (telegramId) => {
       timestamp: new Date().toISOString()
     });
 
-    const socket = initSocket();
+    const socket = await initSocket();
     const response = await new Promise((resolve) => {
       socket.emit('checkActiveLobby', { telegramId }, (response) => {
         console.log('📊 [Socket Service] Game state check result:', {
@@ -437,8 +375,8 @@ export const checkAndRestoreGameState = async (telegramId) => {
   }
 };
 
-export const sendPlayerInfo = (gameId, playerInfo) => {
-  const currentSocket = initSocket();
+export const sendPlayerInfo = async (gameId, playerInfo) => {
+  const currentSocket = await initSocket();
   if (currentSocket.connected) {
     console.log('👤 [Socket Service] Sending player info:', {
       gameId,

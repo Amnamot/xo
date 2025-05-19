@@ -4,22 +4,42 @@
     justify-content: center;
     position: relative;
     z-index: 3;
+    user-select: none;
   }
   
   .gameplayers {
     margin-top: 36px;
-    width: 80%;
+    width: calc(100% - 96px); /* 48px отступ с каждой стороны */
+    margin-left: 48px;
+    margin-right: 48px;
     display: flex;
     justify-content: space-between;
     position: relative;
     z-index: 3;
+    user-select: none;
   }
   
   .gamer1,
-  .gamer2 {
+  .gamer2,
+  .times {
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
+    user-select: none;
+  }
+  
+  .gamer1 {
+    margin-right: 16px;
+  }
+  
+  .gamer2 {
+    margin-left: 16px;
+  }
+  
+  .times {
+    flex: 0 0 auto;
+    min-width: 120px;
   }
   
   .avagamer1,
@@ -27,6 +47,8 @@
     width: 12vw;
     max-width: 128px;
     border-radius: 5px;
+    user-select: none;
+    -webkit-user-drag: none;
   }
   
   .namegamer1 {
@@ -37,6 +59,11 @@
     text-align: center;
     padding: 4px 8px;
     text-shadow: 0 0 8px rgb(255, 255, 255);
+    user-select: none;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .namegamer2 {
@@ -47,12 +74,11 @@
     text-align: center;
     padding: 4px 8px;
     text-shadow: 0 0 8px rgb(255, 255, 255);
-  }
-  
-  .times {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    user-select: none;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   
   .time {
@@ -61,6 +87,9 @@
     font-size: 32px;
     color: #FFB323;
     text-shadow: 0 0 8px rgb(0, 0, 0);
+    user-select: none;
+    text-align: center;
+    width: 100%;
   }
   
   .timer {
@@ -69,6 +98,9 @@
     font-size: 24px;
     color: #00A811;
     text-shadow: 0 0 8px rgb(0, 0, 0);
+    user-select: none;
+    text-align: center;
+    width: 100%;
   }
   
   .player-timer {
@@ -77,6 +109,9 @@
     font-weight: bold;
     margin-top: 0.25rem;
     transition: color 0.3s ease;
+    user-select: none;
+    text-align: center;
+    width: 100%;
   }
   
   .connection-status {
@@ -91,6 +126,7 @@
     font-size: 14px;
     margin-top: 8px;
     animation: pulse 1.5s infinite;
+    user-select: none;
   }
 
   @keyframes pulse {

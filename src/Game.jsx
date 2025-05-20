@@ -12,8 +12,7 @@ import {
   updatePlayerTime, 
   updateViewport,
   subscribeToGameEvents,
-  checkAndRestoreGameState,
-  sendPlayerInfo
+  checkAndRestoreGameState
 } from "./services/socket";
 
 const BOARD_SIZE = 100;
@@ -209,14 +208,6 @@ const Game = () => {
           });
           setIsConnected(true);
           setReconnectAttempts(0);
-
-          const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-          if (tgUser) {
-            sendPlayerInfo(lobbyId, {
-              name: tgUser.first_name || "You",
-              avatar: tgUser.photo_url || "/src/media/JohnAva.png"
-            });
-          }
         });
 
         socket.on('disconnect', () => {

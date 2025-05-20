@@ -328,6 +328,11 @@ const Game = () => {
         });
 
         socket.on('opponentInfo', (data) => {
+          console.log('👤 [Game] Received opponent info:', {
+            avatar: data.avatar,
+            name: data.name,
+            timestamp: new Date().toISOString()
+          });
           setOpponentInfo({
             avatar: data.avatar,
             name: data.name

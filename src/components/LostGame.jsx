@@ -7,7 +7,7 @@ const LostGame = () => {
 
   // ✅ Получаем данные пользователя из initData
   const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
-  const avatarSrc = user?.photo_url || "/media/default-avatar.png";
+  const avatarSrc = user?.photo_url || "/media/buddha.svg";
   const userName = user?.first_name || "You";
 
   const handleBackToStart = () => {

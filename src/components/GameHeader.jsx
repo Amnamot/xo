@@ -1,20 +1,17 @@
 // GameHeader.jsx
 import React, { useEffect, useState } from "react";
 import "./GameHeader.css";
-import logoIcon from '../media/3tbICO.svg';
 
 const GameHeader = ({ 
   currentPlayer, 
   moveTimer, 
   time, 
-  opponentInfo,
+  opponentAvatar,
   playerTime1 = 0,
   playerTime2 = 0,
-  isConnected = true,
-  isCreator = false
+  isConnected = true
 }) => {
   const [timerColor, setTimerColor] = useState("#6800D7");
-  const [isGameStarted, setIsGameStarted] = useState(false);
 
   useEffect(() => {
     if (currentPlayer === "X") {
@@ -24,78 +21,59 @@ const GameHeader = ({
     }
   }, [currentPlayer]);
 
-  // Добавляем эффект для инициализации таймеров
-  useEffect(() => {
-    if (currentPlayer && moveTimer > 0 && !isGameStarted) {
-      console.log('🎮 [GameHeader] Game started, initializing timers', {
-        currentPlayer,
-        moveTimer,
-        time,
-        playerTime1,
-        playerTime2,
-        timestamp: new Date().toISOString()
-      });
-      setIsGameStarted(true);
-    }
-  }, [currentPlayer, moveTimer, time, playerTime1, playerTime2]);
-
-  const formatTimer = (time) => {
-    if (!isGameStarted || time === undefined || time === null) return "00:00";
-    const minutes = Math.floor(time / 6000);
-    const seconds = Math.floor((time % 6000) / 100);
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  const formatMoveTimer = (hundredths) => {
+    const seconds = Math.floor(hundredths / 100);
+    const tenths = Math.floor((hundredths % 100) / 10);
+    return `${String(seconds).padStart(2, "0")}:${tenths}`;
   };
 
-  const formatPlayerTime = (time) => {
-    if (!isGameStarted || time === undefined || time === null) return "00:00";
-    const minutes = Math.floor(time / 6000);
-    const seconds = Math.floor((time % 6000) / 100);
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  const formatTotalTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
 
-  // Данные текущего игрока из Telegram
+  const formatPlayerTime = (milliseconds) => {
+    const seconds = Math.floor(milliseconds / 1000);
+    const tenths = Math.floor((milliseconds % 1000) / 100);
+    return `${seconds} : ${tenths}`;
+  };
+
+  // ✅ Берём данные текущего игрока из Telegram initData
   const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-  const currentUserAvatar = tgUser?.photo_url || "/src/media/JohnAva.png";
-  const currentUserName = tgUser?.first_name || "You";
-
-  // Определяем, какой игрок где (создатель всегда слева)
-  const leftPlayerAvatar = isCreator ? currentUserAvatar : (opponentInfo?.avatar || "/src/media/JohnAva.png");
-  const leftPlayerName = isCreator ? currentUserName : (opponentInfo?.name || "Opponent");
-  const rightPlayerAvatar = isCreator ? (opponentInfo?.avatar || "/src/media/JohnAva.png") : currentUserAvatar;
-  const rightPlayerName = isCreator ? (opponentInfo?.name || "Opponent") : currentUserName;
+  const userAvatar = tgUser?.photo_url || "/media/JohnAva.png";
+  const userName = tgUser?.first_name || "You";
 
   return (
     <>
       <div className="top-logo">
-        <img src={logoIcon} width={128} alt="Logo" />
-        {/* Индикатор переподключения временно скрыт
+        <img src="/media/3tICO.svg" width={128} alt="Logo" />
         {!isConnected && (
           <div className="connection-status">
             Переподключение...
           </div>
         )}
-        */}
       </div>
 
       <div className="gameplayers">
         <div className="gamer1">
-          <img className="avagamer1" src={leftPlayerAvatar} alt="Player X" />
-          <div className="namegamer1">{leftPlayerName}</div>
+          <img className="avagamer1" src={userAvatar} alt="Player 1" />
+          <div className="namegamer1">{userName}</div>
           <div className="player-timer" style={{ color: currentPlayer === "X" ? "#6800D7" : "#000" }}>
             {formatPlayerTime(playerTime1)}
           </div>
         </div>
 
         <div className="times">
-          <div className="time">{formatTimer(time)}</div>
+          <div className="time">{formatTotalTime(time)}</div>
           <div className="timer" style={{ color: timerColor }}>
-            {formatTimer(moveTimer)}
+            {formatMoveTimer(moveTimer)}
           </div>
         </div>
 
         <div className="gamer2">
-          <img className="avagamer2" src={rightPlayerAvatar} alt="Player O" />
-          <div className="namegamer2">{rightPlayerName}</div>
+          <img className="avagamer2" src={opponentAvatar || "/media/buddha.svg"} alt="Player 2" />
+          <div className="namegamer2">Opponent</div>
           <div className="player-timer" style={{ color: currentPlayer === "O" ? "#E10303" : "#000" }}>
             {formatPlayerTime(playerTime2)}
           </div>

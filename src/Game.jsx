@@ -208,6 +208,14 @@ const Game = () => {
           });
           setIsConnected(true);
           setReconnectAttempts(0);
+
+          // Отправляем свои данные
+          const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+          socket.emit('playerInfo', {
+            telegramId: tgUser?.id,
+            avatar: tgUser?.photo_url,
+            name: tgUser?.first_name
+          });
         });
 
         socket.on('disconnect', () => {
@@ -317,6 +325,13 @@ const Game = () => {
           } else {
             navigate('/lost');
           }
+        });
+
+        socket.on('opponentInfo', (data) => {
+          setOpponentInfo({
+            avatar: data.avatar,
+            name: data.name
+          });
         });
 
         // Подписываемся на игровые события

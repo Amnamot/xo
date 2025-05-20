@@ -176,59 +176,35 @@ export const initSocket = () => {
 
 // Функции для игровых событий
 export const createLobby = async (telegramId) => {
-  try {
-    console.log('🎮 [Socket Service] Creating lobby:', {
+  const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  return new Promise((resolve, reject) => {
+    socket.emit('createLobby', {
       telegramId,
-      timestamp: new Date().toISOString()
-    });
-
-    const socket = initSocket();
-    
-    console.log('🔍 [Socket Service] Socket state before lobby creation:', {
-      socketId: socket.id,
-      connected: socket.connected,
-      rooms: Array.from(socket.rooms || []),
-      timestamp: new Date().toISOString()
-    });
-
-    const response = await new Promise((resolve) => {
-      socket.emit('createLobby', { telegramId }, (response) => {
-        console.log('✅ [Socket Service] Lobby creation result:', {
-          response,
-          socketId: socket.id,
-          connected: socket.connected,
-          rooms: Array.from(socket.rooms || []),
-          telegramId,
-          timestamp: new Date().toISOString()
-        });
+      avatar: tgUser?.photo_url,
+      name: tgUser?.first_name
+    }, (response) => {
+      if (response.status === 'created') {
         resolve(response);
-      });
+      } else {
+        reject(new Error(response.message));
+      }
     });
-
-    return response;
-  } catch (error) {
-    console.error('❌ [Socket Service] Failed to create lobby:', {
-      error: error.message,
-      telegramId,
-      timestamp: new Date().toISOString()
-    });
-    throw error;
-  }
+  });
 };
 
-export const joinLobby = (lobbyId, telegramId) => {
-  const currentSocket = initSocket();
+export const joinLobby = async (telegramId, lobbyId) => {
+  const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
   return new Promise((resolve, reject) => {
-    if (!currentSocket.connected) {
-      reject(new Error('WebSocket is not connected'));
-      return;
-    }
-
-    currentSocket.emit('joinLobby', { lobbyId, telegramId }, (response) => {
-      if (response?.status === 'error') {
-        reject(response);
-      } else {
+    socket.emit('joinLobby', {
+      telegramId,
+      lobbyId,
+      avatar: tgUser?.photo_url,
+      name: tgUser?.first_name
+    }, (response) => {
+      if (response.status === 'joined') {
         resolve(response);
+      } else {
+        reject(new Error(response.message));
       }
     });
   });

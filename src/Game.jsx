@@ -208,14 +208,6 @@ const Game = () => {
           });
           setIsConnected(true);
           setReconnectAttempts(0);
-
-          // Отправляем свои данные
-          const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-          socket.emit('playerInfo', {
-            telegramId: tgUser?.id,
-            avatar: tgUser?.photo_url,
-            name: tgUser?.first_name
-          });
         });
 
         socket.on('disconnect', () => {
@@ -325,18 +317,6 @@ const Game = () => {
           } else {
             navigate('/lost');
           }
-        });
-
-        socket.on('opponentInfo', (data) => {
-          console.log('👤 [Game] Received opponent info:', {
-            avatar: data.avatar,
-            name: data.name,
-            timestamp: new Date().toISOString()
-          });
-          setOpponentInfo({
-            avatar: data.avatar,
-            name: data.name
-          });
         });
 
         // Подписываемся на игровые события

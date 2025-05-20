@@ -365,6 +365,20 @@ const StartScreen = () => {
     }
   };
 
+  const handleJoinLobby = async (lobbyId) => {
+    const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    const socket = initSocket();
+    
+    if (socket.connected) {
+      socket.emit('joinLobby', {
+        telegramId: user.id.toString(),
+        lobbyId: lobbyId,
+        avatar: user.photo_url,
+        name: user.first_name
+      });
+    }
+  };
+
   const screenWidth = window.innerWidth;
   const containerWidth = (screenWidth / 12) * 10;
 

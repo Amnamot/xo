@@ -223,11 +223,13 @@ const Game = () => {
           console.log('🎮 [Game] Game started:', {
             startTime: data.startTime,
             gameId: data.gameId,
+            playerInfo: data.playerInfo,
             timestamp: new Date().toISOString()
           });
           
           setGameStartTime(data.startTime);
           setMoveStartTime(data.startTime);
+          setOpponentInfo(data.playerInfo);
         });
 
         socket.on('gameState', (gameState) => {

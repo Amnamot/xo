@@ -208,24 +208,6 @@ const Game = () => {
           });
           setIsConnected(true);
           setReconnectAttempts(0);
-
-          // Отправляем данные игрока при подключении
-          const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-          if (tgUser) {
-            console.log('👤 [Game] Sending player info:', {
-              name: tgUser.first_name,
-              hasAvatar: !!tgUser.photo_url,
-              timestamp: new Date().toISOString()
-            });
-            
-            socket.emit('playerInfo', {
-              gameId: lobbyId,
-              playerInfo: {
-                name: tgUser.first_name || "You",
-                avatar: tgUser.photo_url || "/src/media/JohnAva.png"
-              }
-            });
-          }
         });
 
         socket.on('disconnect', () => {

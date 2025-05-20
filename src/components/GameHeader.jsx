@@ -55,25 +55,14 @@ const GameHeader = ({
 
   // Данные текущего игрока из Telegram
   const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-  const currentUserAvatar = tgUser?.photo_url || "/media/JohnAva.png";
+  const currentUserAvatar = tgUser?.photo_url || "/src/media/JohnAva.png";
   const currentUserName = tgUser?.first_name || "You";
 
   // Определяем, какой игрок где (создатель всегда слева)
-  const leftPlayerAvatar = isCreator 
-    ? currentUserAvatar  // Если мы создатель, то мы слева
-    : opponentInfo?.avatar || "/media/JohnAva.png"; // Если мы приглашенный, то создатель слева
-
-  const leftPlayerName = isCreator 
-    ? currentUserName 
-    : opponentInfo?.name || "Opponent";
-
-  const rightPlayerAvatar = isCreator 
-    ? opponentInfo?.avatar || "/media/JohnAva.png" // Если мы создатель, то оппонент справа
-    : currentUserAvatar; // Если мы приглашенный, то мы справа
-
-  const rightPlayerName = isCreator 
-    ? opponentInfo?.name || "Opponent"
-    : currentUserName;
+  const leftPlayerAvatar = isCreator ? currentUserAvatar : (opponentInfo?.avatar || "/src/media/JohnAva.png");
+  const leftPlayerName = isCreator ? currentUserName : (opponentInfo?.name || "Opponent");
+  const rightPlayerAvatar = isCreator ? (opponentInfo?.avatar || "/src/media/JohnAva.png") : currentUserAvatar;
+  const rightPlayerName = isCreator ? (opponentInfo?.name || "Opponent") : currentUserName;
 
   return (
     <>

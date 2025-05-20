@@ -250,38 +250,7 @@ const Game = () => {
           setPlayerTime1(gameState.playerTime1 || 0);
           setPlayerTime2(gameState.playerTime2 || 0);
           setGameSession(gameState.gameSession);
-          
-          // Получаем информацию о текущем пользователе только если WebApp инициализирован
-          let currentUserInfo = null;
-          if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
-            currentUserInfo = {
-              name: window.Telegram.WebApp.initDataUnsafe.user.first_name || "Player",
-              avatar: window.Telegram.WebApp.initDataUnsafe.user.photo_url || "/media/JohnAva.png"
-            };
-          }
-
-          // Определяем, является ли текущий пользователь создателем
-          const isCreator = gameState.gameSession?.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
-          
-          // Устанавливаем информацию об оппоненте
-          if (gameState.gameSession) {
-            if (!isCreator) {
-              // Если текущий пользователь не создатель, то создатель - оппонент
-              setOpponentInfo({
-                id: gameState.gameSession.creatorId,
-                name: gameState.userInfo?.name || "Creator",
-                avatar: gameState.userInfo?.avatar || "/media/JohnAva.png"
-              });
-            } else if (gameState.userInfo) {
-              // Если текущий пользователь создатель, то оппонент - второй игрок
-              setOpponentInfo({
-                id: gameState.gameSession.opponentId,
-                name: gameState.userInfo.name,
-                avatar: gameState.userInfo.avatar
-              });
-            }
-          }
-          
+          setOpponentInfo(gameState.opponentInfo);
           setMoveTimer(gameState.maxMoveTime || 30000);
           
           if (gameState.startTime) {

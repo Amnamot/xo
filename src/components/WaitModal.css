@@ -45,3 +45,17 @@
     background-color: #d32f2f;
   }
   
+  .creatorMarker {
+    display: inline-block;
+    margin-left: 5px;
+    font-size: 24px;
+    vertical-align: middle;
+    animation: pulse 1.5s infinite;
+  }
+  
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+  

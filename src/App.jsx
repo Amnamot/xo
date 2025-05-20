@@ -7,35 +7,69 @@ import Game from "./Game";
 import EndGame from "./components/EndGame";
 import LostGame from "./components/LostGame";
 import Loss from "./components/Loss";
-import { initSocket, connectSocket } from './services/socket';
+import { initSocket, connectSocket, checkAndRestoreGameState } from './services/socket';
 
 const App = () => {
   const [telegramId, setTelegramId] = useState(null);
 
+  // Функция для получения актуального telegramId
+  const getCurrentTelegramId = () => {
+    return localStorage.getItem('current_telegram_id') || 'unknown';
+  };
+
   useEffect(() => {
-    // Получаем telegramId из localStorage при инициализации
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    setTelegramId(user.telegramId || 'unknown');
+    // Инициализируем telegramId из localStorage
+    setTelegramId(getCurrentTelegramId());
 
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.ready();
       
-      // Отслеживаем закрытие приложения
+      // Отслеживаем изменения состояния приложения
       window.Telegram.WebApp.onEvent('viewportChanged', async () => {
-        if (!window.Telegram.WebApp.isExpanded) {
-          await connectSocket();
-          const socket = initSocket();
+        const isExpanded = window.Telegram.WebApp.isExpanded;
+        await connectSocket();
+        const socket = initSocket();
+        
+        if (!isExpanded) {
+          // При сворачивании приложения
           socket.emit('uiState', { 
-            state: 'appClosed', 
-            telegramId: user.telegramId || 'unknown',
+            state: 'minimized', 
+            telegramId: getCurrentTelegramId(),
             details: { 
               lastScreen: window.location.pathname,
               timestamp: Date.now()
             }
           });
+        } else {
+          // При разворачивании приложения
+          try {
+            const gameState = await checkAndRestoreGameState(getCurrentTelegramId());
+            if (gameState?.gameId) {
+              console.log('🔄 [App] Restoring game after expand:', {
+                gameId: gameState.gameId,
+                timestamp: new Date().toISOString()
+              });
+              window.location.href = `/game/${gameState.gameId}`;
+            }
+          } catch (error) {
+            console.warn('⚠️ [App] No active game found after expand:', {
+              error: error.message,
+              timestamp: new Date().toISOString()
+            });
+          }
         }
       });
     }
+
+    // Следим за изменениями в localStorage
+    const handleStorageChange = (e) => {
+      if (e.key === 'current_telegram_id') {
+        setTelegramId(e.newValue || 'unknown');
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // Функция для отправки состояния UI
@@ -43,7 +77,7 @@ const App = () => {
     const socket = initSocket();
     socket.emit('uiState', {
       state,
-      telegramId,
+      telegramId: getCurrentTelegramId(),
       details
     });
   };

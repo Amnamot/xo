@@ -1,4 +1,4 @@
-// TopUpModal.jsx (обновлённый)
+// src/components/TopUpModal.jsx version 1.0.0
 import React, { useState } from "react";
 import "./TopUpModal.css";
 

@@ -251,11 +251,14 @@ const Game = () => {
           setPlayerTime2(gameState.playerTime2 || 0);
           setGameSession(gameState.gameSession);
           
-          // Получаем информацию о текущем пользователе
-          const currentUserInfo = {
-            name: window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name || "Player",
-            avatar: window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url || "/media/JohnAva.png"
-          };
+          // Получаем информацию о текущем пользователе только если WebApp инициализирован
+          let currentUserInfo = null;
+          if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+            currentUserInfo = {
+              name: window.Telegram.WebApp.initDataUnsafe.user.first_name || "Player",
+              avatar: window.Telegram.WebApp.initDataUnsafe.user.photo_url || "/media/JohnAva.png"
+            };
+          }
 
           // Определяем, является ли текущий пользователь создателем
           const isCreator = gameState.gameSession?.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();

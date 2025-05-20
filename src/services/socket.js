@@ -241,10 +241,31 @@ export const updatePlayerTime = (gameId, playerTimes) => {
   }
 };
 
-export const makeMove = (gameId, position, player, moveTime) => {
-  const currentSocket = initSocket();
-  return new Promise((resolve) => {
-    currentSocket.emit('makeMove', { gameId, position, player, moveTime }, resolve);
+export const makeMove = (lobbyId, position, player) => {
+  const socket = initSocket();
+  const userInfo = {
+    name: window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name || "Player",
+    avatar: window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url || "/media/JohnAva.png"
+  };
+  
+  return new Promise((resolve, reject) => {
+    if (!socket.connected) {
+      reject(new Error('WebSocket is not connected'));
+      return;
+    }
+
+    socket.emit('makeMove', { 
+      lobbyId, 
+      position, 
+      player,
+      userInfo 
+    }, (response) => {
+      if (response?.status === 'error') {
+        reject(response);
+      } else {
+        resolve(response);
+      }
+    });
   });
 };
 

@@ -664,6 +664,7 @@ const Game = () => {
     if (!telegramId) return;
 
     socket.emit('getOpponentInfo', { telegramId }, (response) => {
+      console.log('[DEBUG][FRONT][SOCKET getOpponentInfo]', { response, telegramId, timestamp: new Date().toISOString() });
       if (response && !response.error) {
         setOpponentInfo({
           name: response.name,
@@ -675,6 +676,28 @@ const Game = () => {
       }
     });
   }, []);
+
+  // Логирование после получения gameSession
+  useEffect(() => {
+    if (gameSession) {
+      console.log('[DEBUG][FRONT][SESSION]', {
+        gameSession,
+        isCreator: gameSession?.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
+        telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [gameSession]);
+
+  // Логирование после получения opponentInfo
+  useEffect(() => {
+    if (opponentInfo) {
+      console.log('[DEBUG][FRONT][OPPONENT]', {
+        opponentInfo,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [opponentInfo]);
 
   return (
     <div

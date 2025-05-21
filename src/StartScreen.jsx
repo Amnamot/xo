@@ -372,9 +372,7 @@ const StartScreen = () => {
     if (socket.connected) {
       socket.emit('joinLobby', {
         telegramId: user.id.toString(),
-        lobbyId: lobbyId,
-        avatar: user.photo_url,
-        name: user.first_name
+        lobbyId: lobbyId
       });
     }
   };

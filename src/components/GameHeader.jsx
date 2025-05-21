@@ -64,16 +64,18 @@ const GameHeader = ({
   const rightPlayerAvatar = isCreator ? (opponentInfo?.avatar || "../media/JohnAva.png") : currentUserAvatar;
   const rightPlayerName = isCreator ? (opponentInfo?.name || "Opponent") : currentUserName;
 
-  // Логирование для отладки роли и позиционирования блоков
-  console.log('[DEBUG][FRONT][GameHeader]', {
-    isCreator,
-    leftPlayerName,
-    rightPlayerName,
-    opponentInfo,
-    currentUserName,
-    telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
-    timestamp: new Date().toISOString()
-  });
+  // Оптимизированное логирование: только при изменении ключевых данных
+  useEffect(() => {
+    console.log('[DEBUG][FRONT][GameHeader]', {
+      isCreator,
+      leftPlayerName,
+      rightPlayerName,
+      opponentInfo,
+      currentUserName,
+      telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
+      timestamp: new Date().toISOString()
+    });
+  }, [isCreator, leftPlayerName, rightPlayerName, opponentInfo]);
 
   return (
     <>

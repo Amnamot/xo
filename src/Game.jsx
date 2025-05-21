@@ -658,6 +658,24 @@ const Game = () => {
     };
   };
 
+  useEffect(() => {
+    const socket = initSocket();
+    const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
+    if (!telegramId) return;
+
+    socket.emit('getOpponentInfo', { telegramId }, (response) => {
+      if (response && !response.error) {
+        setOpponentInfo({
+          name: response.name,
+          avatar: response.avatar
+        });
+        console.log('🟢 [Game] Opponent info received:', response);
+      } else {
+        console.warn('⚠️ [Game] Failed to get opponent info:', response);
+      }
+    });
+  }, []);
+
   return (
     <div
       className="game-container"

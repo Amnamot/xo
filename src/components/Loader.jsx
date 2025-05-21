@@ -90,6 +90,13 @@ const Loader = () => {
 
       if (startParam) {
         const initData = window.Telegram?.WebApp?.initData;
+        console.log('🔍 [Loader] Checking initData for lobby join:', {
+          hasInitData: !!initData,
+          startParam,
+          telegramId,
+          timestamp: new Date().toISOString()
+        });
+
         if (!initData) {
           console.warn("No initData during lobby join. Aborting.");
           navigate("/nolobby", { 
@@ -102,8 +109,79 @@ const Loader = () => {
           return;
         }
 
-        // Переходим на страницу игры с параметром лобби
-        navigate(`/game/${startParam}`, { replace: true });
+        console.log('🔄 [Loader] Starting initData validation for lobby join:', {
+          startParam,
+          telegramId,
+          timestamp: new Date().toISOString()
+        });
+
+        // Добавляем валидацию initData перед переходом в игру
+        fetch("https://api.igra.top/user/init", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ initData })
+        })
+          .then((res) => {
+            console.log('📡 [Loader] Received response from /user/init:', {
+              status: res.status,
+              ok: res.ok,
+              startParam,
+              timestamp: new Date().toISOString()
+            });
+
+            if (!res.ok) throw new Error("Failed to authorize");
+            return res.json();
+          })
+          .then(async (userData) => {
+            console.log('✅ [Loader] Successfully validated user data:', {
+              telegramId: userData.telegramId,
+              userName: userData.userName,
+              startParam,
+              timestamp: new Date().toISOString()
+            });
+
+            const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+            if (tgUser?.photo_url) {
+              userData.avatar = tgUser.photo_url;
+              console.log('🖼️ [Loader] Added avatar from Telegram:', {
+                telegramId: userData.telegramId,
+                hasAvatar: !!tgUser.photo_url,
+                timestamp: new Date().toISOString()
+              });
+            }
+
+            localStorage.setItem("user", JSON.stringify(userData));
+            console.log('💾 [Loader] Saved validated user data to localStorage:', {
+              telegramId: userData.telegramId,
+              startParam,
+              timestamp: new Date().toISOString()
+            });
+
+            // После успешной валидации переходим в игру
+            console.log('🎮 [Loader] Navigating to game:', {
+              gameId: startParam,
+              telegramId: userData.telegramId,
+              timestamp: new Date().toISOString()
+            });
+            navigate(`/game/${startParam}`, { replace: true });
+          })
+          .catch((err) => {
+            console.error('❌ [Loader] Authorization error during lobby join:', {
+              error: err.message,
+              startParam,
+              telegramId,
+              timestamp: new Date().toISOString()
+            });
+            navigate("/nolobby", { 
+              state: { 
+                type: 'losst2',
+                message: 'Failed to validate user data.<br />Please try again.',
+                redirectTo: '/start'
+              } 
+            });
+          });
       } else {
         // Если нет start_param, переходим на стартовый экран
         navigate("/start", { replace: true });

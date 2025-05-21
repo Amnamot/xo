@@ -252,7 +252,12 @@ const Game = () => {
           setPlayerTime1(gameState.playerTime1 || 0);
           setPlayerTime2(gameState.playerTime2 || 0);
           setGameSession(gameState.gameSession);
-          setOpponentInfo(gameState.opponentInfo);
+          
+          // Проверяем, есть ли уже данные о сопернике
+          if (!opponentInfo && gameState.opponentInfo) {
+            setOpponentInfo(gameState.opponentInfo);
+          }
+          
           setMoveTimer(gameState.maxMoveTime || 30000);
           
           if (gameState.startTime) {

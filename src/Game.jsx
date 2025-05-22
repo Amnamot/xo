@@ -253,6 +253,18 @@ const Game = () => {
           setPlayerTime2(gameState.playerTime2 || 0);
           setGameSession(gameState.gameSession);
           
+          // Добавляем проверку типов
+          if (gameState.gameSession) {
+            console.log('[DEBUG][FRONT][TYPES]', {
+              creatorId: gameState.gameSession.creatorId,
+              creatorIdType: typeof gameState.gameSession.creatorId,
+              userId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
+              userIdType: typeof window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
+              isCreator: gameState.gameSession.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
+              timestamp: new Date().toISOString()
+            });
+          }
+          
           // Проверяем, есть ли уже данные о сопернике
           if (!opponentInfo && gameState.opponentInfo) {
             setOpponentInfo(gameState.opponentInfo);
@@ -720,7 +732,17 @@ const Game = () => {
         isConnected={isConnected}
         isCreator={gameSession?.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id}
       />
-
+      {gameSession && (
+        <pre style={{color: 'red', fontSize: 12}}>
+          {JSON.stringify({
+            creatorId: gameSession.creatorId,
+            creatorIdType: typeof gameSession.creatorId,
+            userId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
+            userIdType: typeof window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
+            isCreator: gameSession.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id
+          }, null, 2)}
+        </pre>
+      )}
       <div
         ref={boardRef}
         className="board-grid"

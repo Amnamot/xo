@@ -1,31 +1,39 @@
-import React, { createContext, useContext, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useRef, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 
 const SOCKET_URL = 'https://igra.top';
 const SocketContext = createContext(null);
 
 export const SocketProvider = ({ children }) => {
-  const socketRef = useRef(null);
+  const [socket, setSocket] = useState(null);
+
+  // Получаем telegramId один раз при инициализации
+  const telegramId =
+    window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() ||
+    localStorage.getItem('current_telegram_id') ||
+    null;
 
   useEffect(() => {
-    if (!socketRef.current) {
-      socketRef.current = io(SOCKET_URL, {
-        autoConnect: true,
-        transports: ['websocket', 'polling'],
-        path: '/socket.io/',
-        withCredentials: true,
-      });
-    }
-    // Можно добавить обработку событий, переподключение и т.д.
+    if (!telegramId) return;
+
+    const newSocket = io(SOCKET_URL, {
+      autoConnect: true,
+      transports: ['websocket', 'polling'],
+      path: '/socket.io/',
+      withCredentials: true,
+      query: { telegramId }
+    });
+
+    setSocket(newSocket);
 
     return () => {
-      // Отключение сокета при размонтировании приложения (если нужно)
-      // socketRef.current?.disconnect();
+      newSocket.disconnect();
+      setSocket(null);
     };
-  }, []);
+  }, [telegramId]);
 
   return (
-    <SocketContext.Provider value={socketRef.current}>
+    <SocketContext.Provider value={socket}>
       {children}
     </SocketContext.Provider>
   );

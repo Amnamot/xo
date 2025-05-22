@@ -189,7 +189,7 @@ const Game = () => {
     const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() || localStorage.getItem('current_telegram_id');
     if (!socket.connected) socket.connect();
     socket.on('connect', () => { setIsConnected(true); setReconnectAttempts(0); });
-    socket.on('disconnect', () => { setIsConnected(false); handleReconnect(); });
+    socket.on('disconnect', () => { setIsConnected(false); });
     socket.on('gameStart', (data) => { setGameStartTime(data.startTime); setMoveStartTime(data.startTime); setOpponentInfo(data.playerInfo); });
     socket.on('gameState', (gameState) => {
       if (!isValidGameState(gameState)) return;

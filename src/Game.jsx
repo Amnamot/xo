@@ -728,6 +728,18 @@ const Game = () => {
     }
   }, [gameSession]);
 
+  useEffect(() => {
+    if (!socketRef.current) return;
+    console.log('[DEBUG][FRONT][SOCKET][ATTACH_GAMESTATE]', { socketId: socketRef.current.id, timestamp: new Date().toISOString() });
+    const handler = (gameState) => {
+      console.log('[DEBUG][FRONT][SOCKET][ON_GAMESTATE]', { socketId: socketRef.current.id, gameState, timestamp: new Date().toISOString() });
+      setGameSession(gameState.gameSession);
+      // ...другой стейт
+    };
+    socketRef.current.on('gameState', handler);
+    return () => socketRef.current.off('gameState', handler);
+  }, [socketRef]);
+
   return (
     <div
       className="game-container"

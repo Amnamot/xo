@@ -86,7 +86,7 @@ const Loader = () => {
     if (progress >= 100 && authorized) {
       const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const telegramId = user.telegramId;
+      const telegramId = localStorage.getItem('current_telegram_id');
 
       console.log('🔄 [Loader] Starting lobby join process:', {
         progress,
@@ -128,7 +128,7 @@ const Loader = () => {
 
         // Проверяем, что у нас есть все необходимые данные
         if (!telegramId) {
-          console.error('❌ [Loader] Missing telegramId in user data:', {
+          console.error('❌ [Loader] Missing telegramId in localStorage:', {
             user,
             startParam,
             hasInitData: !!initData,

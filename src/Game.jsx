@@ -750,7 +750,9 @@ const Game = () => {
         playerTime2={playerTime2}
         opponentInfo={opponentInfo}
         isConnected={isConnected}
-        isCreator={gameSession ? String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) : false}
+        isCreator={gameSession?.creatorId && window.Telegram?.WebApp?.initDataUnsafe?.user?.id ? 
+          gameSession.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() : 
+          false}
       />
       {gameSession && (
         <pre style={{color: 'red', fontSize: 12}}>

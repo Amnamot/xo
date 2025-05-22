@@ -734,12 +734,19 @@ const Game = () => {
         pointerEvents: isOurTurn ? 'auto' : 'none'
       }}
     >
-      {gameSession && console.log('[DEBUG][FRONT][COMPARISON]', {
+      {gameSession && console.log('[DEBUG][FRONT][COMPARISON_DETAILED]', {
         creatorId: gameSession.creatorId,
+        creatorIdType: typeof gameSession.creatorId,
         creatorIdAsString: String(gameSession.creatorId),
         userId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
+        userIdType: typeof window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
         userIdAsString: String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
         comparison: String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
+        comparisonResult: {
+          direct: gameSession.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
+          stringCompare: String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
+          numberCompare: Number(gameSession.creatorId) === Number(window.Telegram?.WebApp?.initDataUnsafe?.user?.id)
+        },
         timestamp: new Date().toISOString()
       })}
       <GameHeader 
@@ -750,9 +757,9 @@ const Game = () => {
         playerTime2={playerTime2}
         opponentInfo={opponentInfo}
         isConnected={isConnected}
-        isCreator={gameSession?.creatorId ? 
+        isCreator={gameSession ? 
           String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) : 
-          false}
+          null}
       />
       {gameSession && (
         <pre style={{color: 'red', fontSize: 12}}>

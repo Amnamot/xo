@@ -59,10 +59,14 @@ const GameHeader = ({
   const currentUserName = tgUser?.first_name || "You";
 
   // Определяем, какой игрок где (создатель всегда слева)
-  const leftPlayerAvatar = isCreator ? currentUserAvatar : (opponentInfo?.avatar || "../media/JohnAva.png");
-  const leftPlayerName = isCreator ? currentUserName : (opponentInfo?.name || "Opponent");
-  const rightPlayerAvatar = isCreator ? (opponentInfo?.avatar || "../media/JohnAva.png") : currentUserAvatar;
-  const rightPlayerName = isCreator ? (opponentInfo?.name || "Opponent") : currentUserName;
+  const leftPlayerAvatar = isCreator === null ? "../media/JohnAva.png" : 
+    (isCreator ? currentUserAvatar : (opponentInfo?.avatar || "../media/JohnAva.png"));
+  const leftPlayerName = isCreator === null ? "Loading..." : 
+    (isCreator ? currentUserName : (opponentInfo?.name || "Opponent"));
+  const rightPlayerAvatar = isCreator === null ? "../media/JohnAva.png" : 
+    (isCreator ? (opponentInfo?.avatar || "../media/JohnAva.png") : currentUserAvatar);
+  const rightPlayerName = isCreator === null ? "Loading..." : 
+    (isCreator ? (opponentInfo?.name || "Opponent") : currentUserName);
 
   // Оптимизированное логирование: только при изменении ключевых данных
   useEffect(() => {

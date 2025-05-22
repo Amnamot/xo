@@ -782,16 +782,9 @@ const Game = () => {
         timestamp: new Date().toISOString()
       })}
       <GameHeader 
-        currentPlayer={currentPlayer} 
-        moveTimer={moveTimer} 
-        time={time}
-        playerTime1={playerTime1}
-        playerTime2={playerTime2}
-        opponentInfo={opponentInfo}
-        isConnected={isConnected}
-        isCreator={gameSession ? 
-          String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) : 
-          null}
+        gameSession={gameSession}
+        currentPlayer={currentPlayer}
+        onExit={() => navigate('/')}
       />
       {gameSession && (
         <pre style={{color: 'red', fontSize: 12}}>

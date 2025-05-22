@@ -6,6 +6,12 @@ import logoIcon from '../media/3tbICO.svg';
 const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
   const [timerColor, setTimerColor] = useState("#6800D7");
   const [isGameStarted, setIsGameStarted] = useState(false);
+  const [playerInfo, setPlayerInfo] = useState({
+    leftPlayerAvatar: "../media/JohnAva.png",
+    leftPlayerName: "Loading...",
+    rightPlayerAvatar: "../media/JohnAva.png",
+    rightPlayerName: "Loading..."
+  });
 
   // Флаги для однократного логирования
   const loggedGameHeader = useRef(false);
@@ -75,6 +81,47 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
     }
   }, [gameSession, currentPlayer]);
 
+  useEffect(() => {
+    if (gameSession && currentPlayer) {
+      const player = gameSession.players[currentPlayer];
+      const opponent = Object.values(gameSession.players).find(p => p.isOpponent);
+      
+      // Данные текущего игрока из Telegram
+      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      const currentUserAvatar = tgUser?.photo_url || "../media/JohnAva.png";
+      const currentUserName = tgUser?.first_name || "You";
+
+      // Определяем, какой игрок где (создатель всегда слева)
+      const leftPlayerAvatar = player.isCreator === null ? "../media/JohnAva.png" : 
+        (player.isCreator ? currentUserAvatar : (opponent?.avatar || "../media/JohnAva.png"));
+      const leftPlayerName = player.isCreator === null ? "Loading..." : 
+        (player.isCreator ? currentUserName : (opponent?.name || "Opponent"));
+      const rightPlayerAvatar = player.isCreator === null ? "../media/JohnAva.png" : 
+        (player.isCreator ? (opponent?.avatar || "../media/JohnAva.png") : currentUserAvatar);
+      const rightPlayerName = player.isCreator === null ? "Loading..." : 
+        (player.isCreator ? (opponent?.name || "Opponent") : currentUserName);
+
+      setPlayerInfo({
+        leftPlayerAvatar,
+        leftPlayerName,
+        rightPlayerAvatar,
+        rightPlayerName
+      });
+
+      if (!loggedGameHeaderCalc.current) {
+        console.log('[DEBUG][FRONT][GAMEHEADER_CALC]', {
+          isCreator: player.isCreator,
+          leftPlayerName,
+          rightPlayerName,
+          leftPlayerAvatar,
+          rightPlayerAvatar,
+          timestamp: new Date().toISOString()
+        });
+        loggedGameHeaderCalc.current = true;
+      }
+    }
+  }, [gameSession, currentPlayer]);
+
   if (!gameSession || !currentPlayer) {
     return null;
   }
@@ -85,36 +132,6 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
   if (!player || !opponent) {
     return null;
   }
-
-  // Данные текущего игрока из Telegram
-  const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-  const currentUserAvatar = tgUser?.photo_url || "../media/JohnAva.png";
-  const currentUserName = tgUser?.first_name || "You";
-
-  // Определяем, какой игрок где (создатель всегда слева)
-  const leftPlayerAvatar = player.isCreator === null ? "../media/JohnAva.png" : 
-    (player.isCreator ? currentUserAvatar : (opponent?.avatar || "../media/JohnAva.png"));
-  const leftPlayerName = player.isCreator === null ? "Loading..." : 
-    (player.isCreator ? currentUserName : (opponent?.name || "Opponent"));
-  const rightPlayerAvatar = player.isCreator === null ? "../media/JohnAva.png" : 
-    (player.isCreator ? (opponent?.avatar || "../media/JohnAva.png") : currentUserAvatar);
-  const rightPlayerName = player.isCreator === null ? "Loading..." : 
-    (player.isCreator ? (opponent?.name || "Opponent") : currentUserName);
-
-  // Логируем один раз при изменении данных
-  useEffect(() => {
-    if (!loggedGameHeaderCalc.current && gameSession && currentPlayer) {
-      console.log('[DEBUG][FRONT][GAMEHEADER_CALC]', {
-        isCreator: player.isCreator,
-        leftPlayerName,
-        rightPlayerName,
-        leftPlayerAvatar,
-        rightPlayerAvatar,
-        timestamp: new Date().toISOString()
-      });
-      loggedGameHeaderCalc.current = true;
-    }
-  }, [gameSession, currentPlayer, player.isCreator, leftPlayerName, rightPlayerName, leftPlayerAvatar, rightPlayerAvatar]);
 
   const formatTimer = (time) => {
     if (!isGameStarted || time === undefined || time === null) return "00:00";
@@ -145,8 +162,8 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
 
       <div className="gameplayers">
         <div className="gamer1">
-          <img className="avagamer1" src={leftPlayerAvatar} alt="Player X" />
-          <div className="namegamer1">{leftPlayerName}</div>
+          <img className="avagamer1" src={playerInfo.leftPlayerAvatar} alt="Player X" />
+          <div className="namegamer1">{playerInfo.leftPlayerName}</div>
           <div className="player-timer" style={{ color: currentPlayer === "X" ? "#6800D7" : "#000" }}>
             {formatPlayerTime(player.playerTime1)}
           </div>
@@ -160,8 +177,8 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
         </div>
 
         <div className="gamer2">
-          <img className="avagamer2" src={rightPlayerAvatar} alt="Player O" />
-          <div className="namegamer2">{rightPlayerName}</div>
+          <img className="avagamer2" src={playerInfo.rightPlayerAvatar} alt="Player O" />
+          <div className="namegamer2">{playerInfo.rightPlayerName}</div>
           <div className="player-timer" style={{ color: currentPlayer === "O" ? "#E10303" : "#000" }}>
             {formatPlayerTime(player.playerTime2)}
           </div>

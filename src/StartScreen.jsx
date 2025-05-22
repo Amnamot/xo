@@ -51,7 +51,23 @@ const StartScreen = () => {
       socket.connect();
     }
 
+    // Логируем момент подписки
+    console.log('[FRONT][gameStart][subscribe]', {
+      socketId: socket.id,
+      telegramId,
+      rooms: Array.from(socket.rooms || []),
+      timestamp: new Date().toISOString()
+    });
+
     const handleGameStart = (data) => {
+      // Логируем получение события
+      console.log('[FRONT][gameStart][received]', {
+        socketId: socket.id,
+        telegramId,
+        rooms: Array.from(socket.rooms || []),
+        data,
+        timestamp: new Date().toISOString()
+      });
       if (data?.session?.id) {
         setShowWaitModal(false);
         navigate(`/game/${data.session.id}`);
@@ -93,6 +109,13 @@ const StartScreen = () => {
     })();
 
     return () => {
+      // Логируем отписку
+      console.log('[FRONT][gameStart][unsubscribe]', {
+        socketId: socket.id,
+        telegramId,
+        rooms: Array.from(socket.rooms || []),
+        timestamp: new Date().toISOString()
+      });
       socket.off('gameStart', handleGameStart);
       socket.off('setShowWaitModal', handleSetShowWaitModal);
       socket.off('lobbyReady', handleLobbyReady);

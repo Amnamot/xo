@@ -734,12 +734,12 @@ const Game = () => {
         pointerEvents: isOurTurn ? 'auto' : 'none'
       }}
     >
-      {gameSession && console.log('[DEBUG][FRONT][TYPES]', {
+      {gameSession && console.log('[DEBUG][FRONT][COMPARISON]', {
         creatorId: gameSession.creatorId,
-        creatorIdType: typeof gameSession.creatorId,
+        creatorIdAsString: String(gameSession.creatorId),
         userId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
-        userIdType: typeof window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
-        isCreator: String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
+        userIdAsString: String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
+        comparison: String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
         timestamp: new Date().toISOString()
       })}
       <GameHeader 

@@ -366,7 +366,7 @@ const Game = () => {
             
             if (gameState.gameSession) {
               setGameSession(gameState.gameSession);
-              if (gameState.gameSession.creatorId !== window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
+              if (gameState.gameSession.creatorId !== String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id)) {
                 setOpponentInfo({
                   id: gameState.gameSession.creatorId,
                   name: gameState.gameSession.creatorName,

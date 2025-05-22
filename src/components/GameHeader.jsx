@@ -86,20 +86,6 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
     return null;
   }
 
-  const formatTimer = (time) => {
-    if (!isGameStarted || time === undefined || time === null) return "00:00";
-    const minutes = Math.floor(time / 6000);
-    const seconds = Math.floor((time % 6000) / 100);
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  const formatPlayerTime = (time) => {
-    if (!isGameStarted || time === undefined || time === null) return "00:00";
-    const minutes = Math.floor(time / 6000);
-    const seconds = Math.floor((time % 6000) / 100);
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
-
   // Данные текущего игрока из Telegram
   const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
   const currentUserAvatar = tgUser?.photo_url || "../media/JohnAva.png";
@@ -129,6 +115,20 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
       loggedGameHeaderCalc.current = true;
     }
   }, [gameSession, currentPlayer, player.isCreator, leftPlayerName, rightPlayerName, leftPlayerAvatar, rightPlayerAvatar]);
+
+  const formatTimer = (time) => {
+    if (!isGameStarted || time === undefined || time === null) return "00:00";
+    const minutes = Math.floor(time / 6000);
+    const seconds = Math.floor((time % 6000) / 100);
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const formatPlayerTime = (time) => {
+    if (!isGameStarted || time === undefined || time === null) return "00:00";
+    const minutes = Math.floor(time / 6000);
+    const seconds = Math.floor((time % 6000) / 100);
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   return (
     <>

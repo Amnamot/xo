@@ -711,6 +711,18 @@ const Game = () => {
     }
   }, [opponentInfo]);
 
+  useEffect(() => {
+    if (gameSession) {
+      console.log('[DEBUG][FRONT][INITDATA]', {
+        rawInitData: window.Telegram?.WebApp?.initData,
+        parsedInitData: window.Telegram?.WebApp?.initDataUnsafe,
+        userId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
+        userIdType: typeof window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [gameSession]);
+
   return (
     <div
       className="game-container"

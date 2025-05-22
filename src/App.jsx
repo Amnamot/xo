@@ -7,7 +7,7 @@ import Game from "./Game";
 import EndGame from "./components/EndGame";
 import LostGame from "./components/LostGame";
 import Loss from "./components/Loss";
-import { initSocket, connectSocket, checkAndRestoreGameState } from './services/socket';
+import { SocketProvider } from './context/SocketContext';
 
 const App = () => {
   const [telegramId, setTelegramId] = useState(null);
@@ -27,36 +27,13 @@ const App = () => {
       // Отслеживаем изменения состояния приложения
       window.Telegram.WebApp.onEvent('viewportChanged', async () => {
         const isExpanded = window.Telegram.WebApp.isExpanded;
-        await connectSocket();
-        const socket = initSocket();
         
         if (!isExpanded) {
           // При сворачивании приложения
-          socket.emit('uiState', { 
-            state: 'minimized', 
-            telegramId: getCurrentTelegramId(),
-            details: { 
-              lastScreen: window.location.pathname,
-              timestamp: Date.now()
-            }
-          });
+          // emitUiState и socket-логику теперь реализуем через контекст
         } else {
           // При разворачивании приложения
-          try {
-            const gameState = await checkAndRestoreGameState(getCurrentTelegramId());
-            if (gameState?.gameId) {
-              console.log('🔄 [App] Restoring game after expand:', {
-                gameId: gameState.gameId,
-                timestamp: new Date().toISOString()
-              });
-              window.location.href = `/game/${gameState.gameId}`;
-            }
-          } catch (error) {
-            console.warn('⚠️ [App] No active game found after expand:', {
-              error: error.message,
-              timestamp: new Date().toISOString()
-            });
-          }
+          // emitUiState и socket-логику теперь реализуем через контекст
         }
       });
     }
@@ -72,39 +49,31 @@ const App = () => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Функция для отправки состояния UI
-  const emitUiState = (state, details = {}) => {
-    const socket = initSocket();
-    socket.emit('uiState', {
-      state,
-      telegramId: getCurrentTelegramId(),
-      details
-    });
-  };
-
   return (
-    <Router>
-      <Routes>
-        {/* Стартовый экран при загрузке приложения */}
-        <Route path="/" element={<Loader onMount={() => emitUiState('loader', { progress: 0 })} />} />
+    <SocketProvider>
+      <Router>
+        <Routes>
+          {/* Стартовый экран при загрузке приложения */}
+          <Route path="/" element={<Loader />} />
 
-        {/* Экран после загрузки */}
-        <Route path="/start" element={<StartScreen onMount={() => emitUiState('startScreen')} />} />
+          {/* Экран после загрузки */}
+          <Route path="/start" element={<StartScreen />} />
 
-        {/* Игровой экран */}
-        <Route path="/game" element={<Game />} /> {/* Для создателя лобби */}
-        <Route path="/game/:lobbyId" element={<Game />} /> {/* Для присоединяющегося игрока */}
+          {/* Игровой экран */}
+          <Route path="/game" element={<Game />} /> {/* Для создателя лобби */}
+          <Route path="/game/:lobbyId" element={<Game />} /> {/* Для присоединяющегося игрока */}
 
-        {/* Экран победителя */}
-        <Route path="/end" element={<EndGame />} />
+          {/* Экран победителя */}
+          <Route path="/end" element={<EndGame />} />
 
-        {/* Экран проигравшего */}
-        <Route path="/lost" element={<LostGame />} />
+          {/* Экран проигравшего */}
+          <Route path="/lost" element={<LostGame />} />
 
-        {/* Экран потерянного лобби */}
-        <Route path="/nolobby" element={<Loss onMount={() => emitUiState('loss')} />} />
-      </Routes>
-    </Router>
+          {/* Экран потерянного лобби */}
+          <Route path="/nolobby" element={<Loss />} />
+        </Routes>
+      </Router>
+    </SocketProvider>
   );
 };
 

@@ -1,10 +1,9 @@
-// src/components/Loss.jsx v2
+// src/components/Loss.jsx v3
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './Loss.css';
 import logo from '../media/TiTaTo.svg';
 import lossGif from '../media/Loss.gif';
-import { initSocket, connectSocket } from '../services/socket';
 
 const Loss = () => {
   const navigate = useNavigate();
@@ -12,26 +11,6 @@ const Loss = () => {
   const [timeLeft, setTimeLeft] = useState(location.state?.timer || 0);
 
   useEffect(() => {
-    console.log("📺 Loss screen mounted", location.state);
-
-    // Подключаем сокет и логируем показ экрана Loss
-    const logLossState = async () => {
-      await connectSocket();
-      const socket = initSocket();
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      socket.emit('uiState', { 
-        state: 'loss', 
-        telegramId: user.telegramId,
-        details: { 
-          message: location.state?.message,
-          timer: location.state?.timer,
-          type: location.state?.type
-        }
-      });
-    };
-
-    logLossState();
-
     if (location.state?.timer) {
       const timer = setInterval(() => {
         setTimeLeft(prev => {

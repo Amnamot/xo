@@ -6,14 +6,13 @@ import "./Shape.css";
 import Shape from "./Shape";
 import GameHeader from "./components/GameHeader";
 import { 
-  initSocket,
-  connectSocket, 
   makeMove, 
   updatePlayerTime, 
   updateViewport,
   subscribeToGameEvents,
   checkAndRestoreGameState
 } from "./services/socket";
+import { useSocket } from './context/SocketContext';
 
 const BOARD_SIZE = 100;
 const WIN_CONDITION = 5;
@@ -151,6 +150,7 @@ const Game = () => {
   const navigate = useNavigate();
   const { lobbyId } = useParams();
   const mountedRef = useRef(false);
+  const socket = useSocket();
 
   useEffect(() => {
     mountedRef.current = true;
@@ -178,7 +178,6 @@ const Game = () => {
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const maxReconnectAttempts = 5;
   const reconnectDelay = 2000;
-  const socketRef = useRef(null);
   const boardRef = useRef(null);
   const [boardDimensions, setBoardDimensions] = useState({ width: 0, height: 0 });
 
@@ -186,292 +185,88 @@ const Game = () => {
   const CELL_SIZE = isMobile ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP;
 
   useEffect(() => {
-    if (!mountedRef.current || !lobbyId) {
-      return;
-    }
-
-    const initializeSocket = async () => {
-      try {
-        console.log('🔌 [Game] Initializing socket connection:', {
-          lobbyId,
-          telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString(),
-          timestamp: new Date().toISOString()
-        });
-
-        const socket = initSocket();
-        socketRef.current = socket;
-
-        socket.on('connect', () => {
-          console.log('🔌 [Game] Socket connected:', {
-            socketId: socket.id,
-            timestamp: new Date().toISOString()
-          });
-          setIsConnected(true);
-          setReconnectAttempts(0);
-        });
-
-        socket.on('disconnect', () => {
-          console.log('🔌 [Game] Socket disconnected:', {
-            socketId: socket.id,
-            timestamp: new Date().toISOString()
-          });
-          setIsConnected(false);
-          handleReconnect();
-        });
-
-        socket.on('gameStart', (data) => {
-          console.log('🎮 [Game] Game started:', {
-            startTime: data.startTime,
-            gameId: data.gameId,
-            playerInfo: data.playerInfo,
-            timestamp: new Date().toISOString()
-          });
-
-          setGameStartTime(data.startTime);
-          setMoveStartTime(data.startTime);
-          setOpponentInfo(data.playerInfo);
-        });
-
-        socket.on('gameState', (gameState) => {
-          console.log('[DEBUG][FRONT][SOCKET_GAMESTATE_DETAILED]', {
-            socketId: socket.id,
-            gameState,
-            isValid: isValidGameState(gameState),
-            validationDetails: {
-              hasBoard: !!gameState?.board,
-              hasCurrentPlayer: !!gameState?.currentPlayer,
-              hasScale: !!gameState?.scale,
-              hasPosition: !!gameState?.position,
-              boardType: gameState?.board ? typeof gameState.board : 'undefined',
-              currentPlayerType: gameState?.currentPlayer ? typeof gameState.currentPlayer : 'undefined',
-              scaleType: gameState?.scale ? typeof gameState.scale : 'undefined',
-              positionType: gameState?.position ? typeof gameState.position : 'undefined'
-            },
-            timestamp: new Date().toISOString()
-          });
-
-          if (!isValidGameState(gameState)) {
-            console.error('❌ [Game] Invalid game state received:', {
-              gameState,
-              validationDetails: {
-                hasBoard: !!gameState?.board,
-                hasCurrentPlayer: !!gameState?.currentPlayer,
-                hasScale: !!gameState?.scale,
-                hasPosition: !!gameState?.position
-              },
-              timestamp: new Date().toISOString()
-            });
-            return;
-          }
-
-          setBoard(gameState.board);
-          setCurrentPlayer(gameState.currentPlayer);
-          setScale(gameState.scale);
-          setPosition(gameState.position);
-          setTime(gameState.time || 0);
-          setPlayerTime1(gameState.playerTime1 || 0);
-          setPlayerTime2(gameState.playerTime2 || 0);
+    if (!mountedRef.current || !lobbyId || !socket) return;
+    const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() || localStorage.getItem('current_telegram_id');
+    if (!socket.connected) socket.connect();
+    socket.on('connect', () => { setIsConnected(true); setReconnectAttempts(0); });
+    socket.on('disconnect', () => { setIsConnected(false); handleReconnect(); });
+    socket.on('gameStart', (data) => { setGameStartTime(data.startTime); setMoveStartTime(data.startTime); setOpponentInfo(data.playerInfo); });
+    socket.on('gameState', (gameState) => {
+      if (!isValidGameState(gameState)) return;
+      setBoard(gameState.board);
+      setCurrentPlayer(gameState.currentPlayer);
+      setScale(gameState.scale);
+      setPosition(gameState.position);
+      setTime(gameState.time || 0);
+      setPlayerTime1(gameState.playerTime1 || 0);
+      setPlayerTime2(gameState.playerTime2 || 0);
+      setGameSession(gameState.gameSession);
+      if (!opponentInfo && gameState.opponentInfo) setOpponentInfo(gameState.opponentInfo);
+      setMoveTimer(gameState.maxMoveTime || 30000);
+      if (gameState.startTime) { setGameStartTime(gameState.startTime); setMoveStartTime(gameState.startTime); }
+    });
+    socket.on('moveMade', (data) => {
+      setBoard(data.gameState.board);
+      setCurrentPlayer(data.gameState.currentTurn);
+      setMoveStartTime(data.gameState.moveStartTime);
+      setMoveTimer(30000);
+      const winner = checkWinner(data.gameState.board, Number(data.position), data.player);
+      if (winner) setWinLine(winner);
+    });
+    socket.on('playerDisconnected', (data) => {});
+    socket.on('gameEnded', (data) => {
+      const currentTelegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
+      if (data.winner === currentTelegramId) navigate('/end');
+      else navigate('/lost');
+    });
+    subscribeToGameEvents(socket, {
+      onGameState: (gameState) => {
+        if (!isValidGameState(gameState)) return;
+        setBoard(gameState.board);
+        setCurrentPlayer(gameState.currentPlayer);
+        setScale(gameState.scale);
+        setPosition(gameState.position);
+        setTime(gameState.time);
+        setPlayerTime1(gameState.playerTime1);
+        setPlayerTime2(gameState.playerTime2);
+        if (gameState.gameSession) {
           setGameSession(gameState.gameSession);
-
-          // Добавляем проверку типов
-          if (gameState.gameSession) {
-            console.log('[DEBUG][FRONT][TYPES]', {
-              creatorId: gameState.gameSession.creatorId,
-              creatorIdType: typeof gameState.gameSession.creatorId,
-              userId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
-              userIdType: typeof window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
-              isCreator: String(gameState.gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
-              timestamp: new Date().toISOString()
-            });
+          if (gameState.gameSession.creatorId !== String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id)) {
+            setOpponentInfo({ id: gameState.gameSession.creatorId, name: gameState.gameSession.creatorName, avatar: gameState.gameSession.creatorAvatar });
           }
-
-          // Проверяем, есть ли уже данные о сопернике
-          if (!opponentInfo && gameState.opponentInfo) {
-            setOpponentInfo(gameState.opponentInfo);
-          }
-
-          setMoveTimer(gameState.maxMoveTime || 30000);
-
-          if (gameState.startTime) {
-            setGameStartTime(gameState.startTime);
-            setMoveStartTime(gameState.startTime);
-          }
-        });
-
-        socket.on('moveMade', (data) => {
-          console.log('🎲 [Game] Move made:', {
-            moveId: data.moveId,
-            position: data.position,
-            player: data.player,
-            gameState: {
-              board: data.gameState.board,
-              currentTurn: data.gameState.currentTurn,
-              timeLeft: data.gameState.timeLeft
-            },
-            timestamp: new Date().toISOString()
-          });
-
-          setBoard(data.gameState.board);
-          setCurrentPlayer(data.gameState.currentTurn);
-          setMoveStartTime(data.gameState.moveStartTime);
-          setMoveTimer(30000);
-
-          const winner = checkWinner(
-            data.gameState.board,
-            Number(data.position),
-            data.player
-          );
-
-          if (winner) {
-            console.log('🏆 [Game] Winner found:', {
-              winner,
-              lastMove: {
-                position: data.position,
-                player: data.player
-              },
-              timestamp: new Date().toISOString()
-            });
-            setWinLine(winner);
-          }
-        });
-
-        socket.on('playerDisconnected', (data) => {
-          console.log('👋 [Game] Player disconnected:', {
-            telegramId: data.telegramId,
-            timestamp: new Date().toISOString()
-          });
-        });
-
-        socket.on('gameEnded', (data) => {
-          console.log('🏁 [Game] Game ended:', {
-            winner: data.winner,
-            reason: data.reason,
-            statistics: data.statistics,
-            timestamp: new Date().toISOString()
-          });
-
-          const currentTelegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
-          if (data.winner === currentTelegramId) {
-            navigate('/end');
-          } else {
-            navigate('/lost');
-          }
-        });
-
-        // Подписываемся на игровые события
-        subscribeToGameEvents(socket, {
-          onGameState: (gameState) => {
-            if (!isValidGameState(gameState)) {
-              console.error('❌ [Game] Invalid game state received:', {
-                gameState,
-                timestamp: new Date().toISOString()
-              });
-              return;
-            }
-
-            console.log('🎮 [Game] Received game state:', {
-              currentPlayer: gameState.currentPlayer,
-              scale: gameState.scale,
-              position: gameState.position,
-              timestamp: new Date().toISOString()
-            });
-
-            setBoard(gameState.board);
-            setCurrentPlayer(gameState.currentPlayer);
-            setScale(gameState.scale);
-            setPosition(gameState.position);
-            setTime(gameState.time);
-            setPlayerTime1(gameState.playerTime1);
-            setPlayerTime2(gameState.playerTime2);
-
-            if (gameState.gameSession) {
-              setGameSession(gameState.gameSession);
-              if (gameState.gameSession.creatorId !== String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id)) {
-                setOpponentInfo({
-                  id: gameState.gameSession.creatorId,
-                  name: gameState.gameSession.creatorName,
-                  avatar: gameState.gameSession.creatorAvatar
-                });
-              }
-            }
-
-            if (gameStartTime === null) {
-              setGameStartTime(Date.now() - (gameState.time * 1000));
-              setMoveStartTime(Date.now());
-            }
-          },
-          onOpponentJoined: (opponent) => {
-            setOpponentInfo(opponent);
-          },
-          onOpponentLeft: () => {
-            setOpponentInfo(null);
-          },
-          onError: (error) => {
-            console.error('Game error:', error);
-          }
-        });
-
-        // Проверяем сохраненное состояние после подключения
-        try {
-          const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() || 
-                            localStorage.getItem('current_telegram_id');
-          if (telegramId) {
-            const gameState = await checkAndRestoreGameState(telegramId);
-            if (gameState?.gameId && gameState.gameId !== lobbyId) {
-              console.log('🔄 [Game] Found different active game:', {
-                currentLobby: lobbyId,
-                savedGame: gameState.gameId,
-                timestamp: new Date().toISOString()
-              });
-              navigate(`/game/${gameState.gameId}`);
-            }
-          }
-        } catch (error) {
-          console.warn('⚠️ [Game] Failed to check game state:', {
-            error: error.message,
-            timestamp: new Date().toISOString()
-          });
         }
-      } catch (error) {
-        console.error('Error during socket initialization:', error);
-        handleReconnect();
-      }
-    };
-
-    const handleReconnect = () => {
-      if (reconnectAttempts >= maxReconnectAttempts) {
-        navigate('/');
-        return;
-      }
-
-      setTimeout(() => {
-        setReconnectAttempts(prev => prev + 1);
-        initializeSocket();
-      }, reconnectDelay);
-    };
-
-    initializeSocket();
-
+        if (gameStartTime === null) {
+          setGameStartTime(Date.now() - (gameState.time * 1000));
+          setMoveStartTime(Date.now());
+        }
+      },
+      onOpponentJoined: (opponent) => setOpponentInfo(opponent),
+      onOpponentLeft: () => setOpponentInfo(null),
+      onError: (error) => { console.error('Game error:', error); }
+    });
+    (async () => {
+      try {
+        if (telegramId) {
+          const gameState = await checkAndRestoreGameState(socket, telegramId);
+          if (gameState?.gameId && gameState.gameId !== lobbyId) navigate(`/game/${gameState.gameId}`);
+        }
+      } catch (error) {}
+    })();
     return () => {
-      // Не отключаем сокет при размонтировании компонента
-      // Только очищаем обработчики событий
-      if (socketRef.current) {
-        socketRef.current.off('connect');
-        socketRef.current.off('disconnect');
-        socketRef.current.off('moveMade');
-        socketRef.current.off('playerDisconnected');
-        socketRef.current.off('gameEnded');
-        socketRef.current.off('gameState');
-      }
+      socket.off('connect');
+      socket.off('disconnect');
+      socket.off('moveMade');
+      socket.off('playerDisconnected');
+      socket.off('gameEnded');
+      socket.off('gameState');
     };
-  }, [lobbyId, navigate, reconnectAttempts]);
+  }, [lobbyId, navigate, reconnectAttempts, socket]);
 
-  // Обновляем viewport при изменении масштаба или позиции
   useEffect(() => {
-    if (gameSession) {
-      updateViewport(gameSession.id, { scale, position });
+    if (gameSession && socket) {
+      updateViewport(socket, gameSession.id, { scale, position });
     }
-  }, [scale, position, gameSession]);
+  }, [scale, position, gameSession, socket]);
 
   // Эффект для таймера хода и времени игроков
   useEffect(() => {
@@ -509,14 +304,13 @@ const Game = () => {
   const isOurTurn = currentPlayer === (String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ? "X" : "O");
 
   useEffect(() => {
-    const socket = initSocket();
-    if (moveTimer === 0 && isOurTurn) {
+    if (socket && moveTimer === 0 && isOurTurn) {
       socket.emit('timeExpired', {
         gameId: gameSession?.id,
         player: currentPlayer
       });
     }
-  }, [moveTimer, isOurTurn, gameSession?.id, currentPlayer]);
+  }, [moveTimer, isOurTurn, gameSession?.id, currentPlayer, socket]);
 
   // Обновляем размеры доски при изменении размера окна
   useEffect(() => {
@@ -645,28 +439,15 @@ const Game = () => {
   const handleCellClick = async (row, col) => {
     if (!visibleCells.has(`${row}-${col}`) || winLine || !gameSession) return;
     if (currentPlayer !== (String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ? "X" : "O")) return;
-
     const moveTime = Date.now() - moveStartTime;
-
     const { normalizedX, normalizedY } = normalizeCoordinates(
       col * CELL_SIZE,
       row * CELL_SIZE,
       boardDimensions.width,
       boardDimensions.height
     );
-
     try {
-      await makeMove(
-        gameSession.id,
-        { 
-          row,
-          col,
-          normalizedX,
-          normalizedY
-        },
-        currentPlayer,
-        moveTime
-      );
+      await makeMove(socket, gameSession.id, { row, col, normalizedX, normalizedY }, currentPlayer, moveTime);
     } catch (error) {
       console.error('Failed to make move:', error);
     }
@@ -691,69 +472,15 @@ const Game = () => {
   };
 
   useEffect(() => {
-    const socket = initSocket();
+    if (!socket) return;
     const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
     if (!telegramId) return;
-
     socket.emit('getOpponentInfo', { telegramId }, (response) => {
-      console.log('[DEBUG][FRONT][SOCKET getOpponentInfo]', { response, telegramId, timestamp: new Date().toISOString() });
       if (response && !response.error) {
-        setOpponentInfo({
-          name: response.name,
-          avatar: response.avatar
-        });
-        console.log('🟢 [Game] Opponent info received:', response);
-      } else {
-        console.warn('⚠️ [Game] Failed to get opponent info:', response);
+        setOpponentInfo({ name: response.name, avatar: response.avatar });
       }
     });
-  }, []);
-
-  // Логирование после получения gameSession
-  useEffect(() => {
-    if (gameSession) {
-      console.log('[DEBUG][FRONT][SESSION]', {
-        gameSession,
-        isCreator: String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
-        telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
-        timestamp: new Date().toISOString()
-      });
-    }
-  }, [gameSession]);
-
-  // Логирование после получения opponentInfo
-  useEffect(() => {
-    if (opponentInfo) {
-      console.log('[DEBUG][FRONT][OPPONENT]', {
-        opponentInfo,
-        timestamp: new Date().toISOString()
-      });
-    }
-  }, [opponentInfo]);
-
-  useEffect(() => {
-    if (gameSession) {
-      console.log('[DEBUG][FRONT][INITDATA]', {
-        rawInitData: window.Telegram?.WebApp?.initData,
-        parsedInitData: window.Telegram?.WebApp?.initDataUnsafe,
-        userId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
-        userIdType: typeof window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
-        timestamp: new Date().toISOString()
-      });
-    }
-  }, [gameSession]);
-
-  useEffect(() => {
-    if (!socketRef.current) return;
-    console.log('[DEBUG][FRONT][SOCKET][ATTACH_GAMESTATE]', { socketId: socketRef.current.id, timestamp: new Date().toISOString() });
-    const handler = (gameState) => {
-      console.log('[DEBUG][FRONT][SOCKET][ON_GAMESTATE]', { socketId: socketRef.current.id, gameState, timestamp: new Date().toISOString() });
-      setGameSession(gameState.gameSession);
-      // ...другой стейт
-    };
-    socketRef.current.on('gameState', handler);
-    return () => socketRef.current.off('gameState', handler);
-  }, [socketRef]);
+  }, [socket]);
 
   return (
     <div
@@ -766,21 +493,6 @@ const Game = () => {
         pointerEvents: isOurTurn ? 'auto' : 'none'
       }}
     >
-      {gameSession && console.log('[DEBUG][FRONT][COMPARISON_DETAILED]', {
-        creatorId: gameSession.creatorId,
-        creatorIdType: typeof gameSession.creatorId,
-        creatorIdAsString: String(gameSession.creatorId),
-        userId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
-        userIdType: typeof window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
-        userIdAsString: String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
-        comparison: String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
-        comparisonResult: {
-          direct: gameSession.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
-          stringCompare: String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
-          numberCompare: Number(gameSession.creatorId) === Number(window.Telegram?.WebApp?.initDataUnsafe?.user?.id)
-        },
-        timestamp: new Date().toISOString()
-      })}
       <GameHeader 
         currentPlayer={currentPlayer} 
         moveTimer={moveTimer} 

@@ -233,19 +233,34 @@ const Game = () => {
         });
 
         socket.on('gameState', (gameState) => {
-          console.log('[DEBUG][FRONT][SOCKET_GAMESTATE]', {
+          console.log('[DEBUG][FRONT][SOCKET_GAMESTATE_DETAILED]', {
             socketId: socket.id,
             gameState,
-            timestamp: new Date().toISOString()
-          });
-          console.log('🎮 [Game] Received game state:', {
-            currentPlayer: gameState.currentPlayer,
-            hasBoard: !!gameState.board,
+            isValid: isValidGameState(gameState),
+            validationDetails: {
+              hasBoard: !!gameState?.board,
+              hasCurrentPlayer: !!gameState?.currentPlayer,
+              hasScale: !!gameState?.scale,
+              hasPosition: !!gameState?.position,
+              boardType: gameState?.board ? typeof gameState.board : 'undefined',
+              currentPlayerType: gameState?.currentPlayer ? typeof gameState.currentPlayer : 'undefined',
+              scaleType: gameState?.scale ? typeof gameState.scale : 'undefined',
+              positionType: gameState?.position ? typeof gameState.position : 'undefined'
+            },
             timestamp: new Date().toISOString()
           });
 
           if (!isValidGameState(gameState)) {
-            console.error('❌ [Game] Invalid game state received:', gameState);
+            console.error('❌ [Game] Invalid game state received:', {
+              gameState,
+              validationDetails: {
+                hasBoard: !!gameState?.board,
+                hasCurrentPlayer: !!gameState?.currentPlayer,
+                hasScale: !!gameState?.scale,
+                hasPosition: !!gameState?.position
+              },
+              timestamp: new Date().toISOString()
+            });
             return;
           }
 

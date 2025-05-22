@@ -486,7 +486,7 @@ const Game = () => {
   }, [gameStartTime, isConnected]);
 
   // Определяем, является ли текущий ход нашим
-  const isOurTurn = currentPlayer === (String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ? "X" : "O");
+  const isOurTurn = currentPlayer === (Number(gameSession?.creatorId) === Number(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ? "X" : "O");
 
   useEffect(() => {
     const socket = initSocket();
@@ -624,7 +624,7 @@ const Game = () => {
 
   const handleCellClick = async (row, col) => {
     if (!visibleCells.has(`${row}-${col}`) || winLine || !gameSession) return;
-    if (currentPlayer !== (String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ? "X" : "O")) return;
+    if (currentPlayer !== (Number(gameSession?.creatorId) === Number(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ? "X" : "O")) return;
     
     const moveTime = Date.now() - moveStartTime;
     
@@ -738,7 +738,7 @@ const Game = () => {
         playerTime2={playerTime2}
         opponentInfo={opponentInfo}
         isConnected={isConnected}
-        isCreator={gameSession ? String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) : false}
+        isCreator={gameSession ? Number(gameSession.creatorId) === Number(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) : false}
       />
       {gameSession && (
         <pre style={{color: 'red', fontSize: 12}}>

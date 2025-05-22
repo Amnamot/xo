@@ -58,6 +58,19 @@ const GameHeader = ({
   const currentUserAvatar = tgUser?.photo_url || "../media/JohnAva.png";
   const currentUserName = tgUser?.first_name || "You";
 
+  console.log('[DEBUG][FRONT][GAMEHEADER_PROPS]', {
+    currentPlayer,
+    moveTimer,
+    time,
+    playerTime1,
+    playerTime2,
+    opponentInfo,
+    isConnected,
+    isCreator,
+    telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
+    timestamp: new Date().toISOString()
+  });
+
   // Определяем, какой игрок где (создатель всегда слева)
   const leftPlayerAvatar = isCreator === null ? "../media/JohnAva.png" : 
     (isCreator ? currentUserAvatar : (opponentInfo?.avatar || "../media/JohnAva.png"));
@@ -67,6 +80,15 @@ const GameHeader = ({
     (isCreator ? (opponentInfo?.avatar || "../media/JohnAva.png") : currentUserAvatar);
   const rightPlayerName = isCreator === null ? "Loading..." : 
     (isCreator ? (opponentInfo?.name || "Opponent") : currentUserName);
+
+  console.log('[DEBUG][FRONT][GAMEHEADER_CALC]', {
+    isCreator,
+    leftPlayerName,
+    rightPlayerName,
+    leftPlayerAvatar,
+    rightPlayerAvatar,
+    timestamp: new Date().toISOString()
+  });
 
   // Оптимизированное логирование: только при изменении ключевых данных
   useEffect(() => {

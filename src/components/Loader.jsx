@@ -85,20 +85,37 @@ const Loader = () => {
   useEffect(() => {
     if (progress >= 100 && authorized) {
       const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
-      const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
       const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const telegramId = user.telegramId;
+
+      console.log('🔄 [Loader] Starting lobby join process:', {
+        progress,
+        authorized,
+        startParam,
+        telegramId,
+        hasUser: !!user,
+        timestamp: new Date().toISOString()
+      });
 
       if (startParam) {
         const initData = window.Telegram?.WebApp?.initData;
+        const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        
         console.log('🔍 [Loader] Checking initData for lobby join:', {
           hasInitData: !!initData,
           startParam,
           telegramId,
+          hasTgUser: !!tgUser,
+          tgUserId: tgUser?.id,
           timestamp: new Date().toISOString()
         });
 
         if (!initData) {
-          console.warn("No initData during lobby join. Aborting.");
+          console.warn("❌ [Loader] No initData during lobby join. Aborting.", {
+            startParam,
+            telegramId,
+            timestamp: new Date().toISOString()
+          });
           navigate("/nolobby", { 
             state: { 
               type: 'losst2',
@@ -109,81 +126,59 @@ const Loader = () => {
           return;
         }
 
-        console.log('🔄 [Loader] Starting initData validation for lobby join:', {
-          startParam,
+        // Проверяем, что у нас есть все необходимые данные
+        if (!telegramId) {
+          console.error('❌ [Loader] Missing telegramId in user data:', {
+            user,
+            startParam,
+            hasInitData: !!initData,
+            hasTgUser: !!tgUser,
+            tgUserId: tgUser?.id,
+            timestamp: new Date().toISOString()
+          });
+          navigate("/nolobby", { 
+            state: { 
+              type: 'losst2',
+              message: 'Failed to validate user data.<br />Please try again.',
+              redirectTo: '/start'
+            } 
+          });
+          return;
+        }
+
+        // Проверяем соответствие telegramId
+        const tgUserId = tgUser?.id?.toString();
+        if (tgUserId && tgUserId !== telegramId) {
+          console.error('❌ [Loader] Telegram ID mismatch:', {
+            storedTelegramId: telegramId,
+            currentTgUserId: tgUserId,
+            startParam,
+            timestamp: new Date().toISOString()
+          });
+          navigate("/nolobby", { 
+            state: { 
+              type: 'losst2',
+              message: 'User data mismatch.<br />Please try again.',
+              redirectTo: '/start'
+            } 
+          });
+          return;
+        }
+
+        // Переходим в игру с существующими данными
+        console.log('✅ [Loader] All checks passed, navigating to game:', {
+          gameId: startParam,
+          telegramId,
+          hasInitData: !!initData,
+          hasTgUser: !!tgUser,
+          timestamp: new Date().toISOString()
+        });
+        navigate(`/game/${startParam}`, { replace: true });
+      } else {
+        console.log('🏠 [Loader] No start_param, navigating to start screen:', {
           telegramId,
           timestamp: new Date().toISOString()
         });
-
-        // Добавляем валидацию initData перед переходом в игру
-        fetch("https://api.igra.top/user/init", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ initData })
-        })
-          .then((res) => {
-            console.log('📡 [Loader] Received response from /user/init:', {
-              status: res.status,
-              ok: res.ok,
-              startParam,
-              timestamp: new Date().toISOString()
-            });
-
-            if (!res.ok) throw new Error("Failed to authorize");
-            return res.json();
-          })
-          .then(async (userData) => {
-            console.log('✅ [Loader] Successfully validated user data:', {
-              telegramId: userData.telegramId,
-              userName: userData.userName,
-              startParam,
-              timestamp: new Date().toISOString()
-            });
-
-            const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-            if (tgUser?.photo_url) {
-              userData.avatar = tgUser.photo_url;
-              console.log('🖼️ [Loader] Added avatar from Telegram:', {
-                telegramId: userData.telegramId,
-                hasAvatar: !!tgUser.photo_url,
-                timestamp: new Date().toISOString()
-              });
-            }
-
-            localStorage.setItem("user", JSON.stringify(userData));
-            console.log('💾 [Loader] Saved validated user data to localStorage:', {
-              telegramId: userData.telegramId,
-              startParam,
-              timestamp: new Date().toISOString()
-            });
-
-            // После успешной валидации переходим в игру
-            console.log('🎮 [Loader] Navigating to game:', {
-              gameId: startParam,
-              telegramId: userData.telegramId,
-              timestamp: new Date().toISOString()
-            });
-            navigate(`/game/${startParam}`, { replace: true });
-          })
-          .catch((err) => {
-            console.error('❌ [Loader] Authorization error during lobby join:', {
-              error: err.message,
-              startParam,
-              telegramId,
-              timestamp: new Date().toISOString()
-            });
-            navigate("/nolobby", { 
-              state: { 
-                type: 'losst2',
-                message: 'Failed to validate user data.<br />Please try again.',
-                redirectTo: '/start'
-              } 
-            });
-          });
-      } else {
-        // Если нет start_param, переходим на стартовый экран
         navigate("/start", { replace: true });
       }
     }

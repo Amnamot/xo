@@ -722,6 +722,14 @@ const Game = () => {
         pointerEvents: isOurTurn ? 'auto' : 'none'
       }}
     >
+      {gameSession && console.log('[DEBUG][FRONT][TYPES]', {
+        creatorId: gameSession.creatorId,
+        creatorIdType: typeof gameSession.creatorId,
+        userId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
+        userIdType: typeof window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
+        isCreator: gameSession.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
+        timestamp: new Date().toISOString()
+      })}
       <GameHeader 
         currentPlayer={currentPlayer} 
         moveTimer={moveTimer} 

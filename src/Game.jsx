@@ -26,11 +26,11 @@ const createEmptyBoard = () =>
 
 const isValidGameState = (gameState) => {
   if (!gameState || typeof gameState !== 'object') return false;
-  
+
   // Проверяем обязательные поля
   const requiredFields = ['board', 'currentPlayer', 'scale', 'position'];
   if (!requiredFields.every(field => field in gameState)) return false;
-  
+
   // Проверяем board
   if (!Array.isArray(gameState.board) || 
       gameState.board.length !== BOARD_SIZE || 
@@ -41,26 +41,26 @@ const isValidGameState = (gameState) => {
       )) {
     return false;
   }
-  
+
   // Проверяем currentPlayer
   if (gameState.currentPlayer !== 'X' && gameState.currentPlayer !== 'O') return false;
-  
+
   // Проверяем scale
   if (typeof gameState.scale !== 'number' || gameState.scale <= 0) return false;
-  
+
   // Проверяем position
   if (!gameState.position || 
       typeof gameState.position.x !== 'number' || 
       typeof gameState.position.y !== 'number') {
     return false;
   }
-  
+
   // Проверяем опциональные числовые поля
   const optionalNumberFields = ['time', 'playerTime1', 'playerTime2'];
   for (const field of optionalNumberFields) {
     if (field in gameState && typeof gameState[field] !== 'number') return false;
   }
-  
+
   // Проверяем gameSession если он есть
   if (gameState.gameSession) {
     const sessionFields = ['id', 'creatorId', 'opponentId'];
@@ -68,7 +68,7 @@ const isValidGameState = (gameState) => {
       return false;
     }
   }
-  
+
   return true;
 };
 
@@ -226,7 +226,7 @@ const Game = () => {
             playerInfo: data.playerInfo,
             timestamp: new Date().toISOString()
           });
-          
+
           setGameStartTime(data.startTime);
           setMoveStartTime(data.startTime);
           setOpponentInfo(data.playerInfo);
@@ -272,7 +272,8 @@ const Game = () => {
           setPlayerTime1(gameState.playerTime1 || 0);
           setPlayerTime2(gameState.playerTime2 || 0);
           setGameSession(gameState.gameSession);
-          
+
+          // Добавляем проверку типов
           if (gameState.gameSession) {
             console.log('[DEBUG][FRONT][TYPES]', {
               creatorId: gameState.gameSession.creatorId,
@@ -283,13 +284,14 @@ const Game = () => {
               timestamp: new Date().toISOString()
             });
           }
-          
+
+          // Проверяем, есть ли уже данные о сопернике
           if (!opponentInfo && gameState.opponentInfo) {
             setOpponentInfo(gameState.opponentInfo);
           }
-          
+
           setMoveTimer(gameState.maxMoveTime || 30000);
-          
+
           if (gameState.startTime) {
             setGameStartTime(gameState.startTime);
             setMoveStartTime(gameState.startTime);
@@ -381,7 +383,7 @@ const Game = () => {
             setTime(gameState.time);
             setPlayerTime1(gameState.playerTime1);
             setPlayerTime2(gameState.playerTime2);
-            
+
             if (gameState.gameSession) {
               setGameSession(gameState.gameSession);
               if (gameState.gameSession.creatorId !== String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id)) {
@@ -451,6 +453,8 @@ const Game = () => {
     initializeSocket();
 
     return () => {
+      // Не отключаем сокет при размонтировании компонента
+      // Только очищаем обработчики событий
       if (socketRef.current) {
         socketRef.current.off('connect');
         socketRef.current.off('disconnect');
@@ -460,7 +464,7 @@ const Game = () => {
         socketRef.current.off('gameState');
       }
     };
-  }, [lobbyId, navigate, reconnectAttempts, opponentInfo, gameStartTime]);
+  }, [lobbyId, navigate, reconnectAttempts]);
 
   // Обновляем viewport при изменении масштаба или позиции
   useEffect(() => {
@@ -477,7 +481,7 @@ const Game = () => {
       const elapsed = Date.now() - moveStartTime;
       const newMoveTimer = Math.max(30000 - Math.floor(elapsed / 10), 0);
       setMoveTimer(newMoveTimer);
-      
+
       // Обновляем время только активного игрока
       if (currentPlayer === "X") {
         setPlayerTime1(prev => prev + 100);
@@ -540,7 +544,7 @@ const Game = () => {
     });
 
     if (!isOurTurn) return;
-    
+
     if (e?.touches?.length === 1) {
       const newTouchStart = {
         x: e.touches[0].clientX - position.x,
@@ -581,7 +585,7 @@ const Game = () => {
           console.warn('⚠️ Touch move without touchStart');
           return;
         }
-        
+
         const newPosition = {
           x: e.touches[0].clientX - touchStart.x,
           y: e.touches[0].clientY - touchStart.y,
@@ -596,7 +600,7 @@ const Game = () => {
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         const newDistance = Math.sqrt(dx * dx + dy * dy);
-        
+
         if (!initialDistance) {
           console.log('📏 Setting initial distance', {
             distance: newDistance,
@@ -605,7 +609,7 @@ const Game = () => {
           setInitialDistance(newDistance);
           return;
         }
-        
+
         const zoom = newDistance / initialDistance;
         console.log('🔍 Zooming board', {
           currentScale: scale,
@@ -641,16 +645,16 @@ const Game = () => {
   const handleCellClick = async (row, col) => {
     if (!visibleCells.has(`${row}-${col}`) || winLine || !gameSession) return;
     if (currentPlayer !== (String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ? "X" : "O")) return;
-    
+
     const moveTime = Date.now() - moveStartTime;
-    
+
     const { normalizedX, normalizedY } = normalizeCoordinates(
       col * CELL_SIZE,
       row * CELL_SIZE,
       boardDimensions.width,
       boardDimensions.height
     );
-    
+
     try {
       await makeMove(
         gameSession.id,
@@ -778,8 +782,17 @@ const Game = () => {
         timestamp: new Date().toISOString()
       })}
       <GameHeader 
+        currentPlayer={currentPlayer} 
+        moveTimer={moveTimer} 
+        time={time}
+        playerTime1={playerTime1}
+        playerTime2={playerTime2}
+        opponentInfo={opponentInfo}
+        isConnected={isConnected}
+        isCreator={gameSession ? 
+          String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) : 
+          null}
         gameSession={gameSession}
-        currentPlayer={currentPlayer}
         onExit={() => navigate('/')}
       />
       {gameSession && (
@@ -823,5 +836,3 @@ const Game = () => {
     </div>
   );
 };
-
-export default Game;

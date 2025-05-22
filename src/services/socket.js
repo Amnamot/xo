@@ -163,6 +163,13 @@ export const initSocket = () => {
       });
     });
 
+    const socketId = socket.id;
+    console.log('[DEBUG][FRONT][SOCKET_INIT]', { socketId, timestamp: new Date().toISOString() });
+
+    socket.onAny((event, ...args) => {
+      console.log('[DEBUG][FRONT][SOCKET_EVENT]', { event, socketId, args, timestamp: new Date().toISOString() });
+    });
+
     return socket;
   } catch (error) {
     console.error('❌ [Socket Service] Failed to initialize socket:', {

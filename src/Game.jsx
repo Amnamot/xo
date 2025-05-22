@@ -233,6 +233,11 @@ const Game = () => {
         });
 
         socket.on('gameState', (gameState) => {
+          console.log('[DEBUG][FRONT][SOCKET_GAMESTATE]', {
+            socketId: socket.id,
+            gameState,
+            timestamp: new Date().toISOString()
+          });
           console.log('🎮 [Game] Received game state:', {
             currentPlayer: gameState.currentPlayer,
             hasBoard: !!gameState.board,

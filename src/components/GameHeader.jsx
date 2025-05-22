@@ -7,6 +7,43 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
   const [timerColor, setTimerColor] = useState("#6800D7");
   const [isGameStarted, setIsGameStarted] = useState(false);
 
+  // Перемещаем все useEffect перед условными проверками
+  useEffect(() => {
+    if (currentPlayer === "X") {
+      setTimerColor("#6800D7");
+    } else if (currentPlayer === "O") {
+      setTimerColor("#E10303");
+    }
+  }, [currentPlayer]);
+
+  useEffect(() => {
+    if (gameSession?.players?.[currentPlayer]?.moveTimer > 0 && !isGameStarted) {
+      console.log('🎮 [GameHeader] Game started, initializing timers', {
+        currentPlayer,
+        moveTimer: gameSession.players[currentPlayer].moveTimer,
+        time: gameSession.players[currentPlayer].time,
+        playerTime1: gameSession.players[currentPlayer].playerTime1,
+        playerTime2: gameSession.players[currentPlayer].playerTime2,
+        timestamp: new Date().toISOString()
+      });
+      setIsGameStarted(true);
+    }
+  }, [currentPlayer, gameSession, isGameStarted]);
+
+  useEffect(() => {
+    if (gameSession?.players?.[currentPlayer]) {
+      console.log('[DEBUG][FRONT][GameHeader]', {
+        isCreator: gameSession.players[currentPlayer].isCreator,
+        leftPlayerName: gameSession.players[currentPlayer].name,
+        rightPlayerName: Object.values(gameSession.players).find(p => p.isOpponent)?.name,
+        opponentInfo: Object.values(gameSession.players).find(p => p.isOpponent),
+        currentUserName: window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name,
+        telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [gameSession, currentPlayer]);
+
   console.log('[DEBUG][FRONT][GAMEHEADER]', {
     gameSession,
     currentPlayer,
@@ -24,29 +61,6 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
   if (!player || !opponent) {
     return null;
   }
-
-  useEffect(() => {
-    if (currentPlayer === "X") {
-      setTimerColor("#6800D7");
-    } else if (currentPlayer === "O") {
-      setTimerColor("#E10303");
-    }
-  }, [currentPlayer]);
-
-  // Добавляем эффект для инициализации таймеров
-  useEffect(() => {
-    if (currentPlayer && player.moveTimer > 0 && !isGameStarted) {
-      console.log('🎮 [GameHeader] Game started, initializing timers', {
-        currentPlayer,
-        moveTimer: player.moveTimer,
-        time: player.time,
-        playerTime1: player.playerTime1,
-        playerTime2: player.playerTime2,
-        timestamp: new Date().toISOString()
-      });
-      setIsGameStarted(true);
-    }
-  }, [currentPlayer, player.moveTimer, player.time, player.playerTime1, player.playerTime2]);
 
   const formatTimer = (time) => {
     if (!isGameStarted || time === undefined || time === null) return "00:00";
@@ -98,19 +112,6 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
     rightPlayerAvatar,
     timestamp: new Date().toISOString()
   });
-
-  // Оптимизированное логирование: только при изменении ключевых данных
-  useEffect(() => {
-    console.log('[DEBUG][FRONT][GameHeader]', {
-      isCreator: player.isCreator,
-      leftPlayerName,
-      rightPlayerName,
-      opponentInfo: opponent,
-      currentUserName,
-      telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
-      timestamp: new Date().toISOString()
-    });
-  }, [player.isCreator, leftPlayerName, rightPlayerName, opponent]);
 
   return (
     <>

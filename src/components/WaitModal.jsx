@@ -14,6 +14,14 @@ const WaitModal = ({ onCancel }) => {
   useEffect(() => {
     if (!socket) return;
 
+    console.log('⏳ [WaitModal] Initializing wait state:', {
+      telegramId,
+      socketId: socket.id,
+      connected: socket.connected,
+      rooms: Array.from(socket.rooms || []),
+      timestamp: new Date().toISOString()
+    });
+
     // Отправляем начальное состояние
     if (telegramId) {
       socket.emit('uiState', { 
@@ -21,14 +29,32 @@ const WaitModal = ({ onCancel }) => {
         telegramId,
         details: { timeLeft: LOBBY_LIFETIME }
       });
+      
+      console.log('📤 [WaitModal] Sent initial UI state:', {
+        telegramId,
+        timeLeft: LOBBY_LIFETIME,
+        timestamp: new Date().toISOString()
+      });
     }
 
     // Слушаем событие uiState для восстановления таймера
     const handleUiState = (data) => {
+      console.log('📥 [WaitModal] Received UI state update:', {
+        data,
+        telegramId,
+        timestamp: new Date().toISOString()
+      });
+      
       if (data.state === 'waitModal' && data.details?.isReconnect) {
         const timeLeft = data.details.timeLeft;
         setSecondsLeft(timeLeft);
         setStartTime(Date.now() - ((LOBBY_LIFETIME - timeLeft) * 1000));
+        
+        console.log('🔄 [WaitModal] Restored timer state:', {
+          timeLeft,
+          startTime: Date.now() - ((LOBBY_LIFETIME - timeLeft) * 1000),
+          timestamp: new Date().toISOString()
+        });
       }
     };
     socket.on('uiState', handleUiState);
@@ -40,12 +66,20 @@ const WaitModal = ({ onCancel }) => {
 
       // Если таймер дошел до нуля, отменяем лобби
       if (remaining === 0) {
+        console.log('⏰ [WaitModal] Timer expired:', {
+          telegramId,
+          timestamp: new Date().toISOString()
+        });
         clearInterval(timer);
         onCancel();
       }
     }, 1000);
 
     return () => {
+      console.log('🧹 [WaitModal] Cleaning up:', {
+        telegramId,
+        timestamp: new Date().toISOString()
+      });
       clearInterval(timer);
       socket.off('uiState', handleUiState);
     };

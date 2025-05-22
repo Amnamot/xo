@@ -187,11 +187,61 @@ const Game = () => {
   useEffect(() => {
     if (!mountedRef.current || !lobbyId || !socket) return;
     const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() || localStorage.getItem('current_telegram_id');
-    if (!socket.connected) socket.connect();
-    socket.on('connect', () => { setIsConnected(true); setReconnectAttempts(0); });
-    socket.on('disconnect', () => { setIsConnected(false); });
-    socket.on('gameStart', (data) => { setGameStartTime(data.startTime); setMoveStartTime(data.startTime); setOpponentInfo(data.playerInfo); });
+    
+    console.log('🎮 [Game] Initializing game connection:', {
+      lobbyId,
+      telegramId,
+      socketId: socket.id,
+      connected: socket.connected,
+      rooms: Array.from(socket.rooms || []),
+      timestamp: new Date().toISOString()
+    });
+
+    if (!socket.connected) {
+      console.log('🔄 [Game] Socket not connected, connecting...', {
+        socketId: socket.id,
+        timestamp: new Date().toISOString()
+      });
+      socket.connect();
+    }
+
+    socket.on('connect', () => { 
+      console.log('✅ [Game] Socket connected:', {
+        socketId: socket.id,
+        rooms: Array.from(socket.rooms || []),
+        timestamp: new Date().toISOString()
+      });
+      setIsConnected(true); 
+      setReconnectAttempts(0); 
+    });
+
+    socket.on('disconnect', () => { 
+      console.log('❌ [Game] Socket disconnected:', {
+        socketId: socket.id,
+        timestamp: new Date().toISOString()
+      });
+      setIsConnected(false); 
+    });
+
+    socket.on('gameStart', (data) => { 
+      console.log('🎯 [Game] Game started:', {
+        data,
+        socketId: socket.id,
+        rooms: Array.from(socket.rooms || []),
+        timestamp: new Date().toISOString()
+      });
+      setGameStartTime(data.startTime); 
+      setMoveStartTime(data.startTime); 
+      setOpponentInfo(data.playerInfo); 
+    });
+
     socket.on('gameState', (gameState) => {
+      console.log('📊 [Game] Game state received:', {
+        gameState,
+        socketId: socket.id,
+        rooms: Array.from(socket.rooms || []),
+        timestamp: new Date().toISOString()
+      });
       if (!isValidGameState(gameState)) return;
       setBoard(gameState.board);
       setCurrentPlayer(gameState.currentPlayer);

@@ -128,17 +128,45 @@ const StartScreen = () => {
         throw new Error("Missing Telegram ID");
       }
 
+      console.log('🎮 [StartScreen] Starting game creation:', {
+        telegramId,
+        socketId: socket.id,
+        connected: socket.connected,
+        rooms: Array.from(socket.rooms || []),
+        timestamp: new Date().toISOString()
+      });
+
       const lobbyResponse = await createLobby(socket, telegramId);
+      
+      console.log('✅ [StartScreen] Lobby created:', {
+        response: lobbyResponse,
+        socketId: socket.id,
+        rooms: Array.from(socket.rooms || []),
+        timestamp: new Date().toISOString()
+      });
+
       setShowWaitModal(true);
 
       const inviteData = await createInviteWS(socket, telegramId);
+      
+      console.log('📨 [StartScreen] Invite created:', {
+        inviteData,
+        socketId: socket.id,
+        rooms: Array.from(socket.rooms || []),
+        timestamp: new Date().toISOString()
+      });
 
       if (window.Telegram?.WebApp?.shareMessage) {
         await window.Telegram.WebApp.shareMessage(inviteData.messageId);
       }
 
     } catch (error) {
-      console.error('Failed to start game:', error);
+      console.error('❌ [StartScreen] Failed to start game:', {
+        error: error.message,
+        telegramId,
+        socketId: socket.id,
+        timestamp: new Date().toISOString()
+      });
       setShowWaitModal(false);
       if (socket.connected) {
         socket.disconnect();

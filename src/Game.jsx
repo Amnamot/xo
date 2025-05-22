@@ -260,7 +260,7 @@ const Game = () => {
               creatorIdType: typeof gameState.gameSession.creatorId,
               userId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
               userIdType: typeof window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
-              isCreator: Number(gameState.gameSession.creatorId) === Number(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
+              isCreator: String(gameState.gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
               timestamp: new Date().toISOString()
             });
           }
@@ -486,7 +486,7 @@ const Game = () => {
   }, [gameStartTime, isConnected]);
 
   // Определяем, является ли текущий ход нашим
-  const isOurTurn = currentPlayer === (Number(gameSession?.creatorId) === Number(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ? "X" : "O");
+  const isOurTurn = currentPlayer === (String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ? "X" : "O");
 
   useEffect(() => {
     const socket = initSocket();
@@ -624,7 +624,7 @@ const Game = () => {
 
   const handleCellClick = async (row, col) => {
     if (!visibleCells.has(`${row}-${col}`) || winLine || !gameSession) return;
-    if (currentPlayer !== (Number(gameSession?.creatorId) === Number(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ? "X" : "O")) return;
+    if (currentPlayer !== (String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ? "X" : "O")) return;
     
     const moveTime = Date.now() - moveStartTime;
     
@@ -694,7 +694,7 @@ const Game = () => {
     if (gameSession) {
       console.log('[DEBUG][FRONT][SESSION]', {
         gameSession,
-        isCreator: Number(gameSession?.creatorId) === Number(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
+        isCreator: String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
         telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
         timestamp: new Date().toISOString()
       });
@@ -727,7 +727,7 @@ const Game = () => {
         creatorIdType: typeof gameSession.creatorId,
         userId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
         userIdType: typeof window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
-        isCreator: Number(gameSession.creatorId) === Number(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
+        isCreator: String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
         timestamp: new Date().toISOString()
       })}
       <GameHeader 
@@ -738,7 +738,7 @@ const Game = () => {
         playerTime2={playerTime2}
         opponentInfo={opponentInfo}
         isConnected={isConnected}
-        isCreator={gameSession ? Number(gameSession.creatorId) === Number(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) : false}
+        isCreator={gameSession ? String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) : false}
       />
       {gameSession && (
         <pre style={{color: 'red', fontSize: 12}}>
@@ -747,7 +747,7 @@ const Game = () => {
             creatorIdType: typeof gameSession.creatorId,
             userId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
             userIdType: typeof window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
-            isCreator: Number(gameSession.creatorId) === Number(window.Telegram?.WebApp?.initDataUnsafe?.user?.id)
+            isCreator: String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id)
           }, null, 2)}
         </pre>
       )}

@@ -75,34 +75,6 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
     }
   }, [gameSession, currentPlayer]);
 
-  useEffect(() => {
-    if (!loggedGameHeaderCalc.current && gameSession && currentPlayer) {
-      const player = gameSession.players[currentPlayer];
-      const opponent = Object.values(gameSession.players).find(p => p.isOpponent);
-      // Определяем, какой игрок где (создатель всегда слева)
-      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-      const currentUserAvatar = tgUser?.photo_url || "../media/JohnAva.png";
-      const currentUserName = tgUser?.first_name || "You";
-      const leftPlayerAvatar = player.isCreator === null ? "../media/JohnAva.png" : 
-        (player.isCreator ? currentUserAvatar : (opponent?.avatar || "../media/JohnAva.png"));
-      const leftPlayerName = player.isCreator === null ? "Loading..." : 
-        (player.isCreator ? currentUserName : (opponent?.name || "Opponent"));
-      const rightPlayerAvatar = player.isCreator === null ? "../media/JohnAva.png" : 
-        (player.isCreator ? (opponent?.avatar || "../media/JohnAva.png") : currentUserAvatar);
-      const rightPlayerName = player.isCreator === null ? "Loading..." : 
-        (player.isCreator ? (opponent?.name || "Opponent") : currentUserName);
-      console.log('[DEBUG][FRONT][GAMEHEADER_CALC]', {
-        isCreator: player.isCreator,
-        leftPlayerName,
-        rightPlayerName,
-        leftPlayerAvatar,
-        rightPlayerAvatar,
-        timestamp: new Date().toISOString()
-      });
-      loggedGameHeaderCalc.current = true;
-    }
-  }, [gameSession, currentPlayer]);
-
   if (!gameSession || !currentPlayer) {
     return null;
   }
@@ -132,6 +104,31 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
   const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
   const currentUserAvatar = tgUser?.photo_url || "../media/JohnAva.png";
   const currentUserName = tgUser?.first_name || "You";
+
+  // Определяем, какой игрок где (создатель всегда слева)
+  const leftPlayerAvatar = player.isCreator === null ? "../media/JohnAva.png" : 
+    (player.isCreator ? currentUserAvatar : (opponent?.avatar || "../media/JohnAva.png"));
+  const leftPlayerName = player.isCreator === null ? "Loading..." : 
+    (player.isCreator ? currentUserName : (opponent?.name || "Opponent"));
+  const rightPlayerAvatar = player.isCreator === null ? "../media/JohnAva.png" : 
+    (player.isCreator ? (opponent?.avatar || "../media/JohnAva.png") : currentUserAvatar);
+  const rightPlayerName = player.isCreator === null ? "Loading..." : 
+    (player.isCreator ? (opponent?.name || "Opponent") : currentUserName);
+
+  // Логируем один раз при изменении данных
+  useEffect(() => {
+    if (!loggedGameHeaderCalc.current && gameSession && currentPlayer) {
+      console.log('[DEBUG][FRONT][GAMEHEADER_CALC]', {
+        isCreator: player.isCreator,
+        leftPlayerName,
+        rightPlayerName,
+        leftPlayerAvatar,
+        rightPlayerAvatar,
+        timestamp: new Date().toISOString()
+      });
+      loggedGameHeaderCalc.current = true;
+    }
+  }, [gameSession, currentPlayer, player.isCreator, leftPlayerName, rightPlayerName, leftPlayerAvatar, rightPlayerAvatar]);
 
   return (
     <>

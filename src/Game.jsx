@@ -260,7 +260,7 @@ const Game = () => {
               creatorIdType: typeof gameState.gameSession.creatorId,
               userId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
               userIdType: typeof window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
-              isCreator: String(gameState.gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
+              isCreator: Number(gameState.gameSession.creatorId) === Number(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
               timestamp: new Date().toISOString()
             });
           }
@@ -694,7 +694,7 @@ const Game = () => {
     if (gameSession) {
       console.log('[DEBUG][FRONT][SESSION]', {
         gameSession,
-        isCreator: String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
+        isCreator: Number(gameSession?.creatorId) === Number(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
         telegramId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
         timestamp: new Date().toISOString()
       });
@@ -727,7 +727,7 @@ const Game = () => {
         creatorIdType: typeof gameSession.creatorId,
         userId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
         userIdType: typeof window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
-        isCreator: String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
+        isCreator: Number(gameSession.creatorId) === Number(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
         timestamp: new Date().toISOString()
       })}
       <GameHeader 
@@ -747,7 +747,7 @@ const Game = () => {
             creatorIdType: typeof gameSession.creatorId,
             userId: window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
             userIdType: typeof window.Telegram?.WebApp?.initDataUnsafe?.user?.id,
-            isCreator: gameSession.creatorId === window.Telegram?.WebApp?.initDataUnsafe?.user?.id
+            isCreator: Number(gameSession.creatorId) === Number(window.Telegram?.WebApp?.initDataUnsafe?.user?.id)
           }, null, 2)}
         </pre>
       )}

@@ -792,7 +792,27 @@ const Game = () => {
         isCreator={gameSession ? 
           String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) : 
           null}
-        gameSession={gameSession}
+        gameSession={{
+          players: {
+            X: {
+              isCreator: String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
+              isOpponent: false,
+              moveTimer,
+              time,
+              playerTime1,
+              playerTime2
+            },
+            O: {
+              isCreator: String(gameSession?.creatorId) !== String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
+              isOpponent: true,
+              moveTimer,
+              time,
+              playerTime1,
+              playerTime2,
+              ...opponentInfo
+            }
+          }
+        }}
         onExit={() => navigate('/')}
       />
       {gameSession && (

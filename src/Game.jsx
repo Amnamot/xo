@@ -273,7 +273,6 @@ const Game = () => {
           setPlayerTime2(gameState.playerTime2 || 0);
           setGameSession(gameState.gameSession);
           
-          // Добавляем проверку типов
           if (gameState.gameSession) {
             console.log('[DEBUG][FRONT][TYPES]', {
               creatorId: gameState.gameSession.creatorId,
@@ -285,7 +284,6 @@ const Game = () => {
             });
           }
           
-          // Проверяем, есть ли уже данные о сопернике
           if (!opponentInfo && gameState.opponentInfo) {
             setOpponentInfo(gameState.opponentInfo);
           }
@@ -453,8 +451,6 @@ const Game = () => {
     initializeSocket();
 
     return () => {
-      // Не отключаем сокет при размонтировании компонента
-      // Только очищаем обработчики событий
       if (socketRef.current) {
         socketRef.current.off('connect');
         socketRef.current.off('disconnect');
@@ -464,7 +460,7 @@ const Game = () => {
         socketRef.current.off('gameState');
       }
     };
-  }, [lobbyId, navigate, reconnectAttempts]);
+  }, [lobbyId, navigate, reconnectAttempts, opponentInfo, gameStartTime]);
 
   // Обновляем viewport при изменении масштаба или позиции
   useEffect(() => {

@@ -87,6 +87,7 @@ const Loader = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'x-init-data': initData
           },
           body: JSON.stringify({ initData })
         });

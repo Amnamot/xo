@@ -3,14 +3,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
 import './StartScreen.css';
-import { 
-  createLobby, 
-  createInviteWS,
-  checkAndRestoreGameState 
-} from './services/socket';
 import logoIcon from './media/3tbICO.svg';
 import WaitModal from './components/WaitModal';
-import { useSocket } from './contexts/SocketContext';
 
 const StartScreen = () => {
   const [user, setUser] = useState(null);
@@ -19,7 +13,6 @@ const StartScreen = () => {
   const [creatorMarker, setCreatorMarker] = useState('');
   const initData = window.Telegram?.WebApp?.initData;
   const navigate = useNavigate();
-  const socket = useSocket();
   const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
 
   useEffect(() => {
@@ -44,131 +37,8 @@ const StartScreen = () => {
     initializeUI();
   }, []);
 
-  useEffect(() => {
-    if (!socket || !telegramId) {
-      console.warn('⚠️ [StartScreen] Socket or telegramId not ready:', {
-        hasSocket: !!socket,
-        hasTelegramId: !!telegramId,
-        timestamp: new Date().toISOString()
-      });
-      return;
-    }
-
-    // Логируем момент подписки
-    console.log('[FRONT][gameStart][subscribe]', {
-      socketId: socket.id,
-      telegramId,
-      rooms: Array.from(socket.rooms || []),
-      timestamp: new Date().toISOString()
-    });
-
-    const handleGameStart = (data) => {
-      // Логируем получение события
-      console.log('[FRONT][gameStart][received]', {
-        socketId: socket.id,
-        telegramId,
-        rooms: Array.from(socket.rooms || []),
-        data,
-        timestamp: new Date().toISOString()
-      });
-      if (data?.session?.id) {
-        setShowWaitModal(false);
-        navigate(`/game/${data.session.id}`);
-      }
-    };
-
-    const handleSetShowWaitModal = (data) => {
-      if (data.show) {
-        setShowWaitModal(true);
-        if (data.creatorMarker) {
-          setCreatorMarker(data.creatorMarker);
-        }
-      } else {
-        setShowWaitModal(false);
-      }
-    };
-
-    const handleLobbyReady = (data) => {
-      if (data.creatorMarker) {
-        setCreatorMarker(data.creatorMarker);
-        setShowWaitModal(true);
-      }
-    };
-
-    socket.on('gameStart', handleGameStart);
-    socket.on('setShowWaitModal', handleSetShowWaitModal);
-    socket.on('lobbyReady', handleLobbyReady);
-
-    return () => {
-      // Логируем отписку
-      console.log('[FRONT][gameStart][unsubscribe]', {
-        socketId: socket.id,
-        telegramId,
-        rooms: Array.from(socket.rooms || []),
-        timestamp: new Date().toISOString()
-      });
-      socket.off('gameStart', handleGameStart);
-      socket.off('setShowWaitModal', handleSetShowWaitModal);
-      socket.off('lobbyReady', handleLobbyReady);
-    };
-  }, [socket, telegramId, navigate]);
-
-  const handleStartGame = async () => {
-    try {
-      if (!telegramId) {
-        throw new Error("Missing Telegram ID");
-      }
-
-      // Проверяем наличие сокета
-      if (!socket) {
-        console.error('❌ [StartScreen] Socket is null');
-        throw new Error("Socket is not initialized");
-      }
-
-      console.log('🎮 [StartScreen] Starting game creation:', {
-        telegramId,
-        socketId: socket.id,
-        rooms: Array.from(socket.rooms || []),
-        timestamp: new Date().toISOString()
-      });
-
-      const lobbyResponse = await createLobby(socket, telegramId);
-      
-      console.log('✅ [StartScreen] Lobby created:', {
-        response: lobbyResponse,
-        socketId: socket.id,
-        rooms: Array.from(socket.rooms || []),
-        timestamp: new Date().toISOString()
-      });
-
-      setShowWaitModal(true);
-
-      const inviteData = await createInviteWS(socket, telegramId);
-      
-      console.log('📨 [StartScreen] Invite created:', {
-        inviteData,
-        socketId: socket.id,
-        rooms: Array.from(socket.rooms || []),
-        timestamp: new Date().toISOString()
-      });
-
-      if (window.Telegram?.WebApp?.shareMessage) {
-        await window.Telegram.WebApp.shareMessage(inviteData.messageId);
-      }
-
-    } catch (error) {
-      console.error('❌ [StartScreen] Failed to start game:', {
-        error: error.message,
-        telegramId,
-        socketId: socket.id,
-        timestamp: new Date().toISOString()
-      });
-      setShowWaitModal(false);
-      if (socket.connected) {
-        socket.disconnect();
-      }
-      alert(error.message || 'Failed to start game. Please try again.');
-    }
+  const handleStartGame = () => {
+    setShowWaitModal(true);
   };
 
   const screenWidth = window.innerWidth;

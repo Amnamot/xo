@@ -45,7 +45,15 @@ const StartScreen = () => {
   }, []);
 
   useEffect(() => {
-    if (!socket || !telegramId) return;
+    if (!socket || !telegramId || !socket.connected) {
+      console.warn('⚠️ [StartScreen] Socket not ready:', {
+        hasSocket: !!socket,
+        hasTelegramId: !!telegramId,
+        isConnected: socket?.connected,
+        timestamp: new Date().toISOString()
+      });
+      return;
+    }
 
     // Логируем момент подписки
     console.log('[FRONT][gameStart][subscribe]', {
@@ -91,18 +99,6 @@ const StartScreen = () => {
     socket.on('gameStart', handleGameStart);
     socket.on('setShowWaitModal', handleSetShowWaitModal);
     socket.on('lobbyReady', handleLobbyReady);
-
-    // Проверяем сохраненное состояние при инициализации
-    (async () => {
-      try {
-        const gameState = await checkAndRestoreGameState(socket, telegramId);
-        if (gameState?.gameId) {
-          navigate(`/game/${gameState.gameId}`);
-        }
-      } catch (error) {
-        console.warn('No saved game state found:', error);
-      }
-    })();
 
     return () => {
       // Логируем отписку

@@ -113,18 +113,22 @@ const Loader = () => {
           timestamp: new Date().toISOString()
         });
 
+        // Инициализируем сокет в любом случае
+        socketContext.initSocket(telegramId);
+        console.log('🔌 [Loader] Socket initialized:', {
+          telegramId,
+          timestamp: new Date().toISOString()
+        });
+
         if (data.lobbyId) {
-          // 2. Проверяем состояние лобби перед присоединением
+          // Проверяем состояние лобби перед присоединением
           const lobbyState = await checkLobbyState(data.lobbyId);
           
           if (!lobbyState.isValid) {
             throw new Error(lobbyState.error || 'Invalid lobby state');
           }
 
-          // 3. Инициализируем сокет
-          socketContext.initSocket(telegramId);
-
-          // 4. Присоединяемся к лобби
+          // Присоединяемся к лобби
           await joinLobby(socketContext.socket, data.lobbyId, telegramId);
           console.log('✅ [Loader] Joined lobby:', {
             lobbyId: data.lobbyId,

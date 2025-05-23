@@ -120,6 +120,22 @@ const StartScreen = () => {
         throw new Error("Missing Telegram ID");
       }
 
+      // Проверяем состояние сокета
+      if (!socket) {
+        console.error('❌ [StartScreen] Socket is null');
+        throw new Error("Socket is not initialized");
+      }
+
+      if (!socket.connected) {
+        console.error('❌ [StartScreen] Socket is not connected:', {
+          socketId: socket.id,
+          connected: socket.connected,
+          rooms: Array.from(socket.rooms || []),
+          timestamp: new Date().toISOString()
+        });
+        throw new Error("Socket is not connected");
+      }
+
       console.log('🎮 [StartScreen] Starting game creation:', {
         telegramId,
         socketId: socket.id,

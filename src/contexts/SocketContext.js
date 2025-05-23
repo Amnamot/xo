@@ -29,7 +29,7 @@ export const SocketProvider = ({ children }) => {
       timestamp: new Date().toISOString()
     });
 
-    const newSocket = io(process.env.REACT_APP_SOCKET_URL || 'https://api.igra.top', {
+    const newSocket = io(process.env.REACT_APP_SOCKET_URL || 'https://api.igra.top/socket.io/', {
       transports: ['websocket'],
       autoConnect: false,
       query: { telegramId }

@@ -4,7 +4,6 @@ import { useSocket } from './contexts/SocketContext';
 import { gameService } from './services/game';
 import { useNavigate } from 'react-router-dom';
 import GameHeader from './components/GameHeader';
-import { checkWinner } from './utils/gameUtils';
 import './Game.css';
 import './Shape.css';
 import Shape from './Shape';

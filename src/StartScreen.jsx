@@ -10,7 +10,7 @@ import {
 } from './services/socket';
 import logoIcon from './media/3tbICO.svg';
 import WaitModal from './components/WaitModal';
-import { useSocket } from './context/SocketContext';
+import { useSocket } from './contexts/SocketContext';
 
 const StartScreen = () => {
   const [user, setUser] = useState(null);

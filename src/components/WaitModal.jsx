@@ -1,7 +1,7 @@
 // src/components/WaitModal.jsx v6.1
 import React, { useEffect, useState } from 'react';
 import './WaitModal.css';
-import { useSocket } from '../context/SocketContext';
+import { useSocket } from '../contexts/SocketContext';
 
 const LOBBY_LIFETIME = 180; // время жизни лобби в секундах
 

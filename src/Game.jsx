@@ -12,7 +12,7 @@ import {
   subscribeToGameEvents,
   checkAndRestoreGameState
 } from "./services/socket";
-import { useSocket } from './context/SocketContext';
+import { useSocket } from './contexts/SocketContext';
 
 const BOARD_SIZE = 100;
 const WIN_CONDITION = 5;

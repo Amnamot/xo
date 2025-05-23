@@ -27,135 +27,71 @@ const Loader = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Эффект для инициализации и проверки лобби
+  useEffect(() => {
+    const initializeUser = async () => {
+      try {
+        const initData = window.Telegram?.WebApp?.initData;
+        const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
+
+        if (!initData || !telegramId) {
+          console.error('❌ [Loader] Missing initData or telegramId');
+          navigate("/start", { replace: true });
+          return;
+        }
+
+        console.log('🔄 [Loader] Initializing user:', {
+          telegramId,
+          timestamp: new Date().toISOString()
+        });
+
+        const response = await fetch('/user/init', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ initData })
+        });
+
+        const data = await response.json();
+        console.log('✅ [Loader] User initialized:', {
+          response: data,
+          timestamp: new Date().toISOString()
+        });
+
+        if (data.lobbyId) {
+          // Если найдено лобби - присоединяемся
+          socketContext.initSocket(telegramId);
+          await joinLobby(socketContext.socket, data.lobbyId, telegramId);
+          setIsActionsComplete(true);
+        } else {
+          // Если лобби не найдено - идем на стартовый экран
+          setIsActionsComplete(true);
+        }
+      } catch (error) {
+        console.error('❌ [Loader] Initialization error:', {
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
+        setError(error.message);
+      }
+    };
+
+    initializeUser();
+  }, []);
+
   // Эффект для проверки готовности к переходу
   useEffect(() => {
     if (progress >= 100 && isActionsComplete) {
       setIsLoading(false);
-    }
-  }, [progress, isActionsComplete]);
-
-  // Функция инициализации
-  const handleInitialization = async () => {
-    try {
-      const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
-      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-      const telegramId = tgUser?.id?.toString();
-      
-      console.log('🔄 [Loader] Starting initialization:', {
-        startParam,
-        telegramId,
-        hasTgUser: !!tgUser,
-        timestamp: new Date().toISOString()
-      });
-
-      // 1. Проверка startParam
-      if (!startParam) {
-        console.log('🏠 [Loader] No start_param, navigating to start screen:', {
-          telegramId,
-          timestamp: new Date().toISOString()
-        });
-        navigate("/start", { replace: true });
-        return;
-      }
-
-      const initData = window.Telegram?.WebApp?.initData;
-      
-      console.log('🔍 [Loader] Checking initData:', {
-        hasInitData: !!initData,
-        startParam,
-        telegramId,
-        hasTgUser: !!tgUser,
-        timestamp: new Date().toISOString()
-      });
-
-      // 2. Проверка initData
-      if (!initData) {
-        console.warn("❌ [Loader] No initData. Aborting.", {
-          startParam,
-          telegramId,
-          timestamp: new Date().toISOString()
-        });
-        navigate("/nolobby", { 
-          state: { 
-            type: 'losst2',
-            message: 'Either the battle is over,<br />or the link is very old...',
-            redirectTo: '/start'
-          } 
-        });
-        return;
-      }
-
-      // 3. Проверка telegramId
-      if (!telegramId) {
-        console.error('❌ [Loader] Missing telegramId:', {
-          startParam,
-          hasInitData: !!initData,
-          hasTgUser: !!tgUser,
-          timestamp: new Date().toISOString()
-        });
-        navigate("/nolobby", { 
-          state: { 
-            type: 'losst2',
-            message: 'Failed to validate user data.<br />Please try again.',
-            redirectTo: '/start'
-          } 
-        });
-        return;
-      }
-
-      // 4. Инициализация сокета
-      console.log('🔌 [Loader] Initializing socket:', {
-        telegramId,
-        timestamp: new Date().toISOString()
-      });
-
-      socketContext.initSocket(telegramId);
-
-      // 5. Присоединение к лобби
-      console.log('✅ [Loader] All checks passed, joining lobby:', {
-        gameId: startParam,
-        telegramId,
-        timestamp: new Date().toISOString()
-      });
-
-      await joinLobby(socketContext.socket, startParam, telegramId);
-      
-      console.log('✅ [Loader] Successfully joined lobby:', {
-        gameId: startParam,
-        telegramId,
-        timestamp: new Date().toISOString()
-      });
-
-      setIsActionsComplete(true);
-    } catch (error) {
-      console.error('❌ [Loader] Initialization failed:', {
-        error: error.message,
-        timestamp: new Date().toISOString()
-      });
-      navigate("/nolobby", { 
-        state: { 
-          type: 'losst2',
-          message: 'Failed to join the game.<br />Please try again.',
-          redirectTo: '/start'
-        } 
-      });
-    }
-  };
-
-  // Запускаем инициализацию при монтировании
-  useEffect(() => {
-    handleInitialization();
-  }, []);
-
-  // Эффект для навигации после завершения всех действий
-  useEffect(() => {
-    if (!isLoading) {
       const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
       if (startParam) {
         navigate(`/game/${startParam}`, { replace: true });
+      } else {
+        navigate("/start", { replace: true });
       }
     }
-  }, [isLoading, navigate]);
+  }, [progress, isActionsComplete, navigate]);
 
   if (error) {
     return (

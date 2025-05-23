@@ -90,6 +90,9 @@ const Game = ({ lobbyId }) => {
     
     const initializeGame = async () => {
       try {
+        // Запрашиваем начальное состояние
+        socket.emit('getInitialState', { telegramId });
+
         // Подписываемся на события игры
         gameService.subscribeToGameEvents(socket, {
           onConnect: () => {
@@ -416,7 +419,10 @@ const Game = ({ lobbyId }) => {
         time={time}
         playerTime1={playerTime1}
         playerTime2={playerTime2}
-        opponentInfo={opponentInfo}
+        opponentInfo={{
+          name: opponentInfo?.name || 'Caesar',
+          avatar: opponentInfo?.avatar || 'JohnAva.png'
+        }}
         isConnected={isConnected}
         isCreator={gameSession ? 
           String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) : 
@@ -438,7 +444,8 @@ const Game = ({ lobbyId }) => {
               time,
               playerTime1,
               playerTime2,
-              ...opponentInfo
+              name: opponentInfo?.name || 'Caesar',
+              avatar: opponentInfo?.avatar || 'JohnAva.png'
             }
           }
         }}

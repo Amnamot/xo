@@ -4,15 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import TopUpModal from './components/TopUpModal';
 import './StartScreen.css';
 import logoIcon from './media/3tbICO.svg';
-import WaitModal from './components/WaitModal';
 import { useSocket } from './contexts/SocketContext';
-import { lobbyService } from './services/lobby';
 
 const StartScreen = () => {
   const [user, setUser] = useState(null);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
-  const [showWaitModal, setShowWaitModal] = useState(false);
-  const [creatorMarker, setCreatorMarker] = useState('');
   const initData = window.Telegram?.WebApp?.initData;
   const navigate = useNavigate();
   const { socket } = useSocket();
@@ -73,10 +69,6 @@ const StartScreen = () => {
 
   return (
     <div className="start-screen">
-      {showWaitModal && <WaitModal 
-        onClose={() => setShowWaitModal(false)}
-        telegramId={telegramId}
-      />}
       <div className="top-logo">
         <img src={logoIcon} width={128} alt="Logo" />
       </div>

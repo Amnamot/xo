@@ -38,6 +38,16 @@ const StartScreen = () => {
   }, []);
 
   const handleStartGame = () => {
+    if (!telegramId) {
+      alert("Missing Telegram ID");
+      return;
+    }
+
+    console.log('🎮 [StartScreen] Starting game:', {
+      telegramId,
+      timestamp: new Date().toISOString()
+    });
+
     setShowWaitModal(true);
   };
 

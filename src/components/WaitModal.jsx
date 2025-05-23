@@ -1,62 +1,63 @@
 // src/components/WaitModal.jsx v6.1
 import React, { useEffect, useState } from 'react';
 import './WaitModal.css';
-import { useSocket } from '../contexts/SocketContext';
+import { lobbyService } from '../services/lobby';
 
 const LOBBY_LIFETIME = 180; // время жизни лобби в секундах
 
 const WaitModal = ({ onClose, creatorMarker }) => {
   const [secondsLeft, setSecondsLeft] = useState(LOBBY_LIFETIME);
   const [startTime, setStartTime] = useState(Date.now());
-  const socket = useSocket();
   const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
 
   useEffect(() => {
-    if (!socket) return;
+    if (!telegramId) return;
 
     console.log('⏳ [WaitModal] Initializing wait state:', {
       telegramId,
-      socketId: socket.id,
-      rooms: Array.from(socket.rooms || []),
       timestamp: new Date().toISOString()
     });
 
-    // Отправляем начальное состояние
-    if (telegramId) {
-      socket.emit('uiState', { 
-        state: 'waitModal', 
-        telegramId,
-        details: { timeLeft: LOBBY_LIFETIME }
-      });
-      
-      console.log('📤 [WaitModal] Sent initial UI state:', {
-        telegramId,
-        timeLeft: LOBBY_LIFETIME,
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    // Слушаем событие uiState для восстановления таймера
-    const handleUiState = (data) => {
-      console.log('📥 [WaitModal] Received UI state update:', {
-        data,
-        telegramId,
-        timestamp: new Date().toISOString()
-      });
-      
-      if (data.state === 'waitModal' && data.details?.isReconnect) {
-        const timeLeft = data.details.timeLeft;
-        setSecondsLeft(timeLeft);
-        setStartTime(Date.now() - ((LOBBY_LIFETIME - timeLeft) * 1000));
-        
-        console.log('🔄 [WaitModal] Restored timer state:', {
-          timeLeft,
-          startTime: Date.now() - ((LOBBY_LIFETIME - timeLeft) * 1000),
+    // Подписываемся на события лобби
+    lobbyService.subscribeToLobbyEvents(telegramId, {
+      onGameStart: (data) => {
+        console.log('📥 [WaitModal] Game started:', {
+          data,
+          telegramId,
           timestamp: new Date().toISOString()
         });
+        onClose();
+      },
+      onUiState: (data) => {
+        console.log('📥 [WaitModal] UI state updated:', {
+          data,
+          telegramId,
+          timestamp: new Date().toISOString()
+        });
+        
+        if (data.state === 'waitModal' && data.details?.isReconnect) {
+          const timeLeft = data.details.timeLeft;
+          setSecondsLeft(timeLeft);
+          setStartTime(Date.now() - ((LOBBY_LIFETIME - timeLeft) * 1000));
+          
+          console.log('🔄 [WaitModal] Restored timer state:', {
+            timeLeft,
+            startTime: Date.now() - ((LOBBY_LIFETIME - timeLeft) * 1000),
+            timestamp: new Date().toISOString()
+          });
+        }
+      },
+      onLobbyReady: (data) => {
+        console.log('📥 [WaitModal] Lobby ready:', {
+          data,
+          telegramId,
+          timestamp: new Date().toISOString()
+        });
+        if (data.creatorMarker) {
+          setCreatorMarker(data.creatorMarker);
+        }
       }
-    };
-    socket.on('uiState', handleUiState);
+    });
     
     const timer = setInterval(() => {
       const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
@@ -80,9 +81,9 @@ const WaitModal = ({ onClose, creatorMarker }) => {
         timestamp: new Date().toISOString()
       });
       clearInterval(timer);
-      socket.off('uiState', handleUiState);
+      lobbyService.unsubscribeFromLobbyEvents();
     };
-  }, [startTime, telegramId, socket]);
+  }, [startTime, telegramId, onClose]);
 
   const handleCancel = async () => {
     if (!telegramId) {
@@ -91,35 +92,12 @@ const WaitModal = ({ onClose, creatorMarker }) => {
     }
 
     try {
-      if (!socket) {
-        throw new Error('Socket is not initialized');
-      }
-
-      console.log('❌ [WaitModal] Cancelling lobby:', {
-        telegramId,
-        socketId: socket.id,
-        rooms: Array.from(socket.rooms || []),
-        timestamp: new Date().toISOString()
-      });
-
-      socket.once('lobbyDeleted', () => {
-        console.log('✅ [WaitModal] Lobby deleted:', {
-          telegramId,
-          socketId: socket.id,
-          timestamp: new Date().toISOString()
-        });
-        onClose();
-      });
-
-      socket.emit('cancelLobby', {
-        telegramId: telegramId.toString()
-      });
-
+      await lobbyService.cancelLobby(telegramId);
+      onClose();
     } catch (error) {
       console.error('❌ [WaitModal] Failed to cancel lobby:', {
         error: error.message,
         telegramId,
-        socketId: socket?.id,
         timestamp: new Date().toISOString()
       });
       onClose();

@@ -7,7 +7,7 @@ import { useSocket } from '../contexts/SocketContext';
 
 const Loader = () => {
   const navigate = useNavigate();
-  const socket = useSocket();
+  const { socket, initSocket } = useSocket();
   const [progress, setProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionsComplete, setIsActionsComplete] = useState(false);
@@ -38,11 +38,13 @@ const Loader = () => {
   const handleInitialization = async () => {
     try {
       const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
-      const telegramId = localStorage.getItem('current_telegram_id');
+      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      const telegramId = tgUser?.id?.toString();
       
       console.log('🔄 [Loader] Starting initialization:', {
         startParam,
         telegramId,
+        hasTgUser: !!tgUser,
         timestamp: new Date().toISOString()
       });
 
@@ -57,7 +59,6 @@ const Loader = () => {
       }
 
       const initData = window.Telegram?.WebApp?.initData;
-      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
       
       console.log('🔍 [Loader] Checking initData:', {
         hasInitData: !!initData,
@@ -102,24 +103,13 @@ const Loader = () => {
         return;
       }
 
-      // 4. Проверка соответствия telegramId
-      const tgUserId = tgUser?.id?.toString();
-      if (tgUserId && tgUserId !== telegramId) {
-        console.error('❌ [Loader] Telegram ID mismatch:', {
-          storedTelegramId: telegramId,
-          currentTgUserId: tgUserId,
-          startParam,
-          timestamp: new Date().toISOString()
-        });
-        navigate("/nolobby", { 
-          state: { 
-            type: 'losst2',
-            message: 'User data mismatch.<br />Please try again.',
-            redirectTo: '/start'
-          } 
-        });
-        return;
-      }
+      // 4. Инициализация сокета
+      console.log('🔌 [Loader] Initializing socket:', {
+        telegramId,
+        timestamp: new Date().toISOString()
+      });
+
+      initSocket(telegramId);
 
       // 5. Присоединение к лобби
       console.log('✅ [Loader] All checks passed, joining lobby:', {

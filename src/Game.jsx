@@ -4,7 +4,6 @@ import { useSocket } from './contexts/SocketContext';
 import { gameService } from './services/game';
 import { useNavigate } from 'react-router-dom';
 import GameHeader from './components/GameHeader';
-import { checkWinner } from './utils/gameUtils';
 import './Game.css';
 import './Shape.css';
 import Shape from './Shape';
@@ -139,8 +138,14 @@ const Game = ({ lobbyId }) => {
             setCurrentPlayer(data.gameState.currentTurn);
             setMoveStartTime(data.gameState.moveStartTime);
             setMoveTimer(30000);
-            const winner = checkWinner(data.gameState.board, Number(data.position), data.player);
-            if (winner) setWinLine(winner);
+            // Проверяем победителя
+            const winner = data.gameState.winner;
+            if (winner) {
+              setWinLine({
+                start: data.gameState.winLineStart,
+                end: data.gameState.winLineEnd
+              });
+            }
             setError(null);
           },
           onPlayerDisconnected: () => {

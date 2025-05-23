@@ -79,13 +79,13 @@ const Loader = () => {
 
         console.log('🔄 [Loader] Starting initialization:', {
           telegramId,
-          initData,
           timestamp: new Date().toISOString()
         });
 
         // 1. Инициализация пользователя через /user/init
-        console.log('📤 [Loader] Sending init request:', {
+        console.log('📤 [Loader] Sending request to /user/init:', {
           url: '/user/init',
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'x-init-data': initData
@@ -103,22 +103,8 @@ const Loader = () => {
           body: JSON.stringify({ initData })
         });
 
-        console.log('📥 [Loader] Received response:', {
-          status: response.status,
-          statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries()),
-          timestamp: new Date().toISOString()
-        });
-
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ [Loader] Response error:', {
-            status: response.status,
-            statusText: response.statusText,
-            errorText,
-            timestamp: new Date().toISOString()
-          });
-          throw new Error(`HTTP error! status: ${response.status}, text: ${errorText}`);
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();

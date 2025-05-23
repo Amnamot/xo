@@ -11,36 +11,54 @@ const WaitModal = ({ onClose, telegramId }) => {
   useEffect(() => {
     if (!socket || !telegramId) return;
 
-    // Подписываемся на события лобби
-    lobbyService.subscribeToLobbyEvents(socket, telegramId, {
-      onGameStart: () => {
-        console.log('🎮 [WaitModal] Game started');
-        onClose();
-      },
-      onUiState: (data) => {
-        console.log('📱 [WaitModal] UI state updated:', data);
-        if (data.details?.timeLeft) {
-          setTimeLeft(data.details.timeLeft);
-        }
-      },
-      onLobbyReady: () => {
-        console.log('✅ [WaitModal] Lobby ready');
-      }
-    });
+    let timer;
 
-    // Запускаем таймер
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    // Последовательное выполнение действий
+    const initializeLobby = async () => {
+      try {
+        // 1. Создаем лобби и отправляем приглашение
+        await lobbyService.startLobby(socket, telegramId);
+        
+        // 2. После успешного создания лобби подписываемся на события
+        lobbyService.subscribeToLobbyEvents(socket, telegramId, {
+          onGameStart: () => {
+            console.log('🎮 [WaitModal] Game started');
+            onClose();
+          },
+          onUiState: (data) => {
+            console.log('📱 [WaitModal] UI state updated:', data);
+            if (data.details?.timeLeft) {
+              setTimeLeft(data.details.timeLeft);
+            }
+          },
+          onLobbyReady: () => {
+            console.log('✅ [WaitModal] Lobby ready');
+          }
+        });
+
+        // 3. Запускаем таймер только после успешного создания лобби
+        timer = setInterval(() => {
+          setTimeLeft((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              // Вызываем cancelLobby при истечении таймера
+              handleCancel();
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+
+      } catch (error) {
+        console.error('❌ [WaitModal] Error starting lobby:', error);
+        onClose();
+      }
+    };
+
+    initializeLobby();
 
     return () => {
-      clearInterval(timer);
+      if (timer) clearInterval(timer);
       lobbyService.unsubscribeFromLobbyEvents(socket);
     };
   }, [socket, telegramId, onClose]);

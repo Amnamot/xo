@@ -1,85 +1,34 @@
-// import { io } from 'socket.io-client';
+import { io } from 'socket.io-client';
+
+const SOCKET_URL = 'https://api.igra.top';
 
 // Функции для игровых событий
 export const createLobby = async (socket, telegramId) => {
-  try {
-    console.log('🎮 [Socket Service] Creating lobby:', {
-      telegramId,
-      timestamp: new Date().toISOString()
-    });
-
-    const response = await new Promise((resolve) => {
-      socket.emit('createLobby', { telegramId }, (response) => {
-        console.log('✅ [Socket Service] Lobby creation result:', {
-          response,
-          socketId: socket.id,
-          connected: socket.connected,
-          rooms: Array.from(socket.rooms || []),
-          telegramId,
-          timestamp: new Date().toISOString()
-        });
-        resolve(response);
-      });
-    });
-
-    return response;
-  } catch (error) {
-    console.error('❌ [Socket Service] Failed to create lobby:', {
-      error: error.message,
-      telegramId,
-      timestamp: new Date().toISOString()
-    });
-    throw error;
+  if (!socket?.connected) {
+    throw new Error('Socket is not connected');
   }
-};
 
-export const joinLobby = (socket, lobbyId, telegramId) => {
+  console.log('🎮 [Socket] Creating lobby:', {
+    telegramId,
+    socketId: socket.id,
+    connected: socket.connected,
+    rooms: Array.from(socket.rooms || []),
+    timestamp: new Date().toISOString()
+  });
+
   return new Promise((resolve, reject) => {
-    console.log('🎮 [Socket Service] Attempting to join lobby:', {
-      lobbyId,
-      telegramId,
-      socketId: socket.id,
-      connected: socket.connected,
-      rooms: Array.from(socket.rooms || []),
-      timestamp: new Date().toISOString()
-    });
-
-    if (!socket.connected) {
-      console.error('❌ [Socket Service] Socket not connected:', {
-        lobbyId,
-        telegramId,
-        socketId: socket.id,
-        timestamp: new Date().toISOString()
-      });
-      reject(new Error('WebSocket is not connected'));
-      return;
-    }
-
-    socket.emit('joinLobby', { lobbyId, telegramId }, (response) => {
-      console.log('📊 [Socket Service] Join lobby response:', {
-        response,
-        lobbyId,
-        telegramId,
-        socketId: socket.id,
-        connected: socket.connected,
-        rooms: Array.from(socket.rooms || []),
-        timestamp: new Date().toISOString()
-      });
-
-      if (response?.status === 'error') {
-        console.error('❌ [Socket Service] Failed to join lobby:', {
-          error: response,
-          lobbyId,
+    socket.emit('createLobby', { telegramId }, (response) => {
+      if (response.error) {
+        console.error('❌ [Socket] Failed to create lobby:', {
+          error: response.error,
           telegramId,
           socketId: socket.id,
           timestamp: new Date().toISOString()
         });
-        reject(response);
+        reject(new Error(response.error));
       } else {
-        console.log('✅ [Socket Service] Successfully joined lobby:', {
+        console.log('✅ [Socket] Lobby created:', {
           response,
-          lobbyId,
-          telegramId,
           socketId: socket.id,
           rooms: Array.from(socket.rooms || []),
           timestamp: new Date().toISOString()
@@ -90,19 +39,100 @@ export const joinLobby = (socket, lobbyId, telegramId) => {
   });
 };
 
-export const updatePlayerTime = (socket, gameId, playerTimes) => {
-  if (socket.connected) {
-    socket.emit('updatePlayerTime', { gameId, playerTimes });
+export const joinLobby = async (socket, telegramId, lobbyId) => {
+  if (!socket?.connected) {
+    throw new Error('Socket is not connected');
   }
+
+  console.log('🎮 [Socket] Joining lobby:', {
+    telegramId,
+    lobbyId,
+    socketId: socket.id,
+    connected: socket.connected,
+    rooms: Array.from(socket.rooms || []),
+    timestamp: new Date().toISOString()
+  });
+
+  return new Promise((resolve, reject) => {
+    socket.emit('joinLobby', { telegramId, lobbyId }, (response) => {
+      if (response.error) {
+        console.error('❌ [Socket] Failed to join lobby:', {
+          error: response.error,
+          telegramId,
+          lobbyId,
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
+        reject(new Error(response.error));
+      } else {
+        console.log('✅ [Socket] Joined lobby:', {
+          response,
+          socketId: socket.id,
+          rooms: Array.from(socket.rooms || []),
+          timestamp: new Date().toISOString()
+        });
+        resolve(response);
+      }
+    });
+  });
 };
 
-export const makeMove = (socket, gameId, position, player, moveTime) => {
-  return new Promise((resolve) => {
-    socket.emit('makeMove', { gameId, position, player, moveTime }, resolve);
+export const updatePlayerTime = (socket, gameId, player, time) => {
+  if (!socket?.connected) {
+    console.warn('⚠️ [Socket] Cannot update player time - socket not connected');
+    return;
+  }
+
+  socket.emit('updatePlayerTime', { gameId, player, time });
+};
+
+export const makeMove = async (socket, gameId, position, player, moveTime) => {
+  if (!socket?.connected) {
+    throw new Error('Socket is not connected');
+  }
+
+  console.log('🎯 [Socket] Making move:', {
+    gameId,
+    position,
+    player,
+    moveTime,
+    socketId: socket.id,
+    connected: socket.connected,
+    rooms: Array.from(socket.rooms || []),
+    timestamp: new Date().toISOString()
+  });
+
+  return new Promise((resolve, reject) => {
+    socket.emit('makeMove', { gameId, position, player, moveTime }, (response) => {
+      if (response.error) {
+        console.error('❌ [Socket] Failed to make move:', {
+          error: response.error,
+          gameId,
+          position,
+          player,
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
+        reject(new Error(response.error));
+      } else {
+        console.log('✅ [Socket] Move made:', {
+          response,
+          socketId: socket.id,
+          rooms: Array.from(socket.rooms || []),
+          timestamp: new Date().toISOString()
+        });
+        resolve(response);
+      }
+    });
   });
 };
 
 export const updateViewport = (socket, gameId, viewport) => {
+  if (!socket?.connected) {
+    console.warn('⚠️ [Socket] Cannot update viewport - socket not connected');
+    return;
+  }
+
   socket.emit('updateViewport', { gameId, viewport });
 };
 
@@ -111,32 +141,39 @@ export const confirmMoveReceived = (socket, gameId, moveId) => {
 };
 
 export const createInviteWS = async (socket, telegramId) => {
-  try {
-    console.log('📨 [Socket Service] Creating invite:', {
-      telegramId,
-      timestamp: new Date().toISOString()
-    });
+  if (!socket?.connected) {
+    throw new Error('Socket is not connected');
+  }
 
-    const response = await new Promise((resolve) => {
-      socket.emit('createInvite', { telegramId }, (response) => {
-        console.log('✅ [Socket Service] Invite creation result:', {
-          response,
+  console.log('📨 [Socket] Creating invite:', {
+    telegramId,
+    socketId: socket.id,
+    connected: socket.connected,
+    rooms: Array.from(socket.rooms || []),
+    timestamp: new Date().toISOString()
+  });
+
+  return new Promise((resolve, reject) => {
+    socket.emit('createInvite', { telegramId }, (response) => {
+      if (response.error) {
+        console.error('❌ [Socket] Failed to create invite:', {
+          error: response.error,
           telegramId,
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
+        reject(new Error(response.error));
+      } else {
+        console.log('✅ [Socket] Invite created:', {
+          response,
+          socketId: socket.id,
+          rooms: Array.from(socket.rooms || []),
           timestamp: new Date().toISOString()
         });
         resolve(response);
-      });
+      }
     });
-
-    return response;
-  } catch (error) {
-    console.error('❌ [Socket Service] Failed to create invite:', {
-      error: error.message,
-      telegramId,
-      timestamp: new Date().toISOString()
-    });
-    throw error;
-  }
+  });
 };
 
 // Функция для подписки на события игры
@@ -178,30 +215,37 @@ export const subscribeToGameEvents = (socket, handlers) => {
 };
 
 export const checkAndRestoreGameState = async (socket, telegramId) => {
-  try {
-    console.log('🔍 [Socket Service] Checking game state:', {
-      telegramId,
-      timestamp: new Date().toISOString()
-    });
+  if (!socket?.connected) {
+    throw new Error('Socket is not connected');
+  }
 
-    const response = await new Promise((resolve) => {
-      socket.emit('checkActiveLobby', { telegramId }, (response) => {
-        console.log('📊 [Socket Service] Game state check result:', {
-          response,
+  console.log('🔍 [Socket] Checking game state:', {
+    telegramId,
+    socketId: socket.id,
+    connected: socket.connected,
+    rooms: Array.from(socket.rooms || []),
+    timestamp: new Date().toISOString()
+  });
+
+  return new Promise((resolve, reject) => {
+    socket.emit('checkGameState', { telegramId }, (response) => {
+      if (response.error) {
+        console.error('❌ [Socket] Failed to check game state:', {
+          error: response.error,
           telegramId,
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
+        reject(new Error(response.error));
+      } else {
+        console.log('✅ [Socket] Game state checked:', {
+          response,
+          socketId: socket.id,
+          rooms: Array.from(socket.rooms || []),
           timestamp: new Date().toISOString()
         });
         resolve(response);
-      });
+      }
     });
-
-    return response;
-  } catch (error) {
-    console.error('❌ [Socket Service] Failed to check game state:', {
-      error: error.message,
-      telegramId,
-      timestamp: new Date().toISOString()
-    });
-    throw error;
-  }
+  });
 }; 

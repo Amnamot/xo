@@ -46,10 +46,6 @@ const StartScreen = () => {
 
   useEffect(() => {
     if (!socket || !telegramId) return;
-    
-    if (!socket.connected) {
-      socket.connect();
-    }
 
     // Логируем момент подписки
     console.log('[FRONT][gameStart][subscribe]', {
@@ -182,11 +178,25 @@ const StartScreen = () => {
     }
 
     try {
+      if (!socket?.connected) {
+        throw new Error('Socket is not connected');
+      }
+
+      console.log('❌ [StartScreen] Cancelling lobby:', {
+        telegramId,
+        socketId: socket.id,
+        connected: socket.connected,
+        rooms: Array.from(socket.rooms || []),
+        timestamp: new Date().toISOString()
+      });
+
       socket.once('lobbyDeleted', () => {
+        console.log('✅ [StartScreen] Lobby deleted:', {
+          telegramId,
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
         setShowWaitModal(false);
-        if (socket.connected) {
-          socket.disconnect();
-        }
       });
 
       socket.emit('cancelLobby', {
@@ -194,7 +204,12 @@ const StartScreen = () => {
       });
 
     } catch (error) {
-      console.error('Failed to cancel lobby:', error);
+      console.error('❌ [StartScreen] Failed to cancel lobby:', {
+        error: error.message,
+        telegramId,
+        socketId: socket?.id,
+        timestamp: new Date().toISOString()
+      });
       setShowWaitModal(false);
       alert(error.message || "Failed to cancel lobby");
     }

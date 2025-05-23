@@ -1,4 +1,4 @@
-// src/components/Loader.jsx v5.2
+// src/components/Loader.jsx v5.3
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Loader.css';
@@ -12,6 +12,43 @@ const Loader = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isActionsComplete, setIsActionsComplete] = useState(false);
   const [error, setError] = useState(null);
+
+  // Функция проверки состояния лобби
+  const checkLobbyState = async (lobbyId) => {
+    try {
+      console.log('🔍 [Loader] Checking lobby state:', {
+        lobbyId,
+        timestamp: new Date().toISOString()
+      });
+
+      const response = await fetch(`/lobby/state/${lobbyId}`);
+      if (!response.ok) {
+        throw new Error(`Failed to check lobby state: ${response.status}`);
+      }
+
+      const state = await response.json();
+      console.log('✅ [Loader] Lobby state received:', {
+        lobbyId,
+        state,
+        timestamp: new Date().toISOString()
+      });
+
+      return {
+        isValid: true,
+        state
+      };
+    } catch (error) {
+      console.error('❌ [Loader] Lobby state check failed:', {
+        lobbyId,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+      return {
+        isValid: false,
+        error: error.message
+      };
+    }
+  };
 
   // Эффект для прогресс-бара
   useEffect(() => {
@@ -40,18 +77,23 @@ const Loader = () => {
           return;
         }
 
-        console.log('🔄 [Loader] Initializing user:', {
+        console.log('🔄 [Loader] Starting initialization:', {
           telegramId,
           timestamp: new Date().toISOString()
         });
 
-        const response = await fetch('https://api.igra.top/user/init', {
+        // 1. Инициализация пользователя через /user/init
+        const response = await fetch('/user/init', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ initData })
         });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
         const data = await response.json();
         console.log('✅ [Loader] User initialized:', {
@@ -60,14 +102,26 @@ const Loader = () => {
         });
 
         if (data.lobbyId) {
-          // Если найдено лобби - присоединяемся
+          // 2. Проверяем состояние лобби перед присоединением
+          const lobbyState = await checkLobbyState(data.lobbyId);
+          
+          if (!lobbyState.isValid) {
+            throw new Error(lobbyState.error || 'Invalid lobby state');
+          }
+
+          // 3. Инициализируем сокет
           socketContext.initSocket(telegramId);
+
+          // 4. Присоединяемся к лобби
           await joinLobby(socketContext.socket, data.lobbyId, telegramId);
-          setIsActionsComplete(true);
-        } else {
-          // Если лобби не найдено - идем на стартовый экран
-          setIsActionsComplete(true);
+          console.log('✅ [Loader] Joined lobby:', {
+            lobbyId: data.lobbyId,
+            telegramId,
+            timestamp: new Date().toISOString()
+          });
         }
+
+        setIsActionsComplete(true);
       } catch (error) {
         console.error('❌ [Loader] Initialization error:', {
           error: error.message,

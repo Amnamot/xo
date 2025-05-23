@@ -197,14 +197,6 @@ const Game = () => {
       timestamp: new Date().toISOString()
     });
 
-    if (!socket.connected) {
-      console.log('🔄 [Game] Socket not connected, connecting...', {
-        socketId: socket.id,
-        timestamp: new Date().toISOString()
-      });
-      socket.connect();
-    }
-
     socket.on('connect', () => { 
       console.log('✅ [Game] Socket connected:', {
         socketId: socket.id,
@@ -269,48 +261,17 @@ const Game = () => {
       if (data.winner === currentTelegramId) navigate('/end');
       else navigate('/lost');
     });
-    subscribeToGameEvents(socket, {
-      onGameState: (gameState) => {
-        if (!isValidGameState(gameState)) return;
-        setBoard(gameState.board);
-        setCurrentPlayer(gameState.currentPlayer);
-        setScale(gameState.scale);
-        setPosition(gameState.position);
-        setTime(gameState.time);
-        setPlayerTime1(gameState.playerTime1);
-        setPlayerTime2(gameState.playerTime2);
-        if (gameState.gameSession) {
-          setGameSession(gameState.gameSession);
-          if (gameState.gameSession.creatorId !== String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id)) {
-            setOpponentInfo({ id: gameState.gameSession.creatorId, name: gameState.gameSession.creatorName, avatar: gameState.gameSession.creatorAvatar });
-          }
-        }
-        if (gameStartTime === null) {
-          setGameStartTime(Date.now() - (gameState.time * 1000));
-          setMoveStartTime(Date.now());
-        }
-      },
-      onOpponentJoined: (opponent) => setOpponentInfo(opponent),
-      onOpponentLeft: () => setOpponentInfo(null),
-      onError: (error) => { console.error('Game error:', error); }
-    });
-    (async () => {
-      try {
-        if (telegramId) {
-          const gameState = await checkAndRestoreGameState(socket, telegramId);
-          if (gameState?.gameId && gameState.gameId !== lobbyId) navigate(`/game/${gameState.gameId}`);
-        }
-      } catch (error) {}
-    })();
+
     return () => {
       socket.off('connect');
       socket.off('disconnect');
+      socket.off('gameStart');
+      socket.off('gameState');
       socket.off('moveMade');
       socket.off('playerDisconnected');
       socket.off('gameEnded');
-      socket.off('gameState');
     };
-  }, [lobbyId, navigate, reconnectAttempts, socket]);
+  }, [socket, lobbyId, navigate, opponentInfo]);
 
   useEffect(() => {
     if (gameSession && socket) {

@@ -43,6 +43,16 @@ export const SocketProvider = ({ children }) => {
         socketId: newSocket.id,
         timestamp: new Date().toISOString()
       });
+
+      // Запрашиваем восстановление состояния
+      const lastKnownState = localStorage.getItem('lastKnownState');
+      const lastActionTimestamp = localStorage.getItem('lastActionTimestamp');
+
+      newSocket.emit('restoreState', {
+        telegramId,
+        lastKnownState,
+        lastActionTimestamp: lastActionTimestamp ? parseInt(lastActionTimestamp) : undefined
+      });
     });
 
     newSocket.on('connect_error', (error) => {
@@ -51,6 +61,45 @@ export const SocketProvider = ({ children }) => {
         telegramId,
         timestamp: new Date().toISOString()
       });
+    });
+
+    // Обработчик восстановления состояния
+    newSocket.on('restoreState', (data) => {
+      console.log('🔄 [SocketContext] State restored:', {
+        status: data.status,
+        state: data.state,
+        timestamp: new Date().toISOString()
+      });
+
+      if (data.status === 'success') {
+        // Сохраняем текущее состояние
+        localStorage.setItem('lastKnownState', data.state);
+        localStorage.setItem('lastActionTimestamp', Date.now().toString());
+
+        // Обрабатываем различные состояния
+        switch (data.state) {
+          case 'game':
+            // Восстанавливаем состояние игры
+            if (data.gameData) {
+              // Здесь можно добавить логику восстановления UI игры
+              console.log('🎮 [SocketContext] Game state restored:', data.gameData);
+            }
+            break;
+
+          case 'lobby':
+            // Восстанавливаем состояние лобби
+            if (data.lobbyData) {
+              // Здесь можно добавить логику восстановления UI лобби
+              console.log('🎯 [SocketContext] Lobby state restored:', data.lobbyData);
+            }
+            break;
+
+          case 'idle':
+            // Базовое состояние
+            console.log('👤 [SocketContext] Basic state restored:', data.playerData);
+            break;
+        }
+      }
     });
 
     setSocket(newSocket);

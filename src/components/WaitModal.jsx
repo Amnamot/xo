@@ -5,7 +5,7 @@ import { useSocket } from '../contexts/SocketContext';
 
 const LOBBY_LIFETIME = 180; // время жизни лобби в секундах
 
-const WaitModal = ({ onCancel }) => {
+const WaitModal = ({ onClose, creatorMarker }) => {
   const [secondsLeft, setSecondsLeft] = useState(LOBBY_LIFETIME);
   const [startTime, setStartTime] = useState(Date.now());
   const socket = useSocket();
@@ -17,7 +17,6 @@ const WaitModal = ({ onCancel }) => {
     console.log('⏳ [WaitModal] Initializing wait state:', {
       telegramId,
       socketId: socket.id,
-      connected: socket.connected,
       rooms: Array.from(socket.rooms || []),
       timestamp: new Date().toISOString()
     });
@@ -71,7 +70,7 @@ const WaitModal = ({ onCancel }) => {
           timestamp: new Date().toISOString()
         });
         clearInterval(timer);
-        onCancel();
+        handleCancel();
       }
     }, 1000);
 
@@ -83,7 +82,50 @@ const WaitModal = ({ onCancel }) => {
       clearInterval(timer);
       socket.off('uiState', handleUiState);
     };
-  }, [onCancel, startTime, telegramId, socket]);
+  }, [startTime, telegramId, socket]);
+
+  const handleCancel = async () => {
+    if (!telegramId) {
+      onClose();
+      return;
+    }
+
+    try {
+      if (!socket) {
+        throw new Error('Socket is not initialized');
+      }
+
+      console.log('❌ [WaitModal] Cancelling lobby:', {
+        telegramId,
+        socketId: socket.id,
+        rooms: Array.from(socket.rooms || []),
+        timestamp: new Date().toISOString()
+      });
+
+      socket.once('lobbyDeleted', () => {
+        console.log('✅ [WaitModal] Lobby deleted:', {
+          telegramId,
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
+        onClose();
+      });
+
+      socket.emit('cancelLobby', {
+        telegramId: telegramId.toString()
+      });
+
+    } catch (error) {
+      console.error('❌ [WaitModal] Failed to cancel lobby:', {
+        error: error.message,
+        telegramId,
+        socketId: socket?.id,
+        timestamp: new Date().toISOString()
+      });
+      onClose();
+      alert(error.message || "Failed to cancel lobby");
+    }
+  };
 
   const formatTime = (totalSeconds) => {
     const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
@@ -95,7 +137,7 @@ const WaitModal = ({ onCancel }) => {
     <div className="waitFrame">
       <div className="waitText">We are waiting for\nthe zero to join</div>
       <div className="waitTimer">{formatTime(secondsLeft)}</div>
-      <button className="waitButton" onClick={onCancel}>Cancel</button>
+      <button className="waitButton" onClick={handleCancel}>Cancel</button>
     </div>
   );
 };

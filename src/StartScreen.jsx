@@ -45,11 +45,10 @@ const StartScreen = () => {
   }, []);
 
   useEffect(() => {
-    if (!socket || !telegramId || !socket.connected) {
-      console.warn('⚠️ [StartScreen] Socket not ready:', {
+    if (!socket || !telegramId) {
+      console.warn('⚠️ [StartScreen] Socket or telegramId not ready:', {
         hasSocket: !!socket,
         hasTelegramId: !!telegramId,
-        isConnected: socket?.connected,
         timestamp: new Date().toISOString()
       });
       return;
@@ -120,26 +119,15 @@ const StartScreen = () => {
         throw new Error("Missing Telegram ID");
       }
 
-      // Проверяем состояние сокета
+      // Проверяем наличие сокета
       if (!socket) {
         console.error('❌ [StartScreen] Socket is null');
         throw new Error("Socket is not initialized");
       }
 
-      if (!socket.connected) {
-        console.error('❌ [StartScreen] Socket is not connected:', {
-          socketId: socket.id,
-          connected: socket.connected,
-          rooms: Array.from(socket.rooms || []),
-          timestamp: new Date().toISOString()
-        });
-        throw new Error("Socket is not connected");
-      }
-
       console.log('🎮 [StartScreen] Starting game creation:', {
         telegramId,
         socketId: socket.id,
-        connected: socket.connected,
         rooms: Array.from(socket.rooms || []),
         timestamp: new Date().toISOString()
       });
@@ -183,61 +171,6 @@ const StartScreen = () => {
     }
   };
 
-  const handleCancelLobby = async () => {
-    if (!telegramId) {
-      setShowWaitModal(false);
-      return;
-    }
-
-    try {
-      if (!socket?.connected) {
-        throw new Error('Socket is not connected');
-      }
-
-      console.log('❌ [StartScreen] Cancelling lobby:', {
-        telegramId,
-        socketId: socket.id,
-        connected: socket.connected,
-        rooms: Array.from(socket.rooms || []),
-        timestamp: new Date().toISOString()
-      });
-
-      socket.once('lobbyDeleted', () => {
-        console.log('✅ [StartScreen] Lobby deleted:', {
-          telegramId,
-          socketId: socket.id,
-          timestamp: new Date().toISOString()
-        });
-        setShowWaitModal(false);
-      });
-
-      socket.emit('cancelLobby', {
-        telegramId: telegramId.toString()
-      });
-
-    } catch (error) {
-      console.error('❌ [StartScreen] Failed to cancel lobby:', {
-        error: error.message,
-        telegramId,
-        socketId: socket?.id,
-        timestamp: new Date().toISOString()
-      });
-      setShowWaitModal(false);
-      alert(error.message || "Failed to cancel lobby");
-    }
-  };
-
-  const handleJoinLobby = async (lobbyId) => {
-    const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
-    
-    if (socket.connected) {
-      socket.emit('joinLobby', {
-        telegramId: user.id.toString(),
-        lobbyId: lobbyId
-      });
-    }
-  };
-
   const screenWidth = window.innerWidth;
   const containerWidth = (screenWidth / 12) * 10;
 
@@ -264,7 +197,7 @@ const StartScreen = () => {
   return (
     <div className="start-screen">
       {showWaitModal && <WaitModal 
-        onCancel={handleCancelLobby}
+        onClose={() => setShowWaitModal(false)}
         creatorMarker={creatorMarker}
       />}
       <div className="top-logo">

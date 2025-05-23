@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Loader.css';
-import { joinLobby } from '../services/socket';
+import { joinLobby, socket } from '../services/socket';
 
 const Loader = () => {
   const navigate = useNavigate();

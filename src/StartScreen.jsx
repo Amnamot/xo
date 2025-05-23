@@ -203,10 +203,35 @@ const StartScreen = () => {
   const handleJoinLobby = async (lobbyId) => {
     const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
     
+    console.log('🎮 [StartScreen] Attempting to join lobby:', {
+      lobbyId,
+      telegramId: user?.id?.toString(),
+      socketId: socket?.id,
+      connected: socket?.connected,
+      rooms: Array.from(socket?.rooms || []),
+      timestamp: new Date().toISOString()
+    });
+
     if (socket.connected) {
       socket.emit('joinLobby', {
         telegramId: user.id.toString(),
         lobbyId: lobbyId
+      }, (response) => {
+        console.log('📥 [StartScreen] Join lobby response:', {
+          response,
+          lobbyId,
+          telegramId: user?.id?.toString(),
+          socketId: socket?.id,
+          rooms: Array.from(socket?.rooms || []),
+          timestamp: new Date().toISOString()
+        });
+      });
+    } else {
+      console.error('❌ [StartScreen] Cannot join lobby - socket not connected:', {
+        lobbyId,
+        telegramId: user?.id?.toString(),
+        socketId: socket?.id,
+        timestamp: new Date().toISOString()
       });
     }
   };

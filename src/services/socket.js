@@ -36,11 +36,35 @@ export const createLobby = async (socket, telegramId) => {
 export const joinLobby = (socket, lobbyId, telegramId) => {
   return new Promise((resolve, reject) => {
     if (!socket.connected) {
+      console.error('❌ [Socket Service] Cannot join lobby - socket not connected:', {
+        lobbyId,
+        telegramId,
+        socketId: socket.id,
+        timestamp: new Date().toISOString()
+      });
       reject(new Error('WebSocket is not connected'));
       return;
     }
 
+    console.log('🎮 [Socket Service] Attempting to join lobby:', {
+      lobbyId,
+      telegramId,
+      socketId: socket.id,
+      connected: socket.connected,
+      rooms: Array.from(socket.rooms || []),
+      timestamp: new Date().toISOString()
+    });
+
     socket.emit('joinLobby', { lobbyId, telegramId }, (response) => {
+      console.log('📥 [Socket Service] Join lobby response:', {
+        response,
+        lobbyId,
+        telegramId,
+        socketId: socket.id,
+        rooms: Array.from(socket.rooms || []),
+        timestamp: new Date().toISOString()
+      });
+
       if (response?.status === 'error') {
         reject(response);
       } else {

@@ -39,15 +39,9 @@ const StartScreen = () => {
 
   const handleStartGame = () => {
     if (!telegramId) {
-      alert("Missing Telegram ID");
+      alert('Telegram ID не найден');
       return;
     }
-
-    console.log('🎮 [StartScreen] Starting game:', {
-      telegramId,
-      timestamp: new Date().toISOString()
-    });
-
     setShowWaitModal(true);
   };
 
@@ -78,7 +72,7 @@ const StartScreen = () => {
     <div className="start-screen">
       {showWaitModal && <WaitModal 
         onClose={() => setShowWaitModal(false)}
-        creatorMarker={creatorMarker}
+        telegramId={telegramId}
       />}
       <div className="top-logo">
         <img src={logoIcon} width={128} alt="Logo" />

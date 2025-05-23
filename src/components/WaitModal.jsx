@@ -1,121 +1,72 @@
 // src/components/WaitModal.jsx v6.1
 import React, { useEffect, useState } from 'react';
 import './WaitModal.css';
+import { useSocket } from '../contexts/SocketContext';
 import { lobbyService } from '../services/lobby';
 
-const LOBBY_LIFETIME = 180; // время жизни лобби в секундах
-
-const WaitModal = ({ onClose, creatorMarker }) => {
-  const [secondsLeft, setSecondsLeft] = useState(LOBBY_LIFETIME);
-  const [startTime, setStartTime] = useState(Date.now());
-  const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
+const WaitModal = ({ onClose, telegramId }) => {
+  const { socket } = useSocket();
+  const [timeLeft, setTimeLeft] = useState(180);
 
   useEffect(() => {
-    if (!telegramId) return;
-
-    console.log('⏳ [WaitModal] Initializing wait state:', {
-      telegramId,
-      timestamp: new Date().toISOString()
-    });
+    if (!socket || !telegramId) return;
 
     // Подписываемся на события лобби
-    lobbyService.subscribeToLobbyEvents(telegramId, {
-      onGameStart: (data) => {
-        console.log('📥 [WaitModal] Game started:', {
-          data,
-          telegramId,
-          timestamp: new Date().toISOString()
-        });
+    lobbyService.subscribeToLobbyEvents(socket, telegramId, {
+      onGameStart: () => {
+        console.log('🎮 [WaitModal] Game started');
         onClose();
       },
       onUiState: (data) => {
-        console.log('📥 [WaitModal] UI state updated:', {
-          data,
-          telegramId,
-          timestamp: new Date().toISOString()
-        });
-        
-        if (data.state === 'waitModal' && data.details?.isReconnect) {
-          const timeLeft = data.details.timeLeft;
-          setSecondsLeft(timeLeft);
-          setStartTime(Date.now() - ((LOBBY_LIFETIME - timeLeft) * 1000));
-          
-          console.log('🔄 [WaitModal] Restored timer state:', {
-            timeLeft,
-            startTime: Date.now() - ((LOBBY_LIFETIME - timeLeft) * 1000),
-            timestamp: new Date().toISOString()
-          });
+        console.log('📱 [WaitModal] UI state updated:', data);
+        if (data.details?.timeLeft) {
+          setTimeLeft(data.details.timeLeft);
         }
       },
-      onLobbyReady: (data) => {
-        console.log('📥 [WaitModal] Lobby ready:', {
-          data,
-          telegramId,
-          timestamp: new Date().toISOString()
-        });
-        if (data.creatorMarker) {
-          setCreatorMarker(data.creatorMarker);
-        }
+      onLobbyReady: () => {
+        console.log('✅ [WaitModal] Lobby ready');
       }
     });
-    
-    const timer = setInterval(() => {
-      const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-      const remaining = Math.max(0, LOBBY_LIFETIME - elapsedSeconds);
-      setSecondsLeft(remaining);
 
-      // Если таймер дошел до нуля, отменяем лобби
-      if (remaining === 0) {
-        console.log('⏰ [WaitModal] Timer expired:', {
-          telegramId,
-          timestamp: new Date().toISOString()
-        });
-        clearInterval(timer);
-        handleCancel();
-      }
+    // Запускаем таймер
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
 
     return () => {
-      console.log('🧹 [WaitModal] Cleaning up:', {
-        telegramId,
-        timestamp: new Date().toISOString()
-      });
       clearInterval(timer);
-      lobbyService.unsubscribeFromLobbyEvents();
+      lobbyService.unsubscribeFromLobbyEvents(socket);
     };
-  }, [startTime, telegramId, onClose]);
+  }, [socket, telegramId, onClose]);
 
   const handleCancel = async () => {
-    if (!telegramId) {
-      onClose();
-      return;
-    }
-
+    if (!socket || !telegramId) return;
+    
     try {
-      await lobbyService.cancelLobby(telegramId);
+      await lobbyService.cancelLobby(socket, telegramId);
       onClose();
     } catch (error) {
-      console.error('❌ [WaitModal] Failed to cancel lobby:', {
-        error: error.message,
-        telegramId,
-        timestamp: new Date().toISOString()
-      });
-      onClose();
-      alert(error.message || "Failed to cancel lobby");
+      console.error('❌ [WaitModal] Error cancelling lobby:', error);
     }
   };
 
-  const formatTime = (totalSeconds) => {
-    const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
-    const seconds = String(totalSeconds % 60).padStart(2, '0');
-    return `${minutes}:${seconds}`;
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   return (
-    <div className="waitFrame">
-      <div className="waitText">We are waiting for\nthe zero to join</div>
-      <div className="waitTimer">{formatTime(secondsLeft)}</div>
-      <button className="waitButton" onClick={handleCancel}>Cancel</button>
+    <div className="wait-modal">
+      <h2>Ожидание соперника</h2>
+      <p>Время ожидания: {formatTime(timeLeft)}</p>
+      <button onClick={handleCancel}>Отмена</button>
     </div>
   );
 };

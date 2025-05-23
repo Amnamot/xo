@@ -1,5 +1,4 @@
 import { createLobby, createInviteWS } from './socket';
-import { socketContext } from '../contexts/SocketContext';
 
 const LOBBY_LIFETIME = 180; // время жизни лобби в секундах
 
@@ -9,8 +8,7 @@ class LobbyService {
   }
 
   // Инициализация лобби
-  async startLobby(telegramId) {
-    const socket = socketContext.socket;
+  async startLobby(socket, telegramId) {
     if (!socket || !telegramId) {
       throw new Error('Socket or telegramId is not initialized');
     }
@@ -51,8 +49,7 @@ class LobbyService {
   }
 
   // Отмена лобби
-  async cancelLobby(telegramId) {
-    const socket = socketContext.socket;
+  async cancelLobby(socket, telegramId) {
     if (!socket || !telegramId) {
       throw new Error('Socket or telegramId is not initialized');
     }
@@ -81,8 +78,7 @@ class LobbyService {
   }
 
   // Подписка на события лобби
-  subscribeToLobbyEvents(telegramId, callbacks) {
-    const socket = socketContext.socket;
+  subscribeToLobbyEvents(socket, telegramId, callbacks) {
     if (!socket || !telegramId) return;
 
     const { onGameStart, onUiState, onLobbyReady } = callbacks;
@@ -111,8 +107,7 @@ class LobbyService {
   }
 
   // Отписка от событий лобби
-  unsubscribeFromLobbyEvents() {
-    const socket = socketContext.socket;
+  unsubscribeFromLobbyEvents(socket) {
     if (!socket) return;
 
     this.listeners.forEach((callback, event) => {

@@ -7,7 +7,7 @@ import Game from "./Game";
 import EndGame from "./components/EndGame";
 import LostGame from "./components/LostGame";
 import Loss from "./components/Loss";
-import { SocketProvider } from './context/SocketContext';
+import { SocketProvider } from './contexts/SocketContext';
 
 const App = () => {
   const [telegramId, setTelegramId] = useState(null);

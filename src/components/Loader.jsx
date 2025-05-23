@@ -1,13 +1,13 @@
 // src/components/Loader.jsx v5.2
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Loader.css';
 import { joinLobby } from '../services/socket';
-import { SocketContext } from '../contexts/SocketContext';
+import { useSocket } from '../contexts/SocketContext';
 
 const Loader = () => {
   const navigate = useNavigate();
-  const { socket } = useContext(SocketContext);
+  const socket = useSocket();
   const [progress, setProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionsComplete, setIsActionsComplete] = useState(false);

@@ -45,7 +45,7 @@ const Loader = () => {
           timestamp: new Date().toISOString()
         });
 
-        const response = await fetch('/user/init', {
+        const response = await fetch('https://api.igra.top/user/init', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

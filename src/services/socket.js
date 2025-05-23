@@ -35,15 +35,55 @@ export const createLobby = async (socket, telegramId) => {
 
 export const joinLobby = (socket, lobbyId, telegramId) => {
   return new Promise((resolve, reject) => {
+    console.log('🎮 [Socket Service] Attempting to join lobby:', {
+      lobbyId,
+      telegramId,
+      socketId: socket.id,
+      connected: socket.connected,
+      rooms: Array.from(socket.rooms || []),
+      timestamp: new Date().toISOString()
+    });
+
     if (!socket.connected) {
+      console.error('❌ [Socket Service] Socket not connected:', {
+        lobbyId,
+        telegramId,
+        socketId: socket.id,
+        timestamp: new Date().toISOString()
+      });
       reject(new Error('WebSocket is not connected'));
       return;
     }
 
     socket.emit('joinLobby', { lobbyId, telegramId }, (response) => {
+      console.log('📊 [Socket Service] Join lobby response:', {
+        response,
+        lobbyId,
+        telegramId,
+        socketId: socket.id,
+        connected: socket.connected,
+        rooms: Array.from(socket.rooms || []),
+        timestamp: new Date().toISOString()
+      });
+
       if (response?.status === 'error') {
+        console.error('❌ [Socket Service] Failed to join lobby:', {
+          error: response,
+          lobbyId,
+          telegramId,
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
         reject(response);
       } else {
+        console.log('✅ [Socket Service] Successfully joined lobby:', {
+          response,
+          lobbyId,
+          telegramId,
+          socketId: socket.id,
+          rooms: Array.from(socket.rooms || []),
+          timestamp: new Date().toISOString()
+        });
         resolve(response);
       }
     });

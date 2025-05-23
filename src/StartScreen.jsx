@@ -5,6 +5,8 @@ import TopUpModal from './components/TopUpModal';
 import './StartScreen.css';
 import logoIcon from './media/3tbICO.svg';
 import WaitModal from './components/WaitModal';
+import { useSocket } from './contexts/SocketContext';
+import { lobbyService } from './services/lobby';
 
 const StartScreen = () => {
   const [user, setUser] = useState(null);
@@ -13,6 +15,7 @@ const StartScreen = () => {
   const [creatorMarker, setCreatorMarker] = useState('');
   const initData = window.Telegram?.WebApp?.initData;
   const navigate = useNavigate();
+  const { socket } = useSocket();
   const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
 
   useEffect(() => {
@@ -42,7 +45,7 @@ const StartScreen = () => {
       alert('Telegram ID не найден');
       return;
     }
-    setShowWaitModal(true);
+    navigate('/game');
   };
 
   const screenWidth = window.innerWidth;

@@ -63,10 +63,10 @@ const WaitModal = ({ onClose, telegramId }) => {
   };
 
   return (
-    <div className="wait-modal">
-      <h2>Ожидание соперника</h2>
-      <p>Время ожидания: {formatTime(timeLeft)}</p>
-      <button onClick={handleCancel}>Отмена</button>
+    <div className="waitFrame">
+      <div className="waitText">We are waiting for\nthe zero to join</div>
+      <div className="waitTimer">{formatTime(timeLeft)}</div>
+      <button className="waitButton" onClick={handleCancel}>Cancel</button>
     </div>
   );
 };

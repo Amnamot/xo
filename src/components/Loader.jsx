@@ -7,7 +7,7 @@ import { useSocket } from '../contexts/SocketContext';
 
 const Loader = () => {
   const navigate = useNavigate();
-  const { socket, initSocket } = useSocket();
+  const socketContext = useSocket();
   const [progress, setProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionsComplete, setIsActionsComplete] = useState(false);
@@ -109,7 +109,7 @@ const Loader = () => {
         timestamp: new Date().toISOString()
       });
 
-      initSocket(telegramId);
+      socketContext.initSocket(telegramId);
 
       // 5. Присоединение к лобби
       console.log('✅ [Loader] All checks passed, joining lobby:', {
@@ -118,7 +118,7 @@ const Loader = () => {
         timestamp: new Date().toISOString()
       });
 
-      await joinLobby(socket, startParam, telegramId);
+      await joinLobby(socketContext.socket, startParam, telegramId);
       
       console.log('✅ [Loader] Successfully joined lobby:', {
         gameId: startParam,

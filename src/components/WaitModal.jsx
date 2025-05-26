@@ -16,8 +16,11 @@ const WaitModal = ({ onClose, telegramId }) => {
     // Последовательное выполнение действий
     const initializeLobby = async () => {
       try {
-        // 1. Создаем лобби и отправляем приглашение
-        await lobbyService.startLobby(socket, telegramId);
+        const response = await lobbyService.startLobby(socket, telegramId);
+        console.log('✅ [WaitModal] Lobby initialized:', {
+          response,
+          timestamp: new Date().toISOString()
+        });
         
         // 2. После успешного создания лобби подписываемся на события
         lobbyService.subscribeToLobbyEvents(socket, telegramId, {

@@ -140,37 +140,34 @@ export const confirmMoveReceived = (socket, gameId, moveId) => {
   socket.emit('moveReceived', { gameId, moveId });
 };
 
-export const createInviteWS = async (socket, telegramId) => {
-  if (!socket?.connected) {
-    throw new Error('Socket is not connected');
-  }
-
-  console.log('📨 [Socket] Creating invite:', {
-    telegramId,
-    socketId: socket.id,
-    connected: socket.connected,
-    rooms: Array.from(socket.rooms || []),
-    timestamp: new Date().toISOString()
-  });
-
+export const createLobbyWS = (socket, telegramId) => {
   return new Promise((resolve, reject) => {
-    socket.emit('createInvite', { telegramId }, (response) => {
-      if (response.error) {
-        console.error('❌ [Socket] Failed to create invite:', {
-          error: response.error,
-          telegramId,
-          socketId: socket.id,
-          timestamp: new Date().toISOString()
-        });
-        reject(new Error(response.error));
-      } else {
-        console.log('✅ [Socket] Invite created:', {
+    if (!socket || !telegramId) {
+      reject(new Error('Socket or telegramId not initialized'));
+      return;
+    }
+
+    console.log('🎮 [SocketService] Creating lobby:', {
+      telegramId,
+      socketId: socket.id,
+      timestamp: new Date().toISOString()
+    });
+
+    socket.emit('createLobby', { telegramId }, (response) => {
+      if (response.status === 'success') {
+        console.log('✅ [SocketService] Lobby created:', {
           response,
           socketId: socket.id,
-          rooms: Array.from(socket.rooms || []),
           timestamp: new Date().toISOString()
         });
         resolve(response);
+      } else {
+        console.error('❌ [SocketService] Error creating lobby:', {
+          error: response.message,
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
+        reject(new Error(response.message || 'Failed to create lobby'));
       }
     });
   });

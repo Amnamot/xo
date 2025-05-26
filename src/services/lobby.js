@@ -1,6 +1,6 @@
 // src/services/lobby.js v1.0.0
 
-import { createLobby, createInviteWS } from './socket';
+import { createLobby, createInviteWS, createLobbyWS } from './socket';
 
 const LOBBY_LIFETIME = 180; // время жизни лобби в секундах
 
@@ -12,42 +12,30 @@ class LobbyService {
   // Инициализация лобби
   async startLobby(socket, telegramId) {
     if (!socket || !telegramId) {
-      throw new Error('Socket or telegramId is not initialized');
+      throw new Error('Socket or telegramId not initialized');
     }
 
-    console.log('🎮 [LobbyService] Starting lobby:', {
-      telegramId,
-      socketId: socket.id,
-      rooms: Array.from(socket.rooms || []),
-      timestamp: new Date().toISOString()
-    });
+    try {
+      console.log('🎮 [LobbyService] Starting lobby:', {
+        telegramId,
+        socketId: socket.id,
+        timestamp: new Date().toISOString()
+      });
 
-    // Создаем лобби
-    const lobbyResponse = await createLobby(socket, telegramId);
-    
-    console.log('✅ [LobbyService] Lobby created:', {
-      response: lobbyResponse,
-      socketId: socket.id,
-      rooms: Array.from(socket.rooms || []),
-      timestamp: new Date().toISOString()
-    });
+      // Единый вызов для создания лобби и инвайта
+      const response = await createLobbyWS(socket, telegramId);
+      
+      console.log('✅ [LobbyService] Lobby and invite created:', {
+        response,
+        socketId: socket.id,
+        timestamp: new Date().toISOString()
+      });
 
-    // Создаем приглашение
-    const inviteData = await createInviteWS(socket, telegramId);
-    
-    console.log('📨 [LobbyService] Invite created:', {
-      inviteData,
-      socketId: socket.id,
-      rooms: Array.from(socket.rooms || []),
-      timestamp: new Date().toISOString()
-    });
-
-    // Отправляем приглашение через Telegram
-    if (window.Telegram?.WebApp?.shareMessage) {
-      await window.Telegram.WebApp.shareMessage(inviteData.messageId);
+      return response;
+    } catch (error) {
+      console.error('❌ [LobbyService] Error in startLobby:', error);
+      throw error;
     }
-
-    return { lobbyResponse, inviteData };
   }
 
   // Отмена лобби

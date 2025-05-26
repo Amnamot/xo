@@ -18,13 +18,22 @@ const App = () => {
   };
 
   useEffect(() => {
-    // Инициализируем telegramId из localStorage
-    setTelegramId(getCurrentTelegramId());
-
+    // Инициализируем Telegram WebApp первым
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.ready();
-      
-      // Отслеживаем изменения состояния приложения
+      console.log('✅ [App] Telegram WebApp initialized:', {
+        hasWebApp: Boolean(window.Telegram?.WebApp),
+        hasInitDataUnsafe: Boolean(window.Telegram?.WebApp?.initDataUnsafe),
+        startParam: window.Telegram?.WebApp?.initDataUnsafe?.start_param,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Инициализируем telegramId из localStorage
+    setTelegramId(getCurrentTelegramId());
+    
+    // Отслеживаем изменения состояния приложения
+    if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.onEvent('viewportChanged', async () => {
         const isExpanded = window.Telegram.WebApp.isExpanded;
         

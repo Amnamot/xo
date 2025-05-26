@@ -68,6 +68,22 @@ const Loader = () => {
   useEffect(() => {
     const initializeUser = async () => {
       try {
+        // Проверяем инициализацию Telegram WebApp
+        if (!window.Telegram?.WebApp) {
+          console.error('❌ [Loader] Telegram WebApp not initialized');
+          navigate("/start", { replace: true });
+          return;
+        }
+
+        // Логируем start_param в начале инициализации
+        const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+        console.log('🎯 [Loader] Initial start_param check:', {
+          startParam,
+          hasWebApp: Boolean(window.Telegram?.WebApp),
+          hasInitDataUnsafe: Boolean(window.Telegram?.WebApp?.initDataUnsafe),
+          timestamp: new Date().toISOString()
+        });
+
         const initData = window.Telegram?.WebApp?.initData;
         const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
 
@@ -155,6 +171,12 @@ const Loader = () => {
     if (progress >= 100 && isActionsComplete) {
       setIsLoading(false);
       const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+      console.log('🎯 [Loader] Checking start_param:', {
+        startParam,
+        progress,
+        isActionsComplete,
+        timestamp: new Date().toISOString()
+      });
       if (startParam) {
         navigate(`/game/${startParam}`, { replace: true });
       } else {

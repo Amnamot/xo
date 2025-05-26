@@ -15,8 +15,14 @@ const CELL_SIZE_DESKTOP = 60;
 const CELL_SIZE_MOBILE = 40;
 const INITIAL_POSITION = Math.floor(BOARD_SIZE / 2);
 
-const createEmptyBoard = () =>
-  Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
+const createEmptyBoard = () => {
+  const board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
+  console.log('🎲 [Game] Created empty board:', {
+    board,
+    timestamp: new Date().toISOString()
+  });
+  return board;
+};
 
 // Функции нормализации координат
 const normalizeCoordinates = (x, y, boardWidth, boardHeight) => {
@@ -141,7 +147,17 @@ const Game = ({ lobbyId }) => {
               lobbyId,
               timestamp: new Date().toISOString()
             });
-            setBoard(gameState.board || createEmptyBoard());
+            
+            // Проверяем и логируем состояние доски
+            const newBoard = gameState.board || createEmptyBoard();
+            console.log('🎯 [Game] Board state:', {
+              hasBoard: !!newBoard,
+              boardType: newBoard ? typeof newBoard : 'null',
+              isArray: Array.isArray(newBoard),
+              timestamp: new Date().toISOString()
+            });
+            
+            setBoard(newBoard);
             setCurrentPlayer(gameState.currentPlayer);
             setScale(gameState.scale);
             setPosition(gameState.position);
@@ -486,8 +502,8 @@ const Game = ({ lobbyId }) => {
           opacity: isOurTurn ? 1 : 0.7
         }}
       >
-        {(board || createEmptyBoard()).map((row, i) =>
-          row.map((cell, j) => (
+        {((board || createEmptyBoard() || [])).map((row, i) =>
+          (row || []).map((cell, j) => (
             <div
               key={`${i}-${j}`}
               className={`cell ${visibleCells.has(`${i}-${j}`) ? "cell-available" : "cell-blocked"}`}

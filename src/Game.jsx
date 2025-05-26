@@ -386,7 +386,7 @@ const Game = ({ lobbyId }) => {
 
   const handleCellClick = async (row, col) => {
     if (!visibleCells.has(`${row}-${col}`) || winLine || !gameSession) return;
-    if (currentPlayer !== (String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ? "X" : "O")) return;
+    if (currentPlayer !== (String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ? "x" : "o")) return;
     
     try {
       const moveTime = Date.now() - moveStartTime;

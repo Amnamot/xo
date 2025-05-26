@@ -20,9 +20,9 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
   const loggedGameHeaderDebug = useRef(false);
 
   useEffect(() => {
-    if (currentPlayer === "X") {
+    if (currentPlayer === "x") {
       setTimerColor("#6800D7");
-    } else if (currentPlayer === "O") {
+    } else if (currentPlayer === "o") {
       setTimerColor("#E10303");
     }
   }, [currentPlayer]);
@@ -164,7 +164,7 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
         <div className="gamer1">
           <img className="avagamer1" src={playerInfo.leftPlayerAvatar} alt="Player X" />
           <div className="namegamer1">{playerInfo.leftPlayerName}</div>
-          <div className="player-timer" style={{ color: currentPlayer === "X" ? "#6800D7" : "#000" }}>
+          <div className="player-timer" style={{ color: currentPlayer === "x" ? "#6800D7" : "#000" }}>
             {formatPlayerTime(player.playerTime1)}
           </div>
         </div>
@@ -179,7 +179,7 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
         <div className="gamer2">
           <img className="avagamer2" src={playerInfo.rightPlayerAvatar} alt="Player O" />
           <div className="namegamer2">{playerInfo.rightPlayerName}</div>
-          <div className="player-timer" style={{ color: currentPlayer === "O" ? "#E10303" : "#000" }}>
+          <div className="player-timer" style={{ color: currentPlayer === "o" ? "#E10303" : "#000" }}>
             {formatPlayerTime(player.playerTime2)}
           </div>
         </div>

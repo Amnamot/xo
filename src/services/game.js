@@ -1,4 +1,4 @@
-// src/services/game.js
+// src/services/game.js v1.0.3
 class GameService {
   constructor() {
     this.subscribers = new Map();
@@ -24,7 +24,7 @@ class GameService {
       throw new Error('Invalid game state: board is not an array');
     }
 
-    if (gameState.currentPlayer !== 'X' && gameState.currentPlayer !== 'O') {
+    if (gameState.currentPlayer !== 'x' && gameState.currentPlayer !== 'o') {
       throw new Error('Invalid game state: invalid current player');
     }
 

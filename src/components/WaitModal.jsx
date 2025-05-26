@@ -1,5 +1,5 @@
 // src/components/WaitModal.jsx v6.1
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import './WaitModal.css';
 import { useSocket } from '../contexts/SocketContext';
 import { lobbyService } from '../services/lobby';
@@ -7,24 +7,17 @@ import { lobbyService } from '../services/lobby';
 const WaitModal = ({ onClose, telegramId }) => {
   const { socket } = useSocket();
   const [timeLeft, setTimeLeft] = useState(180);
-  const [isInitializing, setIsInitializing] = useState(false);
-  const initializationRef = useRef(false);
 
   useEffect(() => {
-    if (!socket || !telegramId || initializationRef.current) return;
+    if (!socket || !telegramId) return;
 
     let timer;
 
     // Последовательное выполнение действий
     const initializeLobby = async () => {
       try {
-        initializationRef.current = true;
-        setIsInitializing(true);
-        const response = await lobbyService.startLobby(socket, telegramId);
-        console.log('✅ [WaitModal] Lobby initialized:', {
-          response,
-          timestamp: new Date().toISOString()
-        });
+        // 1. Создаем лобби и отправляем приглашение
+        await lobbyService.startLobby(socket, telegramId);
         
         // 2. После успешного создания лобби подписываемся на события
         lobbyService.subscribeToLobbyEvents(socket, telegramId, {
@@ -59,8 +52,6 @@ const WaitModal = ({ onClose, telegramId }) => {
       } catch (error) {
         console.error('❌ [WaitModal] Error starting lobby:', error);
         onClose();
-      } finally {
-        setIsInitializing(false);
       }
     };
 
@@ -69,7 +60,6 @@ const WaitModal = ({ onClose, telegramId }) => {
     return () => {
       if (timer) clearInterval(timer);
       lobbyService.unsubscribeFromLobbyEvents(socket);
-      initializationRef.current = false;
     };
   }, [socket, telegramId, onClose]);
 

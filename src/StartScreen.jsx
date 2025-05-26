@@ -5,6 +5,7 @@ import TopUpModal from './components/TopUpModal';
 import './StartScreen.css';
 import logoIcon from './media/3tbICO.svg';
 import { useSocket } from './contexts/SocketContext';
+import { lobbyService } from './services/lobby';
 
 const StartScreen = () => {
   const [user, setUser] = useState(null);
@@ -36,12 +37,38 @@ const StartScreen = () => {
     initializeUI();
   }, []);
 
-  const handleStartGame = () => {
+  const handleStartGame = async () => {
     if (!telegramId) {
       alert('Telegram ID не найден');
       return;
     }
-    navigate('/game');
+
+    if (!socket) {
+      alert('Нет подключения к серверу');
+      return;
+    }
+
+    try {
+      console.log('🎮 [StartScreen] Starting game:', {
+        telegramId,
+        socketId: socket.id,
+        timestamp: new Date().toISOString()
+      });
+
+      // Создаем лобби перед навигацией
+      await lobbyService.startLobby(socket, telegramId);
+      
+      console.log('✅ [StartScreen] Lobby created, navigating to game');
+      navigate('/game');
+    } catch (error) {
+      console.error('❌ [StartScreen] Failed to start game:', {
+        error,
+        telegramId,
+        socketId: socket?.id,
+        timestamp: new Date().toISOString()
+      });
+      alert('Не удалось создать игру. Попробуйте еще раз.');
+    }
   };
 
   const screenWidth = window.innerWidth;

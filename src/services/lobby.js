@@ -112,7 +112,7 @@ class LobbyService {
   subscribeToLobbyEvents(socket, telegramId, callbacks) {
     if (!socket || !telegramId) return;
 
-    const { onGameStart, onUiState, onLobbyReady } = callbacks;
+    const { onGameStart, onUiState, onLobbyReady, onLobbyDeleted } = callbacks;
 
     if (onGameStart) {
       socket.on('gameStart', onGameStart);
@@ -127,6 +127,11 @@ class LobbyService {
     if (onLobbyReady) {
       socket.on('lobbyReady', onLobbyReady);
       this.listeners.set('lobbyReady', onLobbyReady);
+    }
+
+    if (onLobbyDeleted) {
+      socket.on('lobbyDeleted', onLobbyDeleted);
+      this.listeners.set('lobbyDeleted', onLobbyDeleted);
     }
 
     // Отправляем начальное состояние

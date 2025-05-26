@@ -1,11 +1,13 @@
 // src/components/WaitModal.jsx v6.1
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './WaitModal.css';
 import { useSocket } from '../contexts/SocketContext';
 import { lobbyService } from '../services/lobby';
 
 const WaitModal = ({ onClose, telegramId }) => {
   const { socket } = useSocket();
+  const navigate = useNavigate();
   const [timeLeft, setTimeLeft] = useState(180);
 
   useEffect(() => {
@@ -27,6 +29,11 @@ const WaitModal = ({ onClose, telegramId }) => {
       },
       onLobbyReady: () => {
         console.log('✅ [WaitModal] Lobby ready');
+      },
+      onLobbyDeleted: () => {
+        console.log('❌ [WaitModal] Lobby deleted');
+        onClose();
+        navigate('/');
       }
     });
 
@@ -54,6 +61,7 @@ const WaitModal = ({ onClose, telegramId }) => {
     try {
       await lobbyService.cancelLobby(socket, telegramId);
       onClose();
+      navigate('/');
     } catch (error) {
       console.error('❌ [WaitModal] Error cancelling lobby:', error);
     }

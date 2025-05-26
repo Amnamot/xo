@@ -141,7 +141,7 @@ const Game = ({ lobbyId }) => {
               lobbyId,
               timestamp: new Date().toISOString()
             });
-            setBoard(gameState.board);
+            setBoard(gameState.board || createEmptyBoard());
             setCurrentPlayer(gameState.currentPlayer);
             setScale(gameState.scale);
             setPosition(gameState.position);
@@ -486,7 +486,7 @@ const Game = ({ lobbyId }) => {
           opacity: isOurTurn ? 1 : 0.7
         }}
       >
-        {board.map((row, i) =>
+        {(board || createEmptyBoard()).map((row, i) =>
           row.map((cell, j) => (
             <div
               key={`${i}-${j}`}

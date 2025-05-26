@@ -1,3 +1,5 @@
+// src/services/lobby.js v1.0.0
+
 import { createLobby, createInviteWS } from './socket';
 
 const LOBBY_LIFETIME = 180; // время жизни лобби в секундах

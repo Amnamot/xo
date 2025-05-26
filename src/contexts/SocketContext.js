@@ -32,7 +32,9 @@ export const SocketProvider = ({ children }) => {
     const newSocket = io(process.env.REACT_APP_SOCKET_URL || 'https://api.igra.top/socket.io/', {
       transports: ['websocket'],
       autoConnect: false,
-      query: { telegramId }
+      query: { 
+        initData: window.Telegram?.WebApp?.initData
+      }
     });
 
     newSocket.connect();

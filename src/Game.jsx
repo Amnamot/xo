@@ -96,28 +96,51 @@ const Game = ({ lobbyId }) => {
         // Подписываемся на события игры
         gameService.subscribeToGameEvents(socket, {
           onConnect: () => {
-            console.log('✅ [Game] Socket connected');
+            console.log('✅ [Game] Socket connected:', {
+              socketId: socket.id,
+              lobbyId,
+              timestamp: new Date().toISOString()
+            });
             setIsConnected(true);
             setReconnectAttempts(0);
             setError(null);
           },
           onDisconnect: () => {
-            console.log('❌ [Game] Socket disconnected');
+            console.log('❌ [Game] Socket disconnected:', {
+              socketId: socket.id,
+              lobbyId,
+              timestamp: new Date().toISOString()
+            });
             setIsConnected(false);
           },
           onError: (error) => {
-            console.error('❌ [Game] Socket error:', error);
+            console.error('❌ [Game] Socket error:', {
+              error: error.message,
+              socketId: socket.id,
+              lobbyId,
+              timestamp: new Date().toISOString()
+            });
             setError(error.message);
           },
           onGameStart: (data) => {
-            console.log('🎮 [Game] Game started:', data);
+            console.log('🎮 [Game] Game started:', {
+              data,
+              socketId: socket.id,
+              lobbyId,
+              timestamp: new Date().toISOString()
+            });
             setGameStartTime(data.startTime);
             setMoveStartTime(data.startTime);
             setError(null);
             setShowWaitModal(false);
           },
           onGameState: (gameState) => {
-            console.log('📊 [Game] Game state received:', gameState);
+            console.log('📊 [Game] Game state received:', {
+              gameState,
+              socketId: socket.id,
+              lobbyId,
+              timestamp: new Date().toISOString()
+            });
             setBoard(gameState.board);
             setCurrentPlayer(gameState.currentPlayer);
             setScale(gameState.scale);

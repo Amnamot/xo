@@ -21,6 +21,7 @@ class LobbyService {
     });
 
     // Создаем лобби
+    console.log('🔄 [LobbyService] Creating lobby...');
     const lobbyResponse = await createLobby(socket, telegramId);
     
     console.log('✅ [LobbyService] Lobby created:', {
@@ -31,6 +32,7 @@ class LobbyService {
     });
 
     // Создаем приглашение
+    console.log('🔄 [LobbyService] Creating invite...');
     const inviteData = await createInviteWS(socket, telegramId);
     
     console.log('📨 [LobbyService] Invite created:', {
@@ -40,9 +42,38 @@ class LobbyService {
       timestamp: new Date().toISOString()
     });
 
+    // Проверяем доступность Telegram WebApp
+    console.log('🔍 [LobbyService] Checking Telegram WebApp:', {
+      hasTelegram: Boolean(window.Telegram),
+      hasWebApp: Boolean(window.Telegram?.WebApp),
+      hasShareMessage: Boolean(window.Telegram?.WebApp?.shareMessage),
+      timestamp: new Date().toISOString()
+    });
+
     // Отправляем приглашение через Telegram
     if (window.Telegram?.WebApp?.shareMessage) {
-      await window.Telegram.WebApp.shareMessage(inviteData.messageId);
+      console.log('📤 [LobbyService] Attempting to share message:', {
+        messageId: inviteData.messageId,
+        timestamp: new Date().toISOString()
+      });
+      
+      try {
+        await window.Telegram.WebApp.shareMessage(inviteData.messageId);
+        console.log('✅ [LobbyService] Message shared successfully');
+      } catch (error) {
+        console.error('❌ [LobbyService] Failed to share message:', {
+          error,
+          messageId: inviteData.messageId,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } else {
+      console.warn('⚠️ [LobbyService] Cannot share message - Telegram WebApp not available:', {
+        hasTelegram: Boolean(window.Telegram),
+        hasWebApp: Boolean(window.Telegram?.WebApp),
+        hasShareMessage: Boolean(window.Telegram?.WebApp?.shareMessage),
+        timestamp: new Date().toISOString()
+      });
     }
 
     return { lobbyResponse, inviteData };

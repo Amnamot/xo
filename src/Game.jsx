@@ -206,6 +206,11 @@ const Game = ({ lobbyId: propLobbyId }) => {
               setMoveStartTime(gameState.startTime);
             }
             setError(null);
+            console.log('📊 [Game] After game state update:', {
+              currentPlayer: gameState.currentPlayer,
+              hasGameSession: !!gameState.gameSession,
+              timestamp: new Date().toISOString()
+            });
           },
           onMoveMade: (data) => {
             setBoard(data.gameState.board);
@@ -517,6 +522,12 @@ const Game = ({ lobbyId: propLobbyId }) => {
         />
       )}
       {isGameStarted && gameSession && currentPlayer && (
+        console.log('🎮 [Game] Before GameHeader render check:', {
+          isGameStarted,
+          hasGameSession: !!gameSession,
+          currentPlayer,
+          timestamp: new Date().toISOString()
+        }),
         console.log('🎮 [Game] Rendering GameHeader:', {
           isGameStarted,
           currentPlayer,

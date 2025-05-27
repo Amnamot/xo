@@ -4,6 +4,12 @@ import "./GameHeader.css";
 import logoIcon from '../media/3tbICO.svg';
 
 const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
+  console.log('🎮 [GameHeader] Component mounted:', {
+    hasGameSession: !!gameSession,
+    currentPlayer,
+    timestamp: new Date().toISOString()
+  });
+
   const [timerColor, setTimerColor] = useState("#6800D7");
   const [playerInfo, setPlayerInfo] = useState({
     leftPlayerAvatar: "",
@@ -116,14 +122,30 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
     }
   }, [gameSession, currentPlayer]);
 
+  console.log('🎮 [GameHeader] Before first check:', {
+    hasGameSession: !!gameSession,
+    currentPlayer,
+    timestamp: new Date().toISOString()
+  });
+
   if (!gameSession || !currentPlayer) {
+    console.log('❌ [GameHeader] First check failed');
     return null;
   }
 
   const player = gameSession.players[currentPlayer];
   const opponent = Object.values(gameSession.players).find(p => p.isOpponent);
 
+  console.log('🎮 [GameHeader] Before second check:', {
+    hasPlayer: !!player,
+    hasOpponent: !!opponent,
+    player,
+    opponent,
+    timestamp: new Date().toISOString()
+  });
+
   if (!player || !opponent) {
+    console.log('❌ [GameHeader] Second check failed');
     return null;
   }
 

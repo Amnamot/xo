@@ -526,18 +526,47 @@ const Game = ({ lobbyId: propLobbyId }) => {
           isGameStarted,
           hasGameSession: !!gameSession,
           currentPlayer,
+          gameSessionPlayers: gameSession?.players,
+          currentPlayerData: gameSession?.players?.[currentPlayer],
+          opponentData: Object.values(gameSession?.players || {}).find(p => p.isOpponent),
           timestamp: new Date().toISOString()
         }),
-        console.log('🎮 [Game] Rendering GameHeader:', {
-          isGameStarted,
-          currentPlayer,
-          gameSession,
+        console.log('🎮 [Game] GameHeader props:', {
+          currentPlayer: currentPlayer?.toLowerCase(),
           moveTimer,
           time,
           playerTime1,
           playerTime2,
-          opponentInfo,
+          opponentInfo: {
+            name: opponentInfo?.name,
+            avatar: opponentInfo?.avatar
+          },
           isConnected,
+          isCreator: gameSession ? 
+            String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) : 
+            null,
+          gameSession: {
+            players: {
+              x: {
+                isCreator: String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
+                isOpponent: false,
+                moveTimer,
+                time,
+                playerTime1,
+                playerTime2
+              },
+              o: {
+                isCreator: String(gameSession?.creatorId) !== String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
+                isOpponent: true,
+                moveTimer,
+                time,
+                playerTime1,
+                playerTime2,
+                name: opponentInfo?.name || 'Caesar',
+                avatar: opponentInfo?.avatar || 'JohnAva.png'
+              }
+            }
+          },
           timestamp: new Date().toISOString()
         }),
         <GameHeader 

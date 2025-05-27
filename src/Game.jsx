@@ -493,7 +493,7 @@ const Game = ({ lobbyId }) => {
         />
       )}
       <GameHeader 
-        currentPlayer={currentPlayer} 
+        currentPlayer={currentPlayer?.toLowerCase()} 
         moveTimer={moveTimer} 
         time={time}
         playerTime1={playerTime1}
@@ -508,7 +508,7 @@ const Game = ({ lobbyId }) => {
           null}
         gameSession={{
           players: {
-            X: {
+            x: {
               isCreator: String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
               isOpponent: false,
               moveTimer,
@@ -516,7 +516,7 @@ const Game = ({ lobbyId }) => {
               playerTime1,
               playerTime2
             },
-            O: {
+            o: {
               isCreator: String(gameSession?.creatorId) !== String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
               isOpponent: true,
               moveTimer,

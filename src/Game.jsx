@@ -85,6 +85,7 @@ const Game = ({ lobbyId }) => {
   const [error, setError] = useState(null);
   const [boardDimensions, setBoardDimensions] = useState({ width: 0, height: 0 });
   const [showWaitModal, setShowWaitModal] = useState(false);
+  const [isGameStarted, setIsGameStarted] = useState(false);
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const CELL_SIZE = isMobile ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP;
@@ -147,6 +148,7 @@ const Game = ({ lobbyId }) => {
             setMoveStartTime(data.startTime);
             setError(null);
             setShowWaitModal(false);
+            setIsGameStarted(true);
           },
           onGameState: (gameState) => {
             console.log('📊 [Game] Game state received:', {
@@ -492,45 +494,47 @@ const Game = ({ lobbyId }) => {
           lobbyId={lobbyId}
         />
       )}
-      <GameHeader 
-        currentPlayer={currentPlayer?.toLowerCase()} 
-        moveTimer={moveTimer} 
-        time={time}
-        playerTime1={playerTime1}
-        playerTime2={playerTime2}
-        opponentInfo={{
-          name: opponentInfo?.name || 'Caesar',
-          avatar: opponentInfo?.avatar || 'JohnAva.png'
-        }}
-        isConnected={isConnected}
-        isCreator={gameSession ? 
-          String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) : 
-          null}
-        gameSession={{
-          players: {
-            x: {
-              isCreator: String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
-              isOpponent: false,
-              moveTimer,
-              time,
-              playerTime1,
-              playerTime2
-            },
-            o: {
-              isCreator: String(gameSession?.creatorId) !== String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
-              isOpponent: true,
-              moveTimer,
-              time,
-              playerTime1,
-              playerTime2,
-              name: opponentInfo?.name || 'Caesar',
-              avatar: opponentInfo?.avatar || 'JohnAva.png'
+      {isGameStarted && (
+        <GameHeader 
+          currentPlayer={currentPlayer?.toLowerCase()} 
+          moveTimer={moveTimer} 
+          time={time}
+          playerTime1={playerTime1}
+          playerTime2={playerTime2}
+          opponentInfo={{
+            name: opponentInfo?.name || 'Caesar',
+            avatar: opponentInfo?.avatar || 'JohnAva.png'
+          }}
+          isConnected={isConnected}
+          isCreator={gameSession ? 
+            String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) : 
+            null}
+          gameSession={{
+            players: {
+              x: {
+                isCreator: String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
+                isOpponent: false,
+                moveTimer,
+                time,
+                playerTime1,
+                playerTime2
+              },
+              o: {
+                isCreator: String(gameSession?.creatorId) !== String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
+                isOpponent: true,
+                moveTimer,
+                time,
+                playerTime1,
+                playerTime2,
+                name: opponentInfo?.name || 'Caesar',
+                avatar: opponentInfo?.avatar || 'JohnAva.png'
+              }
             }
-          }
-        }}
-        onExit={() => navigate('/')}
-        error={error}
-      />
+          }}
+          onExit={() => navigate('/')}
+          error={error}
+        />
+      )}
       <div
         ref={boardRef}
         className="board-grid"

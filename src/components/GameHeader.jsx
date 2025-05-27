@@ -28,22 +28,32 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
   }, [currentPlayer]);
 
   useEffect(() => {
-    const normalizedPlayer = currentPlayer?.toLowerCase();
-    if (gameSession?.players?.[normalizedPlayer]?.moveTimer > 0) {
+    console.log('🎮 [GameHeader] Checking game state:', {
+      currentPlayer,
+      hasGameSession: !!gameSession,
+      hasPlayers: !!gameSession?.players,
+      hasCurrentPlayer: !!gameSession?.players?.[currentPlayer],
+      hasMoveTimer: !!gameSession?.players?.[currentPlayer]?.moveTimer,
+      moveTimerValue: gameSession?.players?.[currentPlayer]?.moveTimer,
+      isGameStarted,
+      timestamp: new Date().toISOString()
+    });
+
+    if (gameSession?.players?.[currentPlayer]?.moveTimer > 0 && !isGameStarted) {
       if (!loggedGameHeaderDebug.current) {
         console.log('🎮 [GameHeader] Game started, initializing timers', {
-          currentPlayer: normalizedPlayer,
-          moveTimer: gameSession.players[normalizedPlayer].moveTimer,
-          time: gameSession.players[normalizedPlayer].time,
-          playerTime1: gameSession.players[normalizedPlayer].playerTime1,
-          playerTime2: gameSession.players[normalizedPlayer].playerTime2,
+          currentPlayer,
+          moveTimer: gameSession.players[currentPlayer].moveTimer,
+          time: gameSession.players[currentPlayer].time,
+          playerTime1: gameSession.players[currentPlayer].playerTime1,
+          playerTime2: gameSession.players[currentPlayer].playerTime2,
           timestamp: new Date().toISOString()
         });
         loggedGameHeaderDebug.current = true;
       }
       setIsGameStarted(true);
     }
-  }, [currentPlayer, gameSession]);
+  }, [currentPlayer, gameSession, isGameStarted]);
 
   useEffect(() => {
     if (gameSession?.players?.[currentPlayer]) {

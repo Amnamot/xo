@@ -517,8 +517,32 @@ const Game = ({ lobbyId: propLobbyId }) => {
         />
       )}
       {isGameStarted && (
+        console.log('🎮 [Game] Rendering GameHeader:', {
+          isGameStarted,
+          currentPlayer,
+          gameSession,
+          moveTimer,
+          time,
+          playerTime1,
+          playerTime2,
+          opponentInfo,
+          isConnected,
+          timestamp: new Date().toISOString()
+        }),
         <GameHeader 
           currentPlayer={currentPlayer?.toLowerCase()} 
+          moveTimer={moveTimer} 
+          time={time}
+          playerTime1={playerTime1}
+          playerTime2={playerTime2}
+          opponentInfo={{
+            name: opponentInfo?.name || 'Caesar',
+            avatar: opponentInfo?.avatar || 'JohnAva.png'
+          }}
+          isConnected={isConnected}
+          isCreator={gameSession ? 
+            String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) : 
+            null}
           gameSession={{
             players: {
               x: {
@@ -527,13 +551,7 @@ const Game = ({ lobbyId: propLobbyId }) => {
                 moveTimer,
                 time,
                 playerTime1,
-                playerTime2,
-                name: String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) 
-                  ? window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name 
-                  : opponentInfo?.name || 'Caesar',
-                avatar: String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id)
-                  ? window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url
-                  : opponentInfo?.avatar || 'JohnAva.png'
+                playerTime2
               },
               o: {
                 isCreator: String(gameSession?.creatorId) !== String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
@@ -542,12 +560,8 @@ const Game = ({ lobbyId: propLobbyId }) => {
                 time,
                 playerTime1,
                 playerTime2,
-                name: String(gameSession?.creatorId) !== String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id)
-                  ? window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name
-                  : opponentInfo?.name || 'Caesar',
-                avatar: String(gameSession?.creatorId) !== String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id)
-                  ? window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url
-                  : opponentInfo?.avatar || 'JohnAva.png'
+                name: opponentInfo?.name || 'Caesar',
+                avatar: opponentInfo?.avatar || 'JohnAva.png'
               }
             }
           }}

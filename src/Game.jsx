@@ -83,7 +83,7 @@ const Game = ({ lobbyId }) => {
   const [gameSession, setGameSession] = useState(null);
   const [error, setError] = useState(null);
   const [boardDimensions, setBoardDimensions] = useState({ width: 0, height: 0 });
-  const [showWaitModal, setShowWaitModal] = useState(true);
+  const [showWaitModal, setShowWaitModal] = useState(false);
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const CELL_SIZE = isMobile ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP;

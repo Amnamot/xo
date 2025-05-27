@@ -59,6 +59,8 @@ const StartScreen = () => {
       await lobbyService.startLobby(socket, telegramId);
       
       console.log('✅ [StartScreen] Lobby created, navigating to game');
+      // Устанавливаем флаг в localStorage, чтобы Game.jsx знал, что нужно показать модальное окно
+      localStorage.setItem('showWaitModal', 'true');
       navigate('/game');
     } catch (error) {
       console.error('❌ [StartScreen] Failed to start game:', {

@@ -95,6 +95,13 @@ const Game = ({ lobbyId }) => {
     
     const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() || localStorage.getItem('current_telegram_id');
     
+    // Проверяем флаг showWaitModal из localStorage
+    const shouldShowWaitModal = localStorage.getItem('showWaitModal') === 'true';
+    if (shouldShowWaitModal) {
+      setShowWaitModal(true);
+      localStorage.removeItem('showWaitModal'); // Удаляем флаг после использования
+    }
+    
     const initializeGame = async () => {
       try {
         // Запрашиваем начальное состояние
@@ -128,15 +135,6 @@ const Game = ({ lobbyId }) => {
               timestamp: new Date().toISOString()
             });
             setError(error.message);
-          },
-          onLobbyReady: (data) => {
-            console.log('🎮 [Game] Lobby ready:', {
-              data,
-              socketId: socket.id,
-              lobbyId,
-              timestamp: new Date().toISOString()
-            });
-            setShowWaitModal(true);
           },
           onGameStart: (data) => {
             console.log('🎮 [Game] Game started:', {
@@ -212,6 +210,23 @@ const Game = ({ lobbyId }) => {
             } else {
               navigate('/lost');
             }
+          }
+        });
+
+        // Подписываемся на события лобби
+        lobbyService.subscribeToLobbyEvents(socket, telegramId, {
+          onLobbyReady: (data) => {
+            console.log('🎮 [Game] Lobby ready:', {
+              data,
+              socketId: socket.id,
+              lobbyId,
+              timestamp: new Date().toISOString()
+            });
+            setShowWaitModal(true);
+          },
+          onLobbyDeleted: () => {
+            console.log('❌ [Game] Lobby deleted');
+            navigate('/');
           }
         });
 

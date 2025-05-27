@@ -516,7 +516,7 @@ const Game = ({ lobbyId: propLobbyId }) => {
           lobbyId={currentLobbyId}
         />
       )}
-      {isGameStarted && (
+      {isGameStarted && gameSession && currentPlayer && (
         console.log('🎮 [Game] Rendering GameHeader:', {
           isGameStarted,
           currentPlayer,
@@ -536,8 +536,8 @@ const Game = ({ lobbyId: propLobbyId }) => {
           playerTime1={playerTime1}
           playerTime2={playerTime2}
           opponentInfo={{
-            name: opponentInfo?.name || 'Caesar',
-            avatar: opponentInfo?.avatar || 'JohnAva.png'
+            name: opponentInfo?.name,
+            avatar: opponentInfo?.avatar
           }}
           isConnected={isConnected}
           isCreator={gameSession ? 

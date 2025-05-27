@@ -5,11 +5,10 @@ import logoIcon from '../media/3tbICO.svg';
 
 const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
   const [timerColor, setTimerColor] = useState("#6800D7");
-  const [isGameStarted, setIsGameStarted] = useState(false);
   const [playerInfo, setPlayerInfo] = useState({
-    leftPlayerAvatar: "../media/JohnAva.png",
+    leftPlayerAvatar: "",
     leftPlayerName: "Loading...",
-    rightPlayerAvatar: "../media/JohnAva.png",
+    rightPlayerAvatar: "",
     rightPlayerName: "Loading..."
   });
 
@@ -35,25 +34,9 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
       hasCurrentPlayer: !!gameSession?.players?.[currentPlayer],
       hasMoveTimer: !!gameSession?.players?.[currentPlayer]?.moveTimer,
       moveTimerValue: gameSession?.players?.[currentPlayer]?.moveTimer,
-      isGameStarted,
       timestamp: new Date().toISOString()
     });
-
-    if (gameSession?.players?.[currentPlayer]?.moveTimer > 0 && !isGameStarted) {
-      if (!loggedGameHeaderDebug.current) {
-        console.log('🎮 [GameHeader] Game started, initializing timers', {
-          currentPlayer,
-          moveTimer: gameSession.players[currentPlayer].moveTimer,
-          time: gameSession.players[currentPlayer].time,
-          playerTime1: gameSession.players[currentPlayer].playerTime1,
-          playerTime2: gameSession.players[currentPlayer].playerTime2,
-          timestamp: new Date().toISOString()
-        });
-        loggedGameHeaderDebug.current = true;
-      }
-      setIsGameStarted(true);
-    }
-  }, [currentPlayer, gameSession, isGameStarted]);
+  }, [currentPlayer, gameSession]);
 
   useEffect(() => {
     if (gameSession?.players?.[currentPlayer]) {
@@ -99,18 +82,18 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
       
       // Данные текущего игрока из Telegram
       const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-      const currentUserAvatar = tgUser?.photo_url || "../media/JohnAva.png";
-      const currentUserName = tgUser?.first_name || "You";
+      const currentUserAvatar = tgUser?.photo_url;
+      const currentUserName = tgUser?.first_name;
 
       // Определяем, какой игрок где (создатель всегда слева)
-      const leftPlayerAvatar = player.isCreator === null ? "../media/JohnAva.png" : 
-        (player.isCreator ? currentUserAvatar : (opponent?.avatar || "../media/JohnAva.png"));
+      const leftPlayerAvatar = player.isCreator === null ? "" : 
+        (player.isCreator ? currentUserAvatar : opponent?.avatar);
       const leftPlayerName = player.isCreator === null ? "Loading..." : 
-        (player.isCreator ? currentUserName : (opponent?.name || "Opponent"));
-      const rightPlayerAvatar = player.isCreator === null ? "../media/JohnAva.png" : 
-        (player.isCreator ? (opponent?.avatar || "../media/JohnAva.png") : currentUserAvatar);
+        (player.isCreator ? currentUserName : opponent?.name);
+      const rightPlayerAvatar = player.isCreator === null ? "" : 
+        (player.isCreator ? opponent?.avatar : currentUserAvatar);
       const rightPlayerName = player.isCreator === null ? "Loading..." : 
-        (player.isCreator ? (opponent?.name || "Opponent") : currentUserName);
+        (player.isCreator ? opponent?.name : currentUserName);
 
       setPlayerInfo({
         leftPlayerAvatar,
@@ -145,14 +128,14 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
   }
 
   const formatTimer = (time) => {
-    if (!isGameStarted || time === undefined || time === null) return "00:00";
+    if (!time === undefined || time === null) return "00:00";
     const minutes = Math.floor(time / 6000);
     const seconds = Math.floor((time % 6000) / 100);
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
   const formatPlayerTime = (time) => {
-    if (!isGameStarted || time === undefined || time === null) return "00:00";
+    if (!time === undefined || time === null) return "00:00";
     const minutes = Math.floor(time / 6000);
     const seconds = Math.floor((time % 6000) / 100);
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;

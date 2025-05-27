@@ -521,6 +521,15 @@ const Game = ({ lobbyId: propLobbyId }) => {
           lobbyId={currentLobbyId}
         />
       )}
+      {(() => {
+        console.log('🎮 [Game] Before GameHeader conditions:', {
+          isGameStarted,
+          hasGameSession: !!gameSession,
+          currentPlayer,
+          timestamp: new Date().toISOString()
+        });
+        return null;
+      })()}
       {isGameStarted && gameSession && currentPlayer && (
         console.log('🎮 [Game] Before GameHeader render check:', {
           isGameStarted,

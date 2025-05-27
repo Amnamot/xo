@@ -8,7 +8,6 @@ import EndGame from "./components/EndGame";
 import LostGame from "./components/LostGame";
 import Loss from "./components/Loss";
 import { SocketProvider } from './contexts/SocketContext';
-import { TelegramProvider } from './contexts/TelegramContext';
 
 const App = () => {
   const [telegramId, setTelegramId] = useState(null);
@@ -60,32 +59,30 @@ const App = () => {
   }, []);
 
   return (
-    <TelegramProvider>
-      <SocketProvider>
-        <Router>
-          <Routes>
-            {/* Стартовый экран при загрузке приложения */}
-            <Route path="/" element={<Loader />} />
+    <SocketProvider>
+      <Router>
+        <Routes>
+          {/* Стартовый экран при загрузке приложения */}
+          <Route path="/" element={<Loader />} />
 
-            {/* Экран после загрузки */}
-            <Route path="/start" element={<StartScreen />} />
+          {/* Экран после загрузки */}
+          <Route path="/start" element={<StartScreen />} />
 
-            {/* Игровой экран */}
-            <Route path="/game" element={<Game lobbyId={null} />} /> {/* Для создателя лобби */}
-            <Route path="/game/:lobbyId" element={<Game />} /> {/* Для присоединяющегося игрока */}
+          {/* Игровой экран */}
+          <Route path="/game" element={<Game lobbyId={null} />} /> {/* Для создателя лобби */}
+          <Route path="/game/:lobbyId" element={<Game />} /> {/* Для присоединяющегося игрока */}
 
-            {/* Экран победителя */}
-            <Route path="/end" element={<EndGame />} />
+          {/* Экран победителя */}
+          <Route path="/end" element={<EndGame />} />
 
-            {/* Экран проигравшего */}
-            <Route path="/lost" element={<LostGame />} />
+          {/* Экран проигравшего */}
+          <Route path="/lost" element={<LostGame />} />
 
-            {/* Экран потерянного лобби */}
-            <Route path="/nolobby" element={<Loss />} />
-          </Routes>
-        </Router>
-      </SocketProvider>
-    </TelegramProvider>
+          {/* Экран потерянного лобби */}
+          <Route path="/nolobby" element={<Loss />} />
+        </Routes>
+      </Router>
+    </SocketProvider>
   );
 };
 

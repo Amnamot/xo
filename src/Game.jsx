@@ -166,9 +166,33 @@ const Game = ({ lobbyId: propLobbyId }) => {
             if (data.lobbyId) {
               setCurrentLobbyId(data.lobbyId);
             }
+            setCurrentPlayer(data.currentPlayer || 'x');
+            setGameSession(data.gameSession || {
+              id: data.lobbyId,
+              creatorId: data.creatorId,
+              currentTurn: 'x',
+              players: {
+                x: {
+                  isCreator: true,
+                  moveTimer: 30000,
+                  time: 0,
+                  playerTime1: 0,
+                  playerTime2: 0
+                },
+                o: {
+                  isCreator: false,
+                  moveTimer: 30000,
+                  time: 0,
+                  playerTime1: 0,
+                  playerTime2: 0
+                }
+              }
+            });
             console.log('🎮 [Game] After game start:', {
               isGameStarted: true,
               lobbyId: data.lobbyId,
+              currentPlayer: data.currentPlayer || 'x',
+              gameSession: data.gameSession,
               timestamp: new Date().toISOString()
             });
           },

@@ -68,6 +68,7 @@ const Game = () => {
   const navigate = useNavigate();
   const mountedRef = useRef(true);
   const boardRef = useRef(null);
+  const isInitializedRef = useRef(false);
 
   const [isGameStarted, setIsGameStarted] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -97,7 +98,7 @@ const Game = () => {
 
   // Инициализация сокета и подписка на события
   useEffect(() => {
-    if (!socket || !telegramId || isInitialized) return;
+    if (!socket || !telegramId || isInitializedRef.current) return;
 
     console.log('🎮 [Game] Initializing socket events:', {
       socketId: socket.id,
@@ -220,12 +221,15 @@ const Game = () => {
       }
     });
 
+    isInitializedRef.current = true;
     setIsInitialized(true);
 
     return () => {
-      gameService.unsubscribeFromGameEvents(socket);
+      if (mountedRef.current) {
+        gameService.unsubscribeFromGameEvents(socket);
+      }
     };
-  }, [socket, telegramId, isInitialized]);
+  }, [socket, telegramId]);
 
   // Эффект для таймера хода и времени игроков
   useEffect(() => {

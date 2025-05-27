@@ -28,21 +28,22 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
   }, [currentPlayer]);
 
   useEffect(() => {
-    if (gameSession?.players?.[currentPlayer]?.moveTimer > 0 && !isGameStarted) {
+    const normalizedPlayer = currentPlayer?.toLowerCase();
+    if (gameSession?.players?.[normalizedPlayer]?.moveTimer > 0) {
       if (!loggedGameHeaderDebug.current) {
         console.log('🎮 [GameHeader] Game started, initializing timers', {
-          currentPlayer,
-          moveTimer: gameSession.players[currentPlayer].moveTimer,
-          time: gameSession.players[currentPlayer].time,
-          playerTime1: gameSession.players[currentPlayer].playerTime1,
-          playerTime2: gameSession.players[currentPlayer].playerTime2,
+          currentPlayer: normalizedPlayer,
+          moveTimer: gameSession.players[normalizedPlayer].moveTimer,
+          time: gameSession.players[normalizedPlayer].time,
+          playerTime1: gameSession.players[normalizedPlayer].playerTime1,
+          playerTime2: gameSession.players[normalizedPlayer].playerTime2,
           timestamp: new Date().toISOString()
         });
         loggedGameHeaderDebug.current = true;
       }
       setIsGameStarted(true);
     }
-  }, [currentPlayer, gameSession, isGameStarted]);
+  }, [currentPlayer, gameSession]);
 
   useEffect(() => {
     if (gameSession?.players?.[currentPlayer]) {

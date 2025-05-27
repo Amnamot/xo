@@ -1,5 +1,5 @@
 // src/components/WaitModal.jsx v6.1
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './WaitModal.css';
 import { useSocket } from '../contexts/SocketContext';
@@ -9,6 +9,18 @@ const WaitModal = ({ onClose, telegramId }) => {
   const { socket } = useSocket();
   const navigate = useNavigate();
   const [timeLeft, setTimeLeft] = useState(180);
+
+  const handleCancel = useCallback(async () => {
+    if (!socket || !telegramId) return;
+    
+    try {
+      await lobbyService.cancelLobby(socket, telegramId);
+      onClose();
+      navigate('/');
+    } catch (error) {
+      console.error('❌ [WaitModal] Error cancelling lobby:', error);
+    }
+  }, [socket, telegramId, onClose, navigate]);
 
   useEffect(() => {
     if (!socket || !telegramId) return;
@@ -53,19 +65,7 @@ const WaitModal = ({ onClose, telegramId }) => {
       if (timer) clearInterval(timer);
       lobbyService.unsubscribeFromLobbyEvents(socket);
     };
-  }, [socket, telegramId, onClose]);
-
-  const handleCancel = async () => {
-    if (!socket || !telegramId) return;
-    
-    try {
-      await lobbyService.cancelLobby(socket, telegramId);
-      onClose();
-      navigate('/');
-    } catch (error) {
-      console.error('❌ [WaitModal] Error cancelling lobby:', error);
-    }
-  };
+  }, [socket, telegramId, onClose, handleCancel]);
 
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);

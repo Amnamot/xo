@@ -8,6 +8,7 @@ import './Game.css';
 import './Shape.css';
 import Shape from './Shape';
 import WaitModal from './components/WaitModal';
+import { lobbyService } from './services/lobby';
 
 const BOARD_SIZE = 100;
 const WIN_CONDITION = 5;
@@ -458,6 +459,20 @@ const Game = ({ lobbyId }) => {
       {showWaitModal && (
         <WaitModal
           onClose={() => setShowWaitModal(false)}
+          onCancel={async () => {
+            try {
+              const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
+              await lobbyService.cancelLobby(socket, telegramId);
+              navigate('/');
+            } catch (error) {
+              console.error('❌ [Game] Error cancelling lobby:', {
+                error: error.message,
+                socketId: socket.id,
+                timestamp: new Date().toISOString()
+              });
+              setError('Failed to cancel lobby');
+            }
+          }}
           telegramId={window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()}
         />
       )}

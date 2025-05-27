@@ -489,6 +489,7 @@ const Game = ({ lobbyId }) => {
             }
           }}
           telegramId={window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()}
+          lobbyId={lobbyId}
         />
       )}
       <GameHeader 

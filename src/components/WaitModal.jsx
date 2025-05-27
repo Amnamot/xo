@@ -1,57 +1,33 @@
 // src/components/WaitModal.jsx v6.1
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './WaitModal.css';
-import { useSocket } from '../contexts/SocketContext';
-import { lobbyService } from '../services/lobby';
+import { gameService } from '../services/game';
 
-const WaitModal = ({ onClose, telegramId }) => {
-  const { socket } = useSocket();
+const WaitModal = ({ onCancel, lobbyId, telegramId }) => {
+  const [timeLeft, setTimeLeft] = useState(30);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const [timeLeft, setTimeLeft] = useState(180);
 
-  const handleCancel = useCallback(async () => {
-    if (!socket || !telegramId) return;
-    
+  const handleCancel = async () => {
     try {
-      await lobbyService.cancelLobby(socket, telegramId);
-      onClose();
+      console.log('🎮 [Game] Cancelling lobby:', {
+        telegramId,
+        lobbyId,
+        timestamp: new Date().toISOString()
+      });
+      
+      await gameService.cancelLobby(telegramId);
       navigate('/');
     } catch (error) {
-      console.error('❌ [WaitModal] Error cancelling lobby:', error);
+      console.error('❌ [Game] Error cancelling lobby:', error);
+      setError('Failed to cancel lobby');
     }
-  }, [socket, telegramId, onClose, navigate]);
+  };
 
   useEffect(() => {
-    if (!socket || !telegramId) return;
-
-    let timer;
-
-    // Подписываемся на события лобби
-    lobbyService.subscribeToLobbyEvents(socket, telegramId, {
-      onGameStart: () => {
-        console.log('🎮 [WaitModal] Game started');
-        onClose();
-      },
-      onUiState: (data) => {
-        console.log('📱 [WaitModal] UI state updated:', data);
-        if (data.details?.timeLeft) {
-          setTimeLeft(data.details.timeLeft);
-        }
-      },
-      onLobbyReady: () => {
-        console.log('✅ [WaitModal] Lobby ready');
-      },
-      onLobbyDeleted: () => {
-        console.log('❌ [WaitModal] Lobby deleted');
-        onClose();
-        navigate('/');
-      }
-    });
-
-    // Запускаем таймер
-    timer = setInterval(() => {
-      setTimeLeft((prev) => {
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timer);
           handleCancel();
@@ -61,11 +37,8 @@ const WaitModal = ({ onClose, telegramId }) => {
       });
     }, 1000);
 
-    return () => {
-      if (timer) clearInterval(timer);
-      lobbyService.unsubscribeFromLobbyEvents(socket);
-    };
-  }, [socket, telegramId, onClose, handleCancel]);
+    return () => clearInterval(timer);
+  }, []); // Пустой массив зависимостей, так как таймер должен работать независимо
 
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);

@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useSocket } from './contexts/SocketContext';
 import { gameService } from './services/game';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import GameHeader from './components/GameHeader';
 import './Game.css';
 import './Shape.css';
@@ -60,7 +60,9 @@ const getVisibleCells = (board) => {
   return visibleCells;
 };
 
-const Game = ({ lobbyId }) => {
+const Game = ({ lobbyId: propLobbyId }) => {
+  const { lobbyId: paramLobbyId } = useParams();
+  const lobbyId = paramLobbyId || propLobbyId;
   const { socket } = useSocket();
   const navigate = useNavigate();
   const mountedRef = useRef(true);

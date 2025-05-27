@@ -31,13 +31,10 @@ export const SocketProvider = ({ children }) => {
 
     const newSocket = io(process.env.REACT_APP_SOCKET_URL || 'https://api.igra.top/socket.io/', {
       transports: ['websocket'],
-      autoConnect: false,
       query: { 
         initData: window.Telegram?.WebApp?.initData
       }
     });
-
-    newSocket.connect();
 
     newSocket.on('connect', () => {
       console.log('✅ [SocketContext] Socket connected:', {
@@ -61,6 +58,15 @@ export const SocketProvider = ({ children }) => {
       console.error('❌ [SocketContext] Socket connection error:', {
         error: error.message,
         telegramId,
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    // Добавляем обработчик gameState
+    newSocket.on('gameState', (gameState) => {
+      console.log('📊 [SocketContext] Game state received:', {
+        gameState,
+        socketId: newSocket.id,
         timestamp: new Date().toISOString()
       });
     });

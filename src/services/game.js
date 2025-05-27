@@ -145,7 +145,22 @@ class GameService {
 
   // Улучшенный метод подписки на события
   subscribeToGameEvents(socket, handlers) {
-    if (!socket) return;
+    if (!socket) {
+      console.error('❌ [GameService] Cannot subscribe to events: socket is null');
+      return;
+    }
+
+    console.log('🎮 [GameService] Subscribing to game events:', {
+      socketId: socket.id,
+      hasHandlers: {
+        onGameStart: !!handlers.onGameStart,
+        onGameState: !!handlers.onGameState,
+        onMoveMade: !!handlers.onMoveMade,
+        onPlayerDisconnected: !!handlers.onPlayerDisconnected,
+        onGameEnded: !!handlers.onGameEnded
+      },
+      timestamp: new Date().toISOString()
+    });
 
     const { 
       onGameStart, 
@@ -178,15 +193,27 @@ class GameService {
     if (onGameState) {
       socket.on('gameState', (gameState) => {
         try {
-          this.validateGameState(gameState);
-          console.log('📊 [GameService] Game state received:', {
+          console.log('📊 [GameService] Raw game state received:', {
             gameState,
             socketId: socket.id,
             timestamp: new Date().toISOString()
           });
+
+          this.validateGameState(gameState);
+          console.log('📊 [GameService] Game state validated:', {
+            gameState,
+            socketId: socket.id,
+            timestamp: new Date().toISOString()
+          });
+
           onGameState(gameState);
         } catch (error) {
-          console.error('❌ [GameService] Invalid game state:', error);
+          console.error('❌ [GameService] Invalid game state:', {
+            error: error.message,
+            gameState,
+            socketId: socket.id,
+            timestamp: new Date().toISOString()
+          });
           if (onError) onError(error);
         }
       });

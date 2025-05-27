@@ -151,10 +151,11 @@ const Game = ({ lobbyId: propLobbyId }) => {
             setError(error.message);
           },
           onGameStart: (data) => {
-            console.log('🎮 [Game] Game started:', {
+            console.log('🎮 [Game] Game started event received:', {
               data,
               socketId: socket.id,
               lobbyId: data.lobbyId,
+              currentIsGameStarted: isGameStarted,
               timestamp: new Date().toISOString()
             });
             setGameStartTime(data.startTime);
@@ -165,6 +166,11 @@ const Game = ({ lobbyId: propLobbyId }) => {
             if (data.lobbyId) {
               setCurrentLobbyId(data.lobbyId);
             }
+            console.log('🎮 [Game] After game start:', {
+              isGameStarted: true,
+              lobbyId: data.lobbyId,
+              timestamp: new Date().toISOString()
+            });
           },
           onGameState: (gameState) => {
             console.log('📊 [Game] Game state received:', {

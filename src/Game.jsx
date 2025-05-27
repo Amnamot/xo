@@ -9,6 +9,7 @@ import './Shape.css';
 import Shape from './Shape';
 import WaitModal from './components/WaitModal';
 import { lobbyService } from './services/lobby';
+import { useTelegram } from './contexts/TelegramContext';
 
 const BOARD_SIZE = 100;
 const WIN_CONDITION = 5;
@@ -60,238 +61,178 @@ const getVisibleCells = (board) => {
   return visibleCells;
 };
 
-const Game = ({ lobbyId: propLobbyId }) => {
-  const { lobbyId: paramLobbyId } = useParams();
-  const lobbyId = paramLobbyId || propLobbyId;
+const Game = () => {
   const { socket } = useSocket();
+  const { telegramId } = useTelegram();
+  const { lobbyId: paramLobbyId } = useParams();
   const navigate = useNavigate();
   const mountedRef = useRef(true);
   const boardRef = useRef(null);
+
+  const [isGameStarted, setIsGameStarted] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-  const [reconnectAttempts, setReconnectAttempts] = useState(0);
-  const [board, setBoard] = useState(createEmptyBoard());
   const [currentPlayer, setCurrentPlayer] = useState(null);
+  const [gameSession, setGameSession] = useState(null);
+  const [lobbyId, setLobbyId] = useState(paramLobbyId);
+  const [board, setBoard] = useState(createEmptyBoard());
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [touchStart, setTouchStart] = useState(null);
-  const [initialDistance, setInitialDistance] = useState(null);
   const [time, setTime] = useState(0);
   const [playerTime1, setPlayerTime1] = useState(0);
   const [playerTime2, setPlayerTime2] = useState(0);
-  const [gameStartTime, setGameStartTime] = useState(null);
-  const [moveStartTime, setMoveStartTime] = useState(null);
   const [moveTimer, setMoveTimer] = useState(30000);
-  const [winLine, setWinLine] = useState(null);
-  const [opponentInfo, setOpponentInfo] = useState(null);
-  const [gameSession, setGameSession] = useState(null);
-  const [error, setError] = useState(null);
+  const [gameStartTime, setGameStartTime] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [boardDimensions, setBoardDimensions] = useState({ width: 0, height: 0 });
   const [showWaitModal, setShowWaitModal] = useState(false);
-  const [isGameStarted, setIsGameStarted] = useState(false);
-  const [currentLobbyId, setCurrentLobbyId] = useState(lobbyId);
+  const [touchStart, setTouchStart] = useState(null);
+  const [initialDistance, setInitialDistance] = useState(null);
+  const [winLine, setWinLine] = useState(null);
+  const [opponentInfo, setOpponentInfo] = useState(null);
+  const [error, setError] = useState(null);
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const CELL_SIZE = isMobile ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP;
 
-  // Эффект для инициализации игры
+  // Инициализация сокета и подписка на события
   useEffect(() => {
-    if (!mountedRef.current || !socket) return;
-    
-    const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() || localStorage.getItem('current_telegram_id');
-    
-    console.log('🎮 [Game] Component state:', {
-      isGameStarted,
-      isConnected,
-      currentPlayer,
-      gameSession,
-      lobbyId,
-      currentLobbyId,
+    if (!socket || !telegramId || isInitialized) return;
+
+    console.log('🎮 [Game] Initializing socket events:', {
+      socketId: socket.id,
+      telegramId,
       timestamp: new Date().toISOString()
     });
-    
-    // Проверяем флаг showWaitModal из localStorage
-    const shouldShowWaitModal = localStorage.getItem('showWaitModal') === 'true';
-    if (shouldShowWaitModal) {
-      setShowWaitModal(true);
-      localStorage.removeItem('showWaitModal'); // Удаляем флаг после использования
-    }
-    
-    const initializeGame = async () => {
-      try {
-        // Запрашиваем начальное состояние
-        socket.emit('getInitialState', { telegramId });
 
-        // Подписываемся на события игры
-        gameService.subscribeToGameEvents(socket, {
-          onConnect: () => {
-            console.log('✅ [Game] Socket connected:', {
-              socketId: socket.id,
-              lobbyId,
-              timestamp: new Date().toISOString()
-            });
-            setIsConnected(true);
-            setReconnectAttempts(0);
-            setError(null);
-          },
-          onDisconnect: () => {
-            console.log('❌ [Game] Socket disconnected:', {
-              socketId: socket.id,
-              lobbyId,
-              timestamp: new Date().toISOString()
-            });
-            setIsConnected(false);
-          },
-          onError: (error) => {
-            console.error('❌ [Game] Socket error:', {
-              error: error.message,
-              socketId: socket.id,
-              lobbyId,
-              timestamp: new Date().toISOString()
-            });
-            setError(error.message);
-          },
-          onGameStart: (data) => {
-            console.log('🎮 [Game] Game started event received:', {
-              data,
-              socketId: socket.id,
-              lobbyId: data.lobbyId,
-              currentIsGameStarted: isGameStarted,
-              timestamp: new Date().toISOString()
-            });
-            setGameStartTime(data.startTime);
-            setMoveStartTime(data.startTime);
-            setError(null);
-            setShowWaitModal(false);
-            setIsGameStarted(true);
-            if (data.lobbyId) {
-              setCurrentLobbyId(data.lobbyId);
-            }
-            console.log('🎮 [Game] After game start:', {
-              isGameStarted: true,
-              lobbyId: data.lobbyId,
-              timestamp: new Date().toISOString()
-            });
-          },
-          onGameState: (gameState) => {
-            console.log('📊 [Game] Game state received:', {
-              gameState,
-              socketId: socket.id,
-              lobbyId,
-              timestamp: new Date().toISOString()
-            });
-            
-            // Проверяем и логируем состояние доски
-            const newBoard = gameState.board || createEmptyBoard();
-            console.log('🎯 [Game] Board state:', {
-              hasBoard: !!newBoard,
-              boardType: newBoard ? typeof newBoard : 'null',
-              isArray: Array.isArray(newBoard),
-              timestamp: new Date().toISOString()
-            });
-            
-            setBoard(newBoard);
-            setCurrentPlayer(gameState.currentPlayer);
-            setScale(gameState.scale);
-            setPosition(gameState.position);
-            setTime(gameState.time || 0);
-            setPlayerTime1(gameState.playerTime1 || 0);
-            setPlayerTime2(gameState.playerTime2 || 0);
-            setGameSession(gameState.gameSession);
-            if (!opponentInfo && gameState.opponentInfo) {
-              setOpponentInfo(gameState.opponentInfo);
-            }
-            setMoveTimer(gameState.maxMoveTime || 30000);
-            if (gameState.startTime) {
-              setGameStartTime(gameState.startTime);
-              setMoveStartTime(gameState.startTime);
-            }
-            setError(null);
-            console.log('📊 [Game] After game state update:', {
-              currentPlayer: gameState.currentPlayer,
-              hasGameSession: !!gameState.gameSession,
-              timestamp: new Date().toISOString()
-            });
-          },
-          onMoveMade: (data) => {
-            setBoard(data.gameState.board);
-            setCurrentPlayer(data.gameState.currentTurn);
-            setMoveStartTime(data.gameState.moveStartTime);
-            setMoveTimer(30000);
-            // Проверяем победителя
-            const winner = data.gameState.winner;
-            if (winner) {
-              setWinLine({
-                start: data.gameState.winLineStart,
-                end: data.gameState.winLineEnd
-              });
-            }
-            setError(null);
-          },
-          onPlayerDisconnected: () => {
-            console.log('👋 [Game] Player disconnected');
-            setError('Opponent disconnected');
-          },
-          onGameEnded: (data) => {
-            console.log('🏁 [Game] Game ended:', data);
-            const currentTelegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
-            if (data.winner === currentTelegramId) {
-              navigate('/end');
-            } else {
-              navigate('/lost');
-            }
-          }
+    // Подписываемся на события игры
+    gameService.subscribeToGameEvents(socket, {
+      onGameStart: (data) => {
+        console.log('🎮 [Game] Game started event received:', {
+          data,
+          socketId: socket.id,
+          lobbyId,
+          currentIsGameStarted: isGameStarted,
+          timestamp: new Date().toISOString()
         });
 
-        // Подписываемся на события лобби
-        lobbyService.subscribeToLobbyEvents(socket, telegramId, {
-          onLobbyReady: (data) => {
-            console.log('🎮 [Game] Lobby ready:', {
-              data,
-              socketId: socket.id,
-              lobbyId,
-              timestamp: new Date().toISOString()
-            });
-            setShowWaitModal(true);
-          },
-          onLobbyDeleted: () => {
-            console.log('❌ [Game] Lobby deleted');
-            navigate('/');
-          }
+        setGameStartTime(Date.now());
+        setIsGameStarted(true);
+        setLobbyId(data.lobbyId);
+
+        console.log('🎮 [Game] After game start:', {
+          isGameStarted: true,
+          lobbyId: data.lobbyId,
+          timestamp: new Date().toISOString()
+        });
+      },
+      onGameState: (gameState) => {
+        console.log('📊 [Game] Game state received:', {
+          gameState,
+          socketId: socket.id,
+          lobbyId,
+          timestamp: new Date().toISOString()
         });
 
-      } catch (error) {
-        console.error('❌ [Game] Error initializing game:', error);
-        setError(error.message);
-        
-        // Пробуем переподключиться
-        if (reconnectAttempts < 3) {
-          setReconnectAttempts(prev => prev + 1);
-          setTimeout(async () => {
-            try {
-              await gameService.reconnect(socket, lobbyId, telegramId);
-            } catch (reconnectError) {
-              console.error('❌ [Game] Reconnection failed:', reconnectError);
-              setError(reconnectError.message);
-            }
-          }, 2000);
+        // Проверяем наличие доски
+        console.log('🎯 [Game] Board state:', {
+          hasBoard: !!gameState.board,
+          boardType: typeof gameState.board,
+          isArray: Array.isArray(gameState.board),
+          timestamp: new Date().toISOString()
+        });
+
+        if (gameState.board) {
+          setBoard(gameState.board);
         }
-      }
-    };
+        setCurrentPlayer(gameState.currentPlayer);
+        setScale(gameState.scale);
+        setPosition(gameState.position);
+        setTime(gameState.time);
+        setPlayerTime1(gameState.playerTime1);
+        setPlayerTime2(gameState.playerTime2);
 
-    initializeGame();
+        // Проверяем наличие оппонента
+        if (gameState.players) {
+          const opponent = Object.values(gameState.players).find(
+            player => player.telegramId !== telegramId
+          );
+          if (opponent) {
+            console.log('👥 [Game] Opponent found:', {
+              opponent,
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
+
+        setGameSession(gameState);
+
+        console.log('📊 [Game] After game state update:', {
+          currentPlayer: gameState.currentPlayer,
+          hasGameSession: true,
+          timestamp: new Date().toISOString()
+        });
+      },
+      onMoveMade: (data) => {
+        console.log('🎯 [Game] Move made:', {
+          data,
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
+
+        setBoard(data.board);
+        setCurrentPlayer(data.currentPlayer);
+      },
+      onPlayerDisconnected: (data) => {
+        console.log('👋 [Game] Player disconnected:', {
+          data,
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
+      },
+      onGameEnded: (data) => {
+        console.log('🏁 [Game] Game ended:', {
+          data,
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
+      },
+      onConnect: () => {
+        console.log('✅ [Game] Socket connected:', {
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
+        setIsConnected(true);
+      },
+      onDisconnect: () => {
+        console.log('❌ [Game] Socket disconnected:', {
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
+        setIsConnected(false);
+      },
+      onError: (error) => {
+        console.error('❌ [Game] Socket error:', {
+          error,
+          socketId: socket.id,
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    setIsInitialized(true);
 
     return () => {
-      mountedRef.current = false;
       gameService.unsubscribeFromGameEvents(socket);
     };
-  }, [socket, lobbyId, navigate, opponentInfo, reconnectAttempts]);
+  }, [socket, telegramId, isInitialized]);
 
   // Эффект для таймера хода и времени игроков
   useEffect(() => {
-    if (moveStartTime === null || !isConnected) return;
+    if (gameStartTime === null || !isConnected) return;
 
     const moveInterval = setInterval(() => {
-      const elapsed = Date.now() - moveStartTime;
+      const elapsed = Date.now() - gameStartTime;
       const newMoveTimer = Math.max(30000 - Math.floor(elapsed / 10), 0);
       setMoveTimer(newMoveTimer);
 
@@ -304,7 +245,7 @@ const Game = ({ lobbyId: propLobbyId }) => {
     }, 100);
 
     return () => clearInterval(moveInterval);
-  }, [moveStartTime, currentPlayer, isConnected]);
+  }, [gameStartTime, currentPlayer, isConnected]);
 
   // Эффект для общего времени игры
   useEffect(() => {
@@ -459,7 +400,7 @@ const Game = ({ lobbyId: propLobbyId }) => {
     if (currentPlayer !== (String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ? "x" : "o")) return;
     
     try {
-      const moveTime = Date.now() - moveStartTime;
+      const moveTime = Date.now() - gameStartTime;
       const { normalizedX, normalizedY } = normalizeCoordinates(
         col * CELL_SIZE,
         row * CELL_SIZE,
@@ -498,6 +439,18 @@ const Game = ({ lobbyId: propLobbyId }) => {
     };
   };
 
+  // Проверяем условия для рендера GameHeader только после инициализации
+  if (!isInitialized) {
+    return null;
+  }
+
+  console.log('🎮 [Game] Before GameHeader conditions:', {
+    isGameStarted,
+    hasGameSession: !!gameSession,
+    currentPlayer,
+    timestamp: new Date().toISOString()
+  });
+
   return (
     <div className="game-container">
       {showWaitModal && (
@@ -518,18 +471,9 @@ const Game = ({ lobbyId: propLobbyId }) => {
             }
           }}
           telegramId={window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()}
-          lobbyId={currentLobbyId}
+          lobbyId={lobbyId}
         />
       )}
-      {(() => {
-        console.log('🎮 [Game] Before GameHeader conditions:', {
-          isGameStarted,
-          hasGameSession: !!gameSession,
-          currentPlayer,
-          timestamp: new Date().toISOString()
-        });
-        return null;
-      })()}
       {isGameStarted && gameSession && currentPlayer && (
         console.log('🎮 [Game] Before GameHeader render check:', {
           isGameStarted,

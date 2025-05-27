@@ -55,14 +55,19 @@ const StartScreen = () => {
         timestamp: new Date().toISOString()
       });
 
+      // Создаем лобби перед навигацией
       await lobbyService.startLobby(socket, telegramId);
       
-      socket.once('lobbyReady', () => {
-        console.log('✅ [StartScreen] Lobby ready, navigating to game');
-        navigate('/game');
-      });
+      console.log('✅ [StartScreen] Lobby created, navigating to game');
+      navigate('/game');
     } catch (error) {
-      console.error('❌ [StartScreen] Error starting game:', error);
+      console.error('❌ [StartScreen] Failed to start game:', {
+        error,
+        telegramId,
+        socketId: socket?.id,
+        timestamp: new Date().toISOString()
+      });
+      alert('Не удалось создать игру. Попробуйте еще раз.');
     }
   };
 

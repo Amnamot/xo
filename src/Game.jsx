@@ -88,6 +88,7 @@ const Game = ({ lobbyId: propLobbyId }) => {
   const [boardDimensions, setBoardDimensions] = useState({ width: 0, height: 0 });
   const [showWaitModal, setShowWaitModal] = useState(false);
   const [isGameStarted, setIsGameStarted] = useState(false);
+  const [currentLobbyId, setCurrentLobbyId] = useState(lobbyId);
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   const CELL_SIZE = isMobile ? CELL_SIZE_MOBILE : CELL_SIZE_DESKTOP;
@@ -143,7 +144,7 @@ const Game = ({ lobbyId: propLobbyId }) => {
             console.log('🎮 [Game] Game started:', {
               data,
               socketId: socket.id,
-              lobbyId,
+              lobbyId: data.lobbyId,
               timestamp: new Date().toISOString()
             });
             setGameStartTime(data.startTime);
@@ -151,6 +152,9 @@ const Game = ({ lobbyId: propLobbyId }) => {
             setError(null);
             setShowWaitModal(false);
             setIsGameStarted(true);
+            if (data.lobbyId) {
+              setCurrentLobbyId(data.lobbyId);
+            }
           },
           onGameState: (gameState) => {
             console.log('📊 [Game] Game state received:', {
@@ -493,7 +497,7 @@ const Game = ({ lobbyId: propLobbyId }) => {
             }
           }}
           telegramId={window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString()}
-          lobbyId={lobbyId}
+          lobbyId={currentLobbyId}
         />
       )}
       {isGameStarted && (

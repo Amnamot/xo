@@ -99,6 +99,16 @@ const Game = ({ lobbyId: propLobbyId }) => {
     
     const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString() || localStorage.getItem('current_telegram_id');
     
+    console.log('🎮 [Game] Component state:', {
+      isGameStarted,
+      isConnected,
+      currentPlayer,
+      gameSession,
+      lobbyId,
+      currentLobbyId,
+      timestamp: new Date().toISOString()
+    });
+    
     // Проверяем флаг showWaitModal из localStorage
     const shouldShowWaitModal = localStorage.getItem('showWaitModal') === 'true';
     if (shouldShowWaitModal) {

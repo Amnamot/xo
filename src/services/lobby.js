@@ -133,13 +133,6 @@ class LobbyService {
       socket.on('lobbyDeleted', onLobbyDeleted);
       this.listeners.set('lobbyDeleted', onLobbyDeleted);
     }
-
-    // Отправляем начальное состояние
-    socket.emit('uiState', { 
-      state: 'waitModal', 
-      telegramId,
-      details: { timeLeft: LOBBY_LIFETIME }
-    });
   }
 
   // Отписка от событий лобби

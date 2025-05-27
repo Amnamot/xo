@@ -128,6 +128,15 @@ const Game = ({ lobbyId }) => {
             });
             setError(error.message);
           },
+          onLobbyReady: (data) => {
+            console.log('🎮 [Game] Lobby ready:', {
+              data,
+              socketId: socket.id,
+              lobbyId,
+              timestamp: new Date().toISOString()
+            });
+            setShowWaitModal(true);
+          },
           onGameStart: (data) => {
             console.log('🎮 [Game] Game started:', {
               data,

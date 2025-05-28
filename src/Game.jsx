@@ -310,7 +310,7 @@ const Game = ({ lobbyId: propLobbyId }) => {
         socket.off('gameState');
       }
     };
-  }, [socket, isGameStarted, isConnected, currentPlayer, gameSession, lobbyId, currentLobbyId]);
+  }, [socket, isGameStarted, isConnected, currentPlayer, gameSession, lobbyId, currentLobbyId, navigate, opponentInfo, reconnectAttempts]);
 
   // Эффект для таймера хода и времени игроков
   useEffect(() => {

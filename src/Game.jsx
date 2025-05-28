@@ -73,8 +73,6 @@ const Game = ({ lobbyId: propLobbyId }) => {
   const [currentPlayer, setCurrentPlayer] = useState(null);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [touchStart, setTouchStart] = useState(null);
-  const [initialDistance, setInitialDistance] = useState(null);
   const [time, setTime] = useState(0);
   const [playerTime1, setPlayerTime1] = useState(0);
   const [playerTime2, setPlayerTime2] = useState(0);
@@ -373,110 +371,6 @@ const Game = ({ lobbyId: propLobbyId }) => {
       window.removeEventListener('resize', updateBoardDimensions);
     };
   }, []);
-
-  const handleTouchStart = (e) => {
-    console.log('👆 Touch start event', {
-      isOurTurn,
-      touchCount: e?.touches?.length,
-      timestamp: new Date().toISOString()
-    });
-
-    if (!isOurTurn) return;
-
-    if (e?.touches?.length === 1) {
-      const newTouchStart = {
-        x: e.touches[0].clientX - position.x,
-        y: e.touches[0].clientY - position.y,
-      };
-      console.log('👆 Single touch start', {
-        position,
-        newTouchStart,
-        timestamp: new Date().toISOString()
-      });
-      setTouchStart(newTouchStart);
-    } else if (e?.touches?.length === 2) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      console.log('📱 Double touch start', {
-        distance,
-        timestamp: new Date().toISOString()
-      });
-      setInitialDistance(distance);
-    }
-  };
-
-  const handleTouchMove = (e) => {
-    console.log('👆 Touch move event', {
-      isOurTurn,
-      touchCount: e?.touches?.length,
-      touchStart: !!touchStart,
-      initialDistance: !!initialDistance,
-      timestamp: new Date().toISOString()
-    });
-
-    if (!isOurTurn || !e?.touches) return;
-
-    try {
-      if (e.touches.length === 1) {
-        if (!touchStart) {
-          console.warn('⚠️ Touch move without touchStart');
-          return;
-        }
-
-        const newPosition = {
-          x: e.touches[0].clientX - touchStart.x,
-          y: e.touches[0].clientY - touchStart.y,
-        };
-        console.log('📱 Moving board', {
-          from: position,
-          to: newPosition,
-          timestamp: new Date().toISOString()
-        });
-        setPosition(newPosition);
-      } else if (e.touches.length === 2) {
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        const newDistance = Math.sqrt(dx * dx + dy * dy);
-
-        if (!initialDistance) {
-          console.log('📏 Setting initial distance', {
-            distance: newDistance,
-            timestamp: new Date().toISOString()
-          });
-          setInitialDistance(newDistance);
-          return;
-        }
-
-        const zoom = newDistance / initialDistance;
-        console.log('🔍 Zooming board', {
-          currentScale: scale,
-          zoom,
-          newDistance,
-          initialDistance,
-          timestamp: new Date().toISOString()
-        });
-        setScale((prev) => Math.min(Math.max(prev * zoom, 0.5), 2));
-        setInitialDistance(newDistance);
-      }
-    } catch (error) {
-      console.error('❌ Error in handleTouchMove:', {
-        error: error.message,
-        stack: error.stack,
-        timestamp: new Date().toISOString()
-      });
-    }
-  };
-
-  const handleTouchEnd = () => {
-    console.log('👆 Touch end event', {
-      hadTouchStart: !!touchStart,
-      hadInitialDistance: !!initialDistance,
-      timestamp: new Date().toISOString()
-    });
-    setTouchStart(null);
-    setInitialDistance(null);
-  };
 
   const visibleCells = board.length ? getVisibleCells(board) : new Set();
 

@@ -1,5 +1,5 @@
 // src/App.jsx v3
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Loader from "./components/Loader";
 import StartScreen from "./StartScreen";
@@ -10,13 +10,6 @@ import Loss from "./components/Loss";
 import { SocketProvider } from './contexts/SocketContext';
 
 const App = () => {
-  const [telegramId, setTelegramId] = useState(null);
-
-  // Функция для получения актуального telegramId
-  const getCurrentTelegramId = () => {
-    return localStorage.getItem('current_telegram_id') || 'unknown';
-  };
-
   useEffect(() => {
     // Инициализируем Telegram WebApp первым
     if (window.Telegram?.WebApp) {
@@ -29,9 +22,6 @@ const App = () => {
       });
     }
 
-    // Инициализируем telegramId из localStorage
-    setTelegramId(getCurrentTelegramId());
-    
     // Отслеживаем изменения состояния приложения
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.onEvent('viewportChanged', async () => {
@@ -46,16 +36,6 @@ const App = () => {
         }
       });
     }
-
-    // Следим за изменениями в localStorage
-    const handleStorageChange = (e) => {
-      if (e.key === 'current_telegram_id') {
-        setTelegramId(e.newValue || 'unknown');
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   return (

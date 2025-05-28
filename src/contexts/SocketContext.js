@@ -100,6 +100,10 @@ export const SocketProvider = ({ children }) => {
             // Базовое состояние
             console.log('👤 [SocketContext] Basic state restored:', data.playerData);
             break;
+
+          default:
+            console.log('⚠️ [SocketContext] Unknown state:', data.state);
+            break;
         }
       }
     });

@@ -302,9 +302,15 @@ const Game = ({ lobbyId: propLobbyId }) => {
 
     return () => {
       mountedRef.current = false;
-      gameService.unsubscribeFromGameEvents(socket);
+      if (socket) {
+        socket.off('connect');
+        socket.off('disconnect');
+        socket.off('error');
+        socket.off('gameStart');
+        socket.off('gameState');
+      }
     };
-  }, [socket, lobbyId, navigate, opponentInfo, reconnectAttempts]);
+  }, [socket, isGameStarted, isConnected, currentPlayer, gameSession, lobbyId, currentLobbyId]);
 
   // Эффект для таймера хода и времени игроков
   useEffect(() => {

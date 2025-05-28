@@ -22,7 +22,6 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
   const loggedGameHeader = useRef(false);
   const loggedGameHeaderProps = useRef(false);
   const loggedGameHeaderCalc = useRef(false);
-  const loggedGameHeaderDebug = useRef(false);
 
   useEffect(() => {
     if (currentPlayer === "x") {

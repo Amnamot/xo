@@ -1,7 +1,5 @@
 import { createLobby, createInviteWS } from './socket';
 
-const LOBBY_LIFETIME = 180; // время жизни лобби в секундах
-
 class LobbyService {
   constructor() {
     this.listeners = new Map();

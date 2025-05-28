@@ -296,7 +296,7 @@ const Game = ({ lobbyId: propLobbyId }) => {
       setMoveTimer(newMoveTimer);
 
       // Обновляем время только активного игрока
-      if (currentPlayer === "X") {
+      if (currentPlayer?.toLowerCase() === "x") {
         setPlayerTime1(prev => prev + 100);
       } else {
         setPlayerTime2(prev => prev + 100);
@@ -319,13 +319,13 @@ const Game = ({ lobbyId: propLobbyId }) => {
   }, [gameStartTime, isConnected]);
 
   // Определяем, является ли текущий ход нашим
-  const isOurTurn = currentPlayer === (String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ? "X" : "O");
+  const isOurTurn = currentPlayer?.toLowerCase() === (String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ? "x" : "o");
 
   useEffect(() => {
     if (socket && moveTimer === 0 && isOurTurn) {
       socket.emit('timeExpired', {
         gameId: gameSession?.id,
-        player: currentPlayer
+        player: currentPlayer?.toLowerCase()
       });
     }
   }, [moveTimer, isOurTurn, gameSession?.id, currentPlayer, socket]);
@@ -456,7 +456,7 @@ const Game = ({ lobbyId: propLobbyId }) => {
 
   const handleCellClick = async (row, col) => {
     if (!visibleCells.has(`${row}-${col}`) || winLine || !gameSession) return;
-    if (currentPlayer !== (String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ? "x" : "o")) return;
+    if (currentPlayer?.toLowerCase() !== (String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) ? "x" : "o")) return;
     
     try {
       const moveTime = Date.now() - moveStartTime;
@@ -471,7 +471,7 @@ const Game = ({ lobbyId: propLobbyId }) => {
         socket,
         gameSession.id,
         { row, col, normalizedX, normalizedY },
-        currentPlayer,
+        currentPlayer?.toLowerCase(),
         moveTime
       );
     } catch (error) {
@@ -521,65 +521,45 @@ const Game = ({ lobbyId: propLobbyId }) => {
           lobbyId={currentLobbyId}
         />
       )}
-      {isGameStarted && gameSession && currentPlayer && (
-        console.log('🎮 [Game] Before GameHeader render check:', {
-          isGameStarted,
-          hasGameSession: !!gameSession,
-          currentPlayer,
-          timestamp: new Date().toISOString()
-        }),
-        console.log('🎮 [Game] Rendering GameHeader:', {
-          isGameStarted,
-          currentPlayer,
-          gameSession,
-          moveTimer,
-          time,
-          playerTime1,
-          playerTime2,
-          opponentInfo,
-          isConnected,
-          timestamp: new Date().toISOString()
-        }),
-        <GameHeader 
-          currentPlayer={currentPlayer?.toLowerCase()} 
-          moveTimer={moveTimer} 
-          time={time}
-          playerTime1={playerTime1}
-          playerTime2={playerTime2}
-          opponentInfo={{
-            name: opponentInfo?.name,
-            avatar: opponentInfo?.avatar
-          }}
-          isConnected={isConnected}
-          isCreator={gameSession ? 
-            String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) : 
-            null}
-          gameSession={{
-            players: {
-              x: {
-                isCreator: String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
-                isOpponent: false,
-                moveTimer,
-                time,
-                playerTime1,
-                playerTime2
-              },
-              o: {
-                isCreator: String(gameSession?.creatorId) !== String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
-                isOpponent: true,
-                moveTimer,
-                time,
-                playerTime1,
-                playerTime2,
-                name: opponentInfo?.name,
-                avatar: opponentInfo?.avatar
-              }
+      <GameHeader 
+        currentPlayer={currentPlayer?.toLowerCase()} 
+        moveTimer={moveTimer} 
+        time={time}
+        playerTime1={playerTime1}
+        playerTime2={playerTime2}
+        opponentInfo={{
+          name: opponentInfo?.name,
+          avatar: opponentInfo?.avatar
+        }}
+        isConnected={isConnected}
+        isCreator={gameSession ? 
+          String(gameSession.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id) : 
+          null}
+        gameSession={{
+          players: {
+            x: {
+              isCreator: String(gameSession?.creatorId) === String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
+              isOpponent: false,
+              moveTimer,
+              time,
+              playerTime1,
+              playerTime2
+            },
+            o: {
+              isCreator: String(gameSession?.creatorId) !== String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id),
+              isOpponent: true,
+              moveTimer,
+              time,
+              playerTime1,
+              playerTime2,
+              name: opponentInfo?.name,
+              avatar: opponentInfo?.avatar
             }
-          }}
-          onExit={() => navigate('/')}
-          error={error}
-        />
-      )}
+          }
+        }}
+        onExit={() => navigate('/')}
+        error={error}
+      />
       <div
         ref={boardRef}
         className="board-grid"

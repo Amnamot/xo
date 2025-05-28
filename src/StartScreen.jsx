@@ -10,6 +10,7 @@ import { lobbyService } from './services/lobby';
 const StartScreen = () => {
   const [user, setUser] = useState(null);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
+  const initData = window.Telegram?.WebApp?.initData;
   const navigate = useNavigate();
   const { socket } = useSocket();
   const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();

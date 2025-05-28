@@ -22,6 +22,7 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
   const loggedGameHeader = useRef(false);
   const loggedGameHeaderProps = useRef(false);
   const loggedGameHeaderCalc = useRef(false);
+  const loggedGameHeaderDebug = useRef(false);
 
   useEffect(() => {
     if (currentPlayer === "x") {
@@ -83,44 +84,28 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
   useEffect(() => {
     if (gameSession && currentPlayer) {
       const player = gameSession.players[currentPlayer];
-      const opponent = Object.values(gameSession.players).find(
-        p => p.telegramId !== window.Telegram?.WebApp?.initDataUnsafe?.user?.id
-      );
+      const opponent = Object.values(gameSession.players).find(p => p.isOpponent);
       
-      console.log('🎮 [GameHeader] Processing player data:', {
-        currentPlayer,
-        player,
-        opponent,
-        hasGameSession: !!gameSession,
-        hasPlayers: !!gameSession?.players,
-        timestamp: new Date().toISOString()
-      });
-
       // Данные текущего игрока из Telegram
       const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
       const currentUserAvatar = tgUser?.photo_url;
       const currentUserName = tgUser?.first_name;
 
       // Определяем, какой игрок где (создатель всегда слева)
-      const isCreator = player?.role === 'creator';
-      const leftPlayerAvatar = isCreator ? currentUserAvatar : opponent?.avatar;
-      const leftPlayerName = isCreator ? currentUserName : opponent?.name;
-      const rightPlayerAvatar = isCreator ? opponent?.avatar : currentUserAvatar;
-      const rightPlayerName = isCreator ? opponent?.name : currentUserName;
+      const leftPlayerAvatar = player.isCreator === null ? "" : 
+        (player.isCreator ? currentUserAvatar : opponent?.avatar);
+      const leftPlayerName = player.isCreator === null ? "Loading..." : 
+        (player.isCreator ? currentUserName : opponent?.name);
+      const rightPlayerAvatar = player.isCreator === null ? "" : 
+        (player.isCreator ? opponent?.avatar : currentUserAvatar);
+      const rightPlayerName = player.isCreator === null ? "Loading..." : 
+        (player.isCreator ? opponent?.name : currentUserName);
 
       setPlayerInfo({
         leftPlayerAvatar,
         leftPlayerName,
         rightPlayerAvatar,
         rightPlayerName
-      });
-
-      console.log('🎮 [GameHeader] Set player info:', {
-        leftPlayerAvatar,
-        leftPlayerName,
-        rightPlayerAvatar,
-        rightPlayerName,
-        timestamp: new Date().toISOString()
       });
 
       if (!loggedGameHeaderCalc.current) {
@@ -143,6 +128,11 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
     timestamp: new Date().toISOString()
   });
 
+  if (!gameSession || !currentPlayer) {
+    console.log('❌ [GameHeader] First check failed');
+    return null;
+  }
+
   const player = gameSession.players[currentPlayer];
   const opponent = Object.values(gameSession.players).find(p => p.isOpponent);
 
@@ -153,6 +143,11 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
     opponent,
     timestamp: new Date().toISOString()
   });
+
+  if (!player || !opponent) {
+    console.log('❌ [GameHeader] Second check failed');
+    return null;
+  }
 
   const formatTimer = (time) => {
     if (!time === undefined || time === null) return "00:00";

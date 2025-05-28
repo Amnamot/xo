@@ -9,6 +9,7 @@ const Loader = () => {
   const navigate = useNavigate();
   const socketContext = useSocket();
   const [progress, setProgress] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const [isActionsComplete, setIsActionsComplete] = useState(false);
   const [error, setError] = useState(null);
 
@@ -163,11 +164,12 @@ const Loader = () => {
     };
 
     initializeUser();
-  }, [navigate, socketContext]);
+  }, []);
 
   // Эффект для проверки готовности к переходу
   useEffect(() => {
     if (progress >= 100 && isActionsComplete) {
+      setIsLoading(false);
       const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
       console.log('🎯 [Loader] Checking start_param:', {
         startParam,

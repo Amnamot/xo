@@ -6,6 +6,7 @@ import { gameService } from '../services/game';
 
 const WaitModal = ({ onCancel, lobbyId, telegramId }) => {
   const [timeLeft, setTimeLeft] = useState(30);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   const handleCancel = async () => {
@@ -20,6 +21,7 @@ const WaitModal = ({ onCancel, lobbyId, telegramId }) => {
       navigate('/');
     } catch (error) {
       console.error('❌ [Game] Error cancelling lobby:', error);
+      setError('Failed to cancel lobby');
     }
   };
 
@@ -36,7 +38,7 @@ const WaitModal = ({ onCancel, lobbyId, telegramId }) => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [handleCancel]); // Добавляем handleCancel в зависимости
+  }, []); // Пустой массив зависимостей, так как таймер должен работать независимо
 
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);

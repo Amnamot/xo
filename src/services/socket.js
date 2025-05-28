@@ -1,3 +1,7 @@
+import { io } from 'socket.io-client';
+
+const SOCKET_URL = 'https://api.igra.top';
+
 // Функции для игровых событий
 export const createLobby = async (socket, telegramId) => {
   if (!socket?.connected) {

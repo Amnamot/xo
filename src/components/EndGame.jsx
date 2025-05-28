@@ -8,8 +8,8 @@ const EndGame = () => {
 
   // ✅ Всегда берём аватарку из initData
   const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
-  const avatarSrc = user?.photo_url;
-  const userName = user?.first_name;
+  const avatarSrc = user?.photo_url || "../media/JohnAva.png";
+  const userName = user?.first_name || "You";
 
   const handleBackToStart = () => {
     navigate("/", { replace: true });

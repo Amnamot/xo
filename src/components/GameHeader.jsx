@@ -128,11 +128,6 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
     timestamp: new Date().toISOString()
   });
 
-  if (!gameSession || !currentPlayer) {
-    console.log('❌ [GameHeader] First check failed');
-    return null;
-  }
-
   const player = gameSession.players[currentPlayer];
   const opponent = Object.values(gameSession.players).find(p => p.isOpponent);
 
@@ -143,11 +138,6 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
     opponent,
     timestamp: new Date().toISOString()
   });
-
-  if (!player || !opponent) {
-    console.log('❌ [GameHeader] Second check failed');
-    return null;
-  }
 
   const formatTimer = (time) => {
     if (!time === undefined || time === null) return "00:00";

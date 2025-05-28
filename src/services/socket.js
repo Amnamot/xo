@@ -3,13 +3,15 @@ import { io } from 'socket.io-client';
 const SOCKET_URL = 'https://api.igra.top';
 
 // Функции для игровых событий
-export const createLobby = async (socket, telegramId) => {
+export const createLobby = async (socket, telegramId, name, avatar) => {
   if (!socket?.connected) {
     throw new Error('Socket is not connected');
   }
 
   console.log('🎮 [Socket] Creating lobby:', {
     telegramId,
+    name,
+    avatar,
     socketId: socket.id,
     connected: socket.connected,
     rooms: Array.from(socket.rooms || []),
@@ -17,7 +19,7 @@ export const createLobby = async (socket, telegramId) => {
   });
 
   return new Promise((resolve, reject) => {
-    socket.emit('createLobby', { telegramId }, (response) => {
+    socket.emit('createLobby', { telegramId, name, avatar }, (response) => {
       if (response.error) {
         console.error('❌ [Socket] Failed to create lobby:', {
           error: response.error,

@@ -571,8 +571,8 @@ const Game = ({ lobbyId: propLobbyId }) => {
                 time,
                 playerTime1,
                 playerTime2,
-                name: opponentInfo?.name || 'Caesar',
-                avatar: opponentInfo?.avatar || 'JohnAva.png'
+                name: opponentInfo?.name,
+                avatar: opponentInfo?.avatar
               }
             }
           }}

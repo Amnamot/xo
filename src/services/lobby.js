@@ -8,13 +8,15 @@ class LobbyService {
   }
 
   // Инициализация лобби
-  async startLobby(socket, telegramId) {
+  async startLobby(socket, telegramId, name, avatar) {
     if (!socket || !telegramId) {
       throw new Error('Socket or telegramId is not initialized');
     }
 
     console.log('🎮 [LobbyService] Starting lobby:', {
       telegramId,
+      name,
+      avatar,
       socketId: socket.id,
       rooms: Array.from(socket.rooms || []),
       timestamp: new Date().toISOString()
@@ -22,7 +24,7 @@ class LobbyService {
 
     // Создаем лобби
     console.log('🔄 [LobbyService] Creating lobby...');
-    const lobbyResponse = await createLobby(socket, telegramId);
+    const lobbyResponse = await createLobby(socket, telegramId, name, avatar);
     
     console.log('✅ [LobbyService] Lobby created:', {
       response: lobbyResponse,

@@ -172,6 +172,7 @@ const Game = ({ lobbyId: propLobbyId }) => {
             if (data.gameSession) {
               const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
               const isCreator = String(data.gameSession.creatorId) === String(telegramId);
+              const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
               
               setGameSession({
                 ...data.gameSession,
@@ -182,7 +183,9 @@ const Game = ({ lobbyId: propLobbyId }) => {
                     moveTimer: data.gameSession.players.x.moveTimer,
                     time: data.gameSession.players.x.time,
                     playerTime1: data.gameSession.players.x.playerTime1,
-                    playerTime2: data.gameSession.players.x.playerTime2
+                    playerTime2: data.gameSession.players.x.playerTime2,
+                    name: isCreator ? tgUser?.first_name : opponentInfo?.name,
+                    avatar: isCreator ? tgUser?.photo_url : opponentInfo?.avatar
                   },
                   o: {
                     isCreator: !isCreator,
@@ -190,7 +193,9 @@ const Game = ({ lobbyId: propLobbyId }) => {
                     moveTimer: data.gameSession.players.o.moveTimer,
                     time: data.gameSession.players.o.time,
                     playerTime1: data.gameSession.players.o.playerTime1,
-                    playerTime2: data.gameSession.players.o.playerTime2
+                    playerTime2: data.gameSession.players.o.playerTime2,
+                    name: !isCreator ? tgUser?.first_name : opponentInfo?.name,
+                    avatar: !isCreator ? tgUser?.photo_url : opponentInfo?.avatar
                   }
                 }
               });

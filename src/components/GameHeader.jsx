@@ -129,10 +129,12 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
   });
 
   // Проверяем существование gameSession и currentPlayer
-  if (!gameSession || !currentPlayer) {
+  if (!gameSession?.players || !currentPlayer || !gameSession.players[currentPlayer]) {
     console.log('⚠️ [GameHeader] Missing required props:', {
       hasGameSession: !!gameSession,
+      hasPlayers: !!gameSession?.players,
       currentPlayer,
+      hasCurrentPlayer: !!gameSession?.players?.[currentPlayer],
       timestamp: new Date().toISOString()
     });
     return null;

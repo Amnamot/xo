@@ -165,6 +165,10 @@ const Game = ({ lobbyId: propLobbyId }) => {
             setIsGameStarted(true);
             setGameSession(data.gameSession);
             setCurrentPlayer(data.currentPlayer);
+            setOpponentInfo({
+              name: data.gameSession?.players?.o?.name,
+              avatar: data.gameSession?.players?.o?.avatar
+            });
             if (data.lobbyId) {
               setCurrentLobbyId(data.lobbyId);
             }
@@ -173,6 +177,10 @@ const Game = ({ lobbyId: propLobbyId }) => {
               lobbyId: data.lobbyId,
               gameSession: data.gameSession,
               currentPlayer: data.currentPlayer,
+              opponentInfo: {
+                name: data.gameSession?.players?.o?.name,
+                avatar: data.gameSession?.players?.o?.avatar
+              },
               timestamp: new Date().toISOString()
             });
           },
@@ -565,8 +573,8 @@ const Game = ({ lobbyId: propLobbyId }) => {
                 time,
                 playerTime1,
                 playerTime2,
-                name: opponentInfo?.name || 'Caesar',
-                avatar: opponentInfo?.avatar || 'JohnAva.png'
+                name: opponentInfo?.name,
+                avatar: opponentInfo?.avatar
               }
             }
           }}

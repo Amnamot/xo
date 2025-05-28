@@ -128,8 +128,28 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
     timestamp: new Date().toISOString()
   });
 
+  // Проверяем существование gameSession и currentPlayer
+  if (!gameSession || !currentPlayer) {
+    console.log('⚠️ [GameHeader] Missing required props:', {
+      hasGameSession: !!gameSession,
+      currentPlayer,
+      timestamp: new Date().toISOString()
+    });
+    return null;
+  }
+
   const player = gameSession.players[currentPlayer];
   const opponent = Object.values(gameSession.players).find(p => p.isOpponent);
+
+  // Проверяем существование player
+  if (!player) {
+    console.log('⚠️ [GameHeader] Player not found:', {
+      currentPlayer,
+      availablePlayers: Object.keys(gameSession.players),
+      timestamp: new Date().toISOString()
+    });
+    return null;
+  }
 
   console.log('🎮 [GameHeader] Before second check:', {
     hasPlayer: !!player,

@@ -190,13 +190,55 @@ const Game = ({ lobbyId: propLobbyId }) => {
             });
             
             setBoard(newBoard);
-            setCurrentPlayer(gameState.currentPlayer);
+            
+            // Проверяем currentPlayer перед установкой
+            if (gameState.currentPlayer) {
+              console.log('🎮 [Game] Setting current player:', {
+                currentPlayer: gameState.currentPlayer,
+                timestamp: new Date().toISOString()
+              });
+              setCurrentPlayer(gameState.currentPlayer.toLowerCase());
+            } else {
+              console.warn('⚠️ [Game] No current player in game state:', {
+                gameState,
+                timestamp: new Date().toISOString()
+              });
+            }
+            
             setScale(gameState.scale);
             setPosition(gameState.position);
             setTime(gameState.time || 0);
             setPlayerTime1(gameState.playerTime1 || 0);
             setPlayerTime2(gameState.playerTime2 || 0);
-            setGameSession(gameState.gameSession);
+
+            // Преобразуем формат данных для GameHeader
+            const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
+            const isCreator = String(gameState.gameSession?.creatorId) === String(telegramId);
+            
+            setGameSession({
+              ...gameState.gameSession,
+              players: {
+                x: {
+                  isCreator: isCreator,
+                  isOpponent: !isCreator,
+                  moveTimer: gameState.maxMoveTime,
+                  time: gameState.time,
+                  playerTime1: gameState.playerTime1,
+                  playerTime2: gameState.playerTime2
+                },
+                o: {
+                  isCreator: !isCreator,
+                  isOpponent: isCreator,
+                  moveTimer: gameState.maxMoveTime,
+                  time: gameState.time,
+                  playerTime1: gameState.playerTime1,
+                  playerTime2: gameState.playerTime2,
+                  name: opponentInfo?.name,
+                  avatar: opponentInfo?.avatar
+                }
+              }
+            });
+
             if (!opponentInfo && gameState.opponentInfo) {
               setOpponentInfo(gameState.opponentInfo);
             }
@@ -214,7 +256,21 @@ const Game = ({ lobbyId: propLobbyId }) => {
           },
           onMoveMade: (data) => {
             setBoard(data.gameState.board);
-            setCurrentPlayer(data.gameState.currentTurn);
+            
+            // Проверяем currentTurn перед установкой
+            if (data.gameState.currentTurn) {
+              console.log('🎮 [Game] Setting current player from move:', {
+                currentPlayer: data.gameState.currentTurn,
+                timestamp: new Date().toISOString()
+              });
+              setCurrentPlayer(data.gameState.currentTurn.toLowerCase());
+            } else {
+              console.warn('⚠️ [Game] No current turn in move data:', {
+                data,
+                timestamp: new Date().toISOString()
+              });
+            }
+            
             setMoveStartTime(data.gameState.moveStartTime);
             setMoveTimer(30000);
             // Проверяем победителя

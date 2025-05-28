@@ -197,6 +197,7 @@ const Game = ({ lobbyId: propLobbyId }) => {
             setPlayerTime1(gameState.playerTime1 || 0);
             setPlayerTime2(gameState.playerTime2 || 0);
             setGameSession(gameState.gameSession);
+            setIsGameStarted(true);
             if (!opponentInfo && gameState.opponentInfo) {
               setOpponentInfo(gameState.opponentInfo);
             }

@@ -86,6 +86,15 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
       const player = gameSession.players[currentPlayer];
       const opponent = Object.values(gameSession.players).find(p => p.isOpponent);
       
+      console.log('🎮 [GameHeader] Processing player data:', {
+        currentPlayer,
+        player,
+        opponent,
+        hasGameSession: !!gameSession,
+        hasPlayers: !!gameSession?.players,
+        timestamp: new Date().toISOString()
+      });
+
       // Данные текущего игрока из Telegram
       const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
       const currentUserAvatar = tgUser?.photo_url;
@@ -106,6 +115,14 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
         leftPlayerName,
         rightPlayerAvatar,
         rightPlayerName
+      });
+
+      console.log('🎮 [GameHeader] Set player info:', {
+        leftPlayerAvatar,
+        leftPlayerName,
+        rightPlayerAvatar,
+        rightPlayerName,
+        timestamp: new Date().toISOString()
       });
 
       if (!loggedGameHeaderCalc.current) {

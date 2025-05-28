@@ -163,12 +163,16 @@ const Game = ({ lobbyId: propLobbyId }) => {
             setError(null);
             setShowWaitModal(false);
             setIsGameStarted(true);
+            setGameSession(data.gameSession);
+            setCurrentPlayer(data.currentPlayer);
             if (data.lobbyId) {
               setCurrentLobbyId(data.lobbyId);
             }
             console.log('🎮 [Game] After game start:', {
               isGameStarted: true,
               lobbyId: data.lobbyId,
+              gameSession: data.gameSession,
+              currentPlayer: data.currentPlayer,
               timestamp: new Date().toISOString()
             });
           },
@@ -527,18 +531,7 @@ const Game = ({ lobbyId: propLobbyId }) => {
           isGameStarted,
           hasGameSession: !!gameSession,
           currentPlayer,
-          timestamp: new Date().toISOString()
-        }),
-        console.log('🎮 [Game] Rendering GameHeader:', {
-          isGameStarted,
-          currentPlayer,
-          gameSession,
-          moveTimer,
-          time,
-          playerTime1,
-          playerTime2,
-          opponentInfo,
-          isConnected,
+          gameSessionData: gameSession,
           timestamp: new Date().toISOString()
         }),
         <GameHeader 

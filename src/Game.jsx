@@ -165,10 +165,17 @@ const Game = ({ lobbyId: propLobbyId }) => {
             setIsGameStarted(true);
             setGameSession(data.gameSession);
             setCurrentPlayer(data.currentPlayer);
+            
+            // Получаем данные о сопернике из gameSession
+            const opponent = Object.values(data.gameSession?.players || {}).find(
+              player => player.telegramId !== window.Telegram?.WebApp?.initDataUnsafe?.user?.id
+            );
+            
             setOpponentInfo({
-              name: data.gameSession?.players?.o?.name,
-              avatar: data.gameSession?.players?.o?.avatar
+              name: opponent?.name,
+              avatar: opponent?.avatar
             });
+            
             if (data.lobbyId) {
               setCurrentLobbyId(data.lobbyId);
             }

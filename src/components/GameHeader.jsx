@@ -84,7 +84,9 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
   useEffect(() => {
     if (gameSession && currentPlayer) {
       const player = gameSession.players[currentPlayer];
-      const opponent = Object.values(gameSession.players).find(p => p.isOpponent);
+      const opponent = Object.values(gameSession.players).find(
+        p => p.telegramId !== window.Telegram?.WebApp?.initDataUnsafe?.user?.id
+      );
       
       console.log('🎮 [GameHeader] Processing player data:', {
         currentPlayer,
@@ -101,14 +103,11 @@ const GameHeader = ({ gameSession, currentPlayer, onExit }) => {
       const currentUserName = tgUser?.first_name;
 
       // Определяем, какой игрок где (создатель всегда слева)
-      const leftPlayerAvatar = player.isCreator === null ? "" : 
-        (player.isCreator ? currentUserAvatar : opponent?.avatar);
-      const leftPlayerName = player.isCreator === null ? "Loading..." : 
-        (player.isCreator ? currentUserName : opponent?.name);
-      const rightPlayerAvatar = player.isCreator === null ? "" : 
-        (player.isCreator ? opponent?.avatar : currentUserAvatar);
-      const rightPlayerName = player.isCreator === null ? "Loading..." : 
-        (player.isCreator ? opponent?.name : currentUserName);
+      const isCreator = player?.role === 'creator';
+      const leftPlayerAvatar = isCreator ? currentUserAvatar : opponent?.avatar;
+      const leftPlayerName = isCreator ? currentUserName : opponent?.name;
+      const rightPlayerAvatar = isCreator ? opponent?.avatar : currentUserAvatar;
+      const rightPlayerName = isCreator ? opponent?.name : currentUserName;
 
       setPlayerInfo({
         leftPlayerAvatar,

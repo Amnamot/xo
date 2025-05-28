@@ -158,17 +158,64 @@ const Game = ({ lobbyId: propLobbyId }) => {
               currentIsGameStarted: isGameStarted,
               timestamp: new Date().toISOString()
             });
+
+            // Устанавливаем currentPlayer из currentTurn
+            if (data.currentTurn) {
+              console.log('🎮 [Game] Setting initial current player:', {
+                currentPlayer: data.currentTurn,
+                timestamp: new Date().toISOString()
+              });
+              setCurrentPlayer(data.currentTurn.toLowerCase());
+            }
+
+            // Устанавливаем gameSession
+            if (data.gameSession) {
+              const telegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id?.toString();
+              const isCreator = String(data.gameSession.creatorId) === String(telegramId);
+              
+              setGameSession({
+                ...data.gameSession,
+                players: {
+                  x: {
+                    isCreator: isCreator,
+                    isOpponent: !isCreator,
+                    moveTimer: data.gameSession.players.x.moveTimer,
+                    time: data.gameSession.players.x.time,
+                    playerTime1: data.gameSession.players.x.playerTime1,
+                    playerTime2: data.gameSession.players.x.playerTime2
+                  },
+                  o: {
+                    isCreator: !isCreator,
+                    isOpponent: isCreator,
+                    moveTimer: data.gameSession.players.o.moveTimer,
+                    time: data.gameSession.players.o.time,
+                    playerTime1: data.gameSession.players.o.playerTime1,
+                    playerTime2: data.gameSession.players.o.playerTime2
+                  }
+                }
+              });
+            }
+
+            // Устанавливаем таймеры
             setGameStartTime(data.startTime);
             setMoveStartTime(data.startTime);
+            setMoveTimer(30000); // Начальное значение из gameSession
+            setTime(0);
+            setPlayerTime1(0);
+            setPlayerTime2(0);
+
             setError(null);
             setShowWaitModal(false);
             setIsGameStarted(true);
             if (data.lobbyId) {
               setCurrentLobbyId(data.lobbyId);
             }
+
             console.log('🎮 [Game] After game start:', {
               isGameStarted: true,
               lobbyId: data.lobbyId,
+              currentPlayer: data.currentTurn,
+              hasGameSession: !!data.gameSession,
               timestamp: new Date().toISOString()
             });
           },
